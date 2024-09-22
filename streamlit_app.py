@@ -245,7 +245,7 @@ if 'debug' in st.query_params and st.query_params['debug'].lower() == 'true':
 if DEBUG:
 	tab1, tab2, tab3, tab4= st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée", "Debug"])
 else:
-		tab1, tab2, tab3 = st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée"])
+	tab1, tab2, tab3 = st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée"])
 
 with tab1:
 	weight_and_balance_calculator(current_glider)
