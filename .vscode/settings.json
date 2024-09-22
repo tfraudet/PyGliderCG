@@ -1,0 +1,12 @@
+{
+	"CodeGPT.apiKey": "Groq",
+	"sqltools.useNodeRuntime": true,
+	"sqltools.connections": [
+		{
+			"previewLimit": 50,
+			"driver": "DuckDB",
+			"database": "${workspaceFolder:PyGliderCG}/data/gliders.db",
+			"name": "gliders"
+		}
+	]
+}

@@ -1,19 +1,19 @@
-# 🎈 Blank app template
+# 🎈 Center of Gravity Calculator for ACPH Gliders
 
-A simple Streamlit app template for you to modify!
+A simple Streamlit app to calculate center of gravity for ACPH gliders!
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://glider-cg.streamlit.app/)
 
-### How to run it on your own machine
+## How to run it on your own machine
 
-1. Install the requirements
+### Install the requirements
 
-   ```
-   $ pip install -r requirements.txt
-   ```
+```bash
+$ pip install -r requirements.txt
+```
 
-2. Run the app
+### Run the app
 
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+```bash
+$ streamlit run calculator_app.py
+```
