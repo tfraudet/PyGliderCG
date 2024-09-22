@@ -7,6 +7,8 @@ import plotly.graph_objects as go
 
 from gliders import Glider, DB_NAME
 
+DEBUG = False
+
 def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, balance_empty_wb = None):
 	# Plot
 	df_limits = current_glider.limits_to_pandas()
@@ -237,7 +239,14 @@ if ('selected_glider' not in st.session_state) or (st.session_state.selected_gli
 st.subheader('{} {} '.format( 'Monoplace' if current_glider.single_seat else 'Biplace', current_glider.registration))
 st.write('planeur {} de marque {}'.format(current_glider.model, current_glider.brand ))
 
-tab1, tab2, tab3, tab4= st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée", "Debug"])
+if 'debug' in st.query_params and st.query_params['debug'].lower() == 'true':
+	DEBUG = True
+
+if DEBUG:
+	tab1, tab2, tab3, tab4= st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée", "Debug"])
+else:
+		tab1, tab2, tab3 = st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée"])
+
 with tab1:
 	weight_and_balance_calculator(current_glider)
 
@@ -247,6 +256,7 @@ with tab2:
 with tab3:
 	weighing_sheet(current_glider)
 
-with tab4:
-	st.write(current_glider)
+if DEBUG:
+	with tab4:
+		st.write(current_glider)
 
