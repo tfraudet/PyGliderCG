@@ -113,21 +113,21 @@ def weight_and_balance_calculator(current_glider):
 	col1, col2 = st.columns(2)
 
 	with col1:
-		front_pilot_weight = st.number_input( 'Masse pilote avant (en kg)', min_value=0.0, format='%0.1f', step=0.5, placeholder='Type a number...')
+		front_pilot_weight = st.number_input( 'Masse pilote avant (en kg)', min_value=0.0, format='%0.1f', step=0.5, key = 'front_pilot_weight', placeholder='Type a number...')
 		# st.write("The current number is ", front_pilot_weight)
 
-		front_ballast_weight = st.number_input( 'Masse Gueuse avant (kg)', min_value=0.0, format='%0.1f', step=0.5, placeholder='Type a number...')
+		front_ballast_weight = st.number_input( 'Masse Gueuse avant (kg)', min_value=0.0, format='%0.1f', step=0.5, key = 'front_ballast_weight', placeholder='Type a number...')
 		# st.write("The current number is ", front_ballast_weight)
 
-		wing_water_ballast_weight = st.number_input( 'Masse d\'eau dans les ailes (kg)', min_value=0.0, format='%0.1f', step=0.5, placeholder='Type a number...')
+		wing_water_ballast_weight = st.number_input( 'Masse d\'eau dans les ailes (kg)', min_value=0.0, format='%0.1f', step=0.5, key = 'wing_water_ballast_weight', placeholder='Type a number...')
 		# st.write("The current number is ", wing_water_ballast_weight)
 
 	with col2:
 		rear_pilot_weight = st.number_input( 'Masse pilote arrière (kg)', min_value=0.0, format='%0.1f', step=0.5, placeholder='Type a number...',
-									  disabled= True if (current_glider.single_seat) else False )
+						disabled = True if (current_glider.single_seat) else False, key='rear_pilot_weight')
 		# st.write("The current number is ", rear_pilot_weight)
 
-		rear_ballast_weight = st.number_input( 'Masse Gueuse ou water ballast arrière (kg)', min_value=0.0, format='%0.1f', step=0.5, placeholder='Type a number...')
+		rear_ballast_weight = st.number_input( 'Masse Gueuse ou water ballast arrière (kg)', min_value=0.0, format='%0.1f', step=0.5, key = 'rear_ballast_weight', placeholder='Type a number...')
 		# st.write("The current number is ", rear_ballast_weight)
 
 	if st.button('Calculer',type='primary'):
@@ -135,12 +135,12 @@ def weight_and_balance_calculator(current_glider):
 		
 		# calcul du centrage : ∑ des moments / ∑ des masses
 		total_weight, balance = current_glider.weight_and_balance_calculator(front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, wing_water_ballast_weight)
-		st.write('Centrage calculé: masse total :green[{}] kg, centrage :green[{}] mm'.format(total_weight, round(balance,2)))
+		st.write('Centrage calculé: masse total :green[{}] kg, centrage :green[{}] mm'.format(round(total_weight,1), round(balance,2)))
 
 		# calcul du centrage water-ballast à vide: ∑ des moments / ∑ des masses
 		if (wing_water_ballast_weight>0):
 			total_weight_WB_empty, balance_WB_empty = current_glider.weight_and_balance_calculator(front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, 0)
-			st.write('Centrage water-ballast vide: masse :red[{}] kg, centrage :red[{}] mm'.format(total_weight_WB_empty, round(balance_WB_empty,2)))
+			st.write('Centrage water-ballast vide: masse :red[{}] kg, centrage :red[{}] mm'.format(round(total_weight_WB_empty,1), round(balance_WB_empty,2)))
 		else:
 			total_weight_WB_empty, balance_WB_empty = None, None
 
@@ -226,6 +226,13 @@ gliders_options = gliders.keys()
 selected_registration = st.selectbox('Choisir un planeur', gliders_options)
 
 current_glider = gliders.get(selected_registration)
+if ('selected_glider' not in st.session_state) or (st.session_state.selected_glider != current_glider.model):
+	st.session_state.selected_glider = current_glider.model
+	st.session_state.rear_pilot_weight = 0
+	st.session_state.front_pilot_weight = 0
+	st.session_state.front_ballast_weight = 0
+	st.session_state.wing_water_ballast_weight = 0
+	st.session_state.rear_ballast_weight = 0
 
 st.subheader('{} {} '.format( 'Monoplace' if current_glider.single_seat else 'Biplace', current_glider.registration))
 st.write('planeur {} de marque {}'.format(current_glider.model, current_glider.brand ))
