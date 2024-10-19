@@ -15,17 +15,17 @@ from gliders import Glider, DB_NAME
 DEBUG = False
 
 def load_users():
-    with open('.streamlit/users.yaml', 'r') as file:
-        users = yaml.safe_load(file)
-    return users
+	with open('.streamlit/users.yaml', 'r') as file:
+		users = yaml.safe_load(file)
+	return users
 
 def authenticate(username, password):
-    users = load_users()
-    if username in users['credentials']:
-        stored_password = users['credentials'][username]['password']
-        if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
-            return True
-    return False
+	users = load_users()
+	if username in users['credentials']:
+		stored_password = users['credentials'][username]['password']
+		if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
+			return True
+	return False
 
 def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, balance_empty_wb = None):
 	# Plot
@@ -280,29 +280,29 @@ if DEBUG:
 
 # Authentication
 if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
+	st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    with st.sidebar:
-        st.header("Login")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            if authenticate(username, password):
-                st.session_state.authenticated = True
-                st.session_state.username = username
-                st.experimental_set_query_params(authenticated=True)
-                st.experimental_rerun()
-            else:
-                st.error("Invalid username or password")
+	with st.sidebar:
+		st.header("Login")
+		username = st.text_input("Username")
+		password = st.text_input("Password", type="password")
+		if st.button("Login"):
+			if authenticate(username, password):
+				st.session_state.authenticated = True
+				st.session_state.username = username
+				st.experimental_set_query_params(authenticated=True)
+				st.rerun()
+			else:
+				st.error("Invalid username or password")
 else:
-    with st.sidebar:
-        st.header("Welcome, {}".format(st.session_state.username))
-        if st.button("Logout"):
-            st.session_state.authenticated = False
-            st.experimental_set_query_params(authenticated=False)
-            st.experimental_rerun()
+	with st.sidebar:
+		st.header("Welcome, {}".format(st.session_state.username))
+		if st.button("Logout"):
+			st.session_state.authenticated = False
+			st.experimental_set_query_params(authenticated=False)
+			st.rerun()
 
 # Check for authentication cookie
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-    st.stop()
+	st.stop()
