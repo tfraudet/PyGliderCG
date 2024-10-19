@@ -1,4 +1,5 @@
 .streamlit/secrets.toml
+.streamlit/users.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

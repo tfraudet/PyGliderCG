@@ -1,11 +1,16 @@
 import json
 import pandas as pd
 import streamlit as st
+import yaml
+import os
+
+from datetime import datetime, timedelta
 
 import plotly.express as px
 import plotly.graph_objects as go
 
 from gliders import Glider, DB_NAME
+from users import Users
 
 DEBUG = False
 
@@ -215,13 +220,15 @@ def weighing_sheet(glider):
 
 # set up page details
 st.set_page_config(
-	page_title="Weight & Balance Calculator",
-	page_icon="✈️",
-	layout="wide",
+	page_title='Weight & Balance Calculator',
+	page_icon='✈️',
+	layout='wide',
+	initial_sidebar_state='collapsed'
 )
 st.header('✈️ Weight & Balance Calculator for Glider')
 
 gliders = Glider.from_database(DB_NAME)
+users = Users(st.secrets['COOKIE_KEY'])
 
 # gliders_options = [ x.registration for x in gliders]
 gliders_options = gliders.keys()
@@ -260,3 +267,37 @@ if DEBUG:
 	with tab4:
 		st.write(current_glider)
 
+# Authentication
+if 'authenticated' not in st.session_state:
+	st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+	with st.sidebar:
+		st.header("Connexion")
+		username = st.text_input("Identifiant")
+		password = st.text_input("Mot de passe", type="password")
+		if st.button("Se connecter"):
+			if users.login(username, password):
+				st.session_state.authenticated = True
+				st.session_state.username = username
+				st.rerun()
+			else:
+				st.error("Identifiant ou mot de passe invalide")
+else:
+	with st.sidebar:
+		st.header("Bienvenue, {}".format(st.session_state.username))
+		st.write(users.get_roles(st.session_state.username))
+		if st.button("Déconnexion"):
+			users.logout(st.session_state.username)
+			st.session_state.authenticated = False
+			st.session_state.pop('username', None)
+			st.rerun()
+
+# in DEBIG mode, display the session content
+if DEBUG:
+	with st.sidebar:
+		st.write('---')
+		st.write(st.session_state)
+
+		# st.write('---')
+		# st.write(cookies.getAll())
