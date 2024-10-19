@@ -1,0 +1,12 @@
+credentials:
+  tfraudet:
+    email: thierry.fraudet@gmail.com
+    password: $2b$12$wnjCIoOt0zBmN0.rSwwIHuPHtR73gGNy5OLfCpyRz/jJAoBBEi73q
+  webmaster:
+    email: webmaster@aeroclub-issoire.fr
+    password: $2b$12$71SXCLpgP9t3JLCPuWUdDePz1wgL4oHOsmKvUTCa0CWkcQnW8VB/O
+
+cookie:
+  expiry_time: 1
+  key: 'glider-for-ever'
+  name: 'pyglidercg'
