@@ -3,29 +3,16 @@ import pandas as pd
 import streamlit as st
 import yaml
 import os
-import bcrypt
-import jwt
+
 from datetime import datetime, timedelta
 
 import plotly.express as px
 import plotly.graph_objects as go
 
 from gliders import Glider, DB_NAME
+from users import Users
 
 DEBUG = False
-
-def load_users():
-	with open('.streamlit/users.yaml', 'r') as file:
-		users = yaml.safe_load(file)
-	return users
-
-def authenticate(username, password):
-	users = load_users()
-	if username in users['credentials']:
-		stored_password = users['credentials'][username]['password']
-		if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
-			return True
-	return False
 
 def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, balance_empty_wb = None):
 	# Plot
@@ -233,13 +220,15 @@ def weighing_sheet(glider):
 
 # set up page details
 st.set_page_config(
-	page_title="Weight & Balance Calculator",
-	page_icon="✈️",
-	layout="wide",
+	page_title='Weight & Balance Calculator',
+	page_icon='✈️',
+	layout='wide',
+	initial_sidebar_state='collapsed'
 )
 st.header('✈️ Weight & Balance Calculator for Glider')
 
 gliders = Glider.from_database(DB_NAME)
+users = Users(st.secrets['COOKIE_KEY'])
 
 # gliders_options = [ x.registration for x in gliders]
 gliders_options = gliders.keys()
@@ -284,25 +273,31 @@ if 'authenticated' not in st.session_state:
 
 if not st.session_state.authenticated:
 	with st.sidebar:
-		st.header("Login")
-		username = st.text_input("Username")
-		password = st.text_input("Password", type="password")
-		if st.button("Login"):
-			if authenticate(username, password):
+		st.header("Connexion")
+		username = st.text_input("Identifiant")
+		password = st.text_input("Mot de passe", type="password")
+		if st.button("Se connecter"):
+			if users.login(username, password):
 				st.session_state.authenticated = True
 				st.session_state.username = username
-				st.experimental_set_query_params(authenticated=True)
 				st.rerun()
 			else:
-				st.error("Invalid username or password")
+				st.error("Identifiant ou mot de passe invalide")
 else:
 	with st.sidebar:
-		st.header("Welcome, {}".format(st.session_state.username))
-		if st.button("Logout"):
+		st.header("Bienvenue, {}".format(st.session_state.username))
+		st.write(users.get_roles(st.session_state.username))
+		if st.button("Déconnexion"):
+			users.logout(st.session_state.username)
 			st.session_state.authenticated = False
-			st.experimental_set_query_params(authenticated=False)
+			st.session_state.pop('username', None)
 			st.rerun()
 
-# Check for authentication cookie
-if 'authenticated' not in st.session_state or not st.session_state.authenticated:
-	st.stop()
+# in DEBIG mode, display the session content
+if DEBUG:
+	with st.sidebar:
+		st.write('---')
+		st.write(st.session_state)
+
+		# st.write('---')
+		# st.write(cookies.getAll())
