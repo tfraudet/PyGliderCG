@@ -1,10 +1,52 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import date
+from enum import Enum
+import logging
 
 import duckdb
 import pandas as pd
+import streamlit as st
 
-DB_NAME = './data/gliders.db'
+from config import get_database_name
+
+logger = logging.getLogger(__name__)
+
+@st.cache_data
+def fetch_gliders(show_spinner = 'Loading gliders'):	
+	return Glider.from_database(get_database_name())
+
+class DatumWeighingPoints(Enum):
+	DATUM_WING_2POINTS_AFT_OF_DATUM = 1
+	DATUM_WING_1POINT_AFT_OF_DATUM = 2
+	DATUM_WING_WHEEL_FORWARD_OF_DATUM = 3
+	DATUM_FORWARD_GLIDER = 4
+
+class DatumPilotPosition(Enum):
+	PILOT_FORWARD_OF_DATUM = 1
+	PILOT_AFT_OF_DATUM = 2
+
+DATUMS = {
+	DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM: {
+			'label': 'Bord d\'attaque de l\'aile - 2 point en arrière de la référence',
+			'image': 'img/datum-1.png'
+		},
+	DatumWeighingPoints.DATUM_WING_1POINT_AFT_OF_DATUM: {
+			'label': 'Bord d\'attaque de l\'aile - 1 point en avant de la référence',
+			'image': 'img/datum-2.png',
+	   },
+	DatumWeighingPoints.DATUM_WING_WHEEL_FORWARD_OF_DATUM: {
+			'label' : 'Bord d\'attaque de l\'aile - Train principal en avant de la référence',
+			'image': 'img/datum-4.png',
+		},
+	DatumWeighingPoints.DATUM_FORWARD_GLIDER: {
+			'label' : 'Devant le planeur',
+			'image': 'img/datum-3.png',
+		}
+}
+
+def get_datum_image_by_label(label):
+	datum = next(filter(lambda item: item[1]['label'] == label, DATUMS.items()), None)
+	return datum[1].get('image') if datum else None
 
 @dataclass
 class Limits:
@@ -14,7 +56,6 @@ class Limits:
 	mmenp : float
 	mm_harnais : float
 	weight_min_pilot : float
-	weight_max_pilot : float
 
 	# centering limits
 	front_centering : float
@@ -32,6 +73,8 @@ class Arms:
 
 @dataclass
 class Weighing:
+	id : int
+	date : date
 	p1: float
 	p2: float
 	right_wing_weight: float
@@ -42,15 +85,40 @@ class Weighing:
 	A: int = 0
 	D: int = 0
 
+	def delete(self):
+		conn = duckdb.connect(get_database_name())
+		conn.execute('DELETE FROM WEIGHING WHERE id={}'.format(self.id))
+		conn.close()
+		logger.debug('{} deleted from the database'.format(self))
+	
+	def mve(self) -> float:
+		'''
+		Retourne la masse a vide équipée (MVE) en Kg
+		'''
+		return round(self.right_wing_weight + self.left_wing_weight + self.tail_weight + self.fuselage_weight + self.fix_ballast_weight, 2)
+
+	def mvenp(self) -> float:
+		'''
+		Retourne la masse à vide des élements non portants (MVENP) en Kg
+		'''
+		return round(self.tail_weight + self.fuselage_weight + self.fix_ballast_weight, 2)
+
 @dataclass
 class Instrument:
+	id : int
 	on_board: bool
 	instrument : str
 	brand: str
 	type: str
 	number: str
-	date: str
+	date: date
 	seat: str
+
+	def delete(self):
+		conn = duckdb.connect(get_database_name())
+		conn.execute('DELETE FROM INVENTORY WHERE id={}'.format(self.id))
+		conn.close()
+		logger.debug('{} deleted from the database'.format(self))
 
 @dataclass
 class Glider:
@@ -59,19 +127,178 @@ class Glider:
 	brand : str
 	serial_number : int
 	single_seat : bool
-
+	datum : int
+	pilot_position : int 
+	datum_label : str
+	wedge : str
+	wedge_position : str
+		
 	limits : Limits = None
 	arms: Arms = None
 
-	# weighings : Weighing = None
-	weighings : list[tuple[date, Weighing]] = field(default_factory=list)
-
+	weighings : list[Weighing] = field(default_factory=list)
 	weight_and_balances: list[(int, float)] = field(default_factory=list)  # list of tuple (centering in mm, weight in Kg)
-
 	instruments: list[Instrument] = field(default_factory=list)
 
 	def limits_to_pandas(self) -> pd.DataFrame:
 		return pd.DataFrame(self.weight_and_balances, columns=['centering', 'mass'])
+	
+	def get_instrument_by_id(self, id : int) -> Instrument:
+		return next((instrument for instrument in self.instruments if instrument.id == id), None)
+	
+	def get_weighing_by_id(self, id : int) -> Instrument:
+		return next((weighing for weighing in self.weighings if weighing.id == id), None)
+	
+	def instruments_to_pandas(self) -> pd.DataFrame:
+		return pd.DataFrame(self.instruments, columns=['id', 'on_board', 'instrument', 'brand', 'type', 'number', 'date', 'seat'])
+
+	def weight_and_balances_to_pandas(self) -> pd.DataFrame:
+		return pd.DataFrame(self.weight_and_balances, columns=['balance', 'weight'])
+	
+	def wheighings_to_pandas(self) -> pd.DataFrame:
+		columns = ['id', 'date', 'p1', 'p2', 'right_wing_weight', 'left_wing_weight', 'tail_weight', 'fuselage_weight', 'fix_ballast_weight', 'A', 'D']
+		# as_dicts = [dict(zip(columns, [weighing[0]] + [getattr(weighing[1], field.name) for field in fields(weighing[1])])) for weighing in self.weighings]
+		return pd.DataFrame(self.weighings, columns=columns)
+
+	def save(self):
+		logger.debug('save {} in database'.format(self))
+		conn = duckdb.connect(get_database_name())
+
+		# save the glider datasheet
+		conn.execute('INSERT OR REPLACE INTO GLIDER VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',[
+			self.model,
+			self.registration,
+			self.brand,
+			self.serial_number,
+			self.single_seat,
+			
+			# Datum for weighings
+			self.datum,
+			self.pilot_position,
+			self.datum_label,
+			self.wedge,
+			self.wedge_position,
+
+			# Limits
+			self.limits.mmwp,
+			self.limits.mmwv,
+			self.limits.mmenp,
+			self.limits.mm_harnais,
+			self.limits.weight_min_pilot,
+			self.limits.front_centering,
+			self.limits.rear_centering,
+
+			# Arms
+			self.arms.arm_front_pilot,
+			self.arms.arm_rear_pilot,
+			self.arms.arm_waterballast,
+			self.arms.arm_front_ballast,
+			self.arms.arm_rear_watterballast_or_ballast,
+			self.arms.arm_gas_tank,
+			self.arms.arm_instruments_panel
+		])
+
+		# save the instrument list
+
+		conn.close()
+		logger.debug('{} datasheet saved in database'.format(self.registration))
+
+
+	def save_weight_and_balance(self):
+		conn = duckdb.connect(get_database_name())
+		try:
+			#  Delete all points
+			conn.execute('DELETE FROM WB_LIMIT WHERE registration=\'{}\''.format(self.registration))
+
+			# store the new points
+			for idx, point in enumerate(self.weight_and_balances):
+				conn.execute('INSERT INTO WB_LIMIT VALUES (?, ?, ?, ?)',[
+					self.registration,
+					idx,
+					point[0],
+					point[1]
+				])
+
+			logger.debug('{} deleted from the database'.format(self.registration))
+		finally:
+			conn.close()	
+
+	def save_instruments(self):
+		conn = duckdb.connect(get_database_name())
+		for instrument in self.instruments:
+			if instrument.id is None:
+				instrument.id = conn.execute('SELECT nextval(\'inventory_id_seq\')').fetchone()[0]
+				logger.debug('Next instrument id is {} '.format(instrument.id))
+
+			conn.execute('''
+					INSERT OR REPLACE INTO INVENTORY (id, registration, on_board, instrument, brand, type, number, date, seat)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+				''', [
+					instrument.id,
+					self.registration,
+					instrument.on_board,
+					instrument.instrument,
+					instrument.brand,
+					instrument.type,
+					instrument.number,
+					instrument.date,
+					instrument.seat
+				])
+			logger.debug('{} instrument saved in database'.format(instrument))
+
+		conn.close()
+		logger.debug('{} instruments saved in database'.format(self.registration))
+
+	def save_weighings(self):
+		conn = duckdb.connect(get_database_name())
+		for weighing in self.weighings:
+			if weighing.id is None:
+				weighing.id = conn.execute('SELECT nextval(\'auto_increment\')').fetchone()[0]
+				logger.debug('Next weighing id is {} '.format(weighing.id))
+
+			conn.execute('''
+					INSERT OR REPLACE INTO WEIGHING (id, date, registration, p1, p2, right_wing_weight, left_wing_weight, tail_weight, fuselage_weight, fix_ballast_weight, A, D)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				''', [
+					weighing.id,
+					weighing.date,
+					self.registration,
+					weighing.p1,
+					weighing.p2,
+					weighing.right_wing_weight,
+					weighing.left_wing_weight,
+					weighing.tail_weight,
+					weighing.fuselage_weight,
+					weighing.fix_ballast_weight,
+					weighing.A,
+					weighing.D
+				])
+			logger.debug('{} instrument saved in database'.format(weighing))
+
+		conn.close()
+		logger.debug('{} instruments saved in database'.format(self.registration))
+
+	def delete(self):
+		conn = duckdb.connect(get_database_name())
+		try:
+			# conn.begin()
+
+			#  Delete all weihings 
+			conn.execute('DELETE FROM WEIGHING WHERE registration=\'{}\''.format(self.registration))
+
+			#  Delete all center of gravity and weight points
+			conn.execute('DELETE FROM WB_LIMIT WHERE registration=\'{}\''.format(self.registration))
+				
+			#  Delete related entries in the INVENTORY table
+			conn.execute('DELETE FROM INVENTORY WHERE registration=\'{}\''.format(self.registration))
+
+			#  Delete the entry in the GLIDER table
+			conn.execute('DELETE FROM GLIDER WHERE registration=\'{}\''.format(self.registration))
+
+			# conn.commit()
+			logger.debug('{} deleted from the database'.format(self.registration))
+		finally:
+			conn.close()	
 
 	@classmethod
 	def from_database(cls, database_name: str) -> dict:
@@ -79,9 +306,10 @@ class Glider:
 		results  = conn.execute('SELECT * from GLIDER').fetchall()
 
 		def construct_row(values) -> Glider:
-			main_values = values[:5]
-			limits_value = values[5:13]
-			arm_values = values[13:20]
+			main_values = values[:10]
+			limits_value = values[10:17]
+			arm_values = values[17:25]
+
 			aGlider = Glider(*main_values)
 			aGlider.limits = Limits(*limits_value)
 			aGlider.arms = Arms(*arm_values)
@@ -92,11 +320,14 @@ class Glider:
 
 			# load weighings for this glider
 			weighings = conn.execute("SELECT * from WEIGHING WHERE registration='{}'".format(values[1])).fetchall()
-			aGlider.weighings = [ (item[1], Weighing(*item[3:])) for item in weighings]
+			# aGlider.weighings = [ Weighing(item[0], item[1], *item[3:]) for item in weighings]
+			aGlider.weighings = [ Weighing(
+				item[0], item[1], float(item[3]), float(item[4]), float(item[5]), float(item[6]), float(item[7]), float(item[8]), float(item[9]), item[10], item[11]
+			) for item in weighings]
 
 			# load equipements for this glider
-			weighings = conn.execute("SELECT * from INVENTORY WHERE registration='{}'".format(values[1])).fetchall()
-			aGlider.instruments = [ Instrument(*item[1:8]) for item in weighings]
+			equipments = conn.execute("SELECT * from INVENTORY WHERE registration='{}'".format(values[1])).fetchall()
+			aGlider.instruments = [ Instrument(item[0], *item[2:9]) for item in equipments]
 
 			return aGlider
 		
@@ -105,42 +336,95 @@ class Glider:
 		return rows
 	
 	def last_weighing(self) -> Weighing:
-		return max(self.weighings, key=lambda x: x[0])[1]
+		return max(self.weighings, key=lambda x: x.date) if len(self.weighings)>0 else None
 	
 	def empty_weight(self) -> float:
 		last_weighing = self.last_weighing()
-		return last_weighing.p1 + last_weighing.p2
+		if last_weighing is None:
+			raise ValueError('No weighing for this glider')
+		
+		# p1 + p2 should be equals to mve
+		return last_weighing.mve()
+		# return last_weighing.p1 + last_weighing.p2
+	
+	def cv_max(self) -> float:
+		'''
+		Retourne la charge variable maximum en kg, défini comme la différence entre la masse maximale de l'appareil et la masse à vide équipée.
+		CV max = MMA - MVE
+		'''
+		last_weighing = self.last_weighing()
+		if last_weighing is None:
+			raise ValueError('No weighing for this glider')
+		
+		return round(self.limits.mmwp - last_weighing.mve(), 2)
+
+	def cu_max(self) -> float:
+		'''
+		Retourne la charge utile maximum en kg, défini comme la différence entre la masse maximale des elements non portant 
+		et la masse à vide des élement non portant. CU max = MMENP - MVENP
+		'''
+		last_weighing = self.last_weighing()
+		if last_weighing is None:
+			raise ValueError('No weighing for this glider')
+		
+		return round(self.limits.mmenp - last_weighing.mvenp(), 2)
+	
+	def pilot_av_mini(self) -> float:
+		mass_mini_pilot = None
+		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
+			# Masse à vide * (X0 - limite centrage arrière) / Bras de levier pilote + limite centrage arrière
+			mass_mini_pilot = self.empty_weight() * (self.empty_arm() - self.limits.rear_centering) / (self.arms.arm_front_pilot + self.limits.rear_centering)
+		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
+			# Masse à vide * (X0 - limite centrage arrière ) / limite centrage arrière - Bras de levier pilote
+			mass_mini_pilot = self.empty_weight() * (self.limits.rear_centering - self.empty_arm()) / (self.limits.rear_centering - self.arms.arm_front_pilot)
+		return round(mass_mini_pilot,1)
+
+	def pilot_av_maxi(self) -> float:
+		mass_maxi_pilot = None
+		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
+			# Masse à vide * (X0 - limite centrage avant) / Bras de levier pilote + limite centrage avant
+			mass_maxi_pilot = self.empty_weight() * (self.empty_arm() - self.limits.front_centering) / (self.arms.arm_front_pilot + self.limits.front_centering)
+		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
+			# Masse à vide * (X0 - limite centrage avant ) / limite centrage avant - Bras de levier pilote
+			mass_maxi_pilot = self.empty_weight() * (self.limits.front_centering - self.empty_arm()) / (self.limits.front_centering - self.arms.arm_front_pilot)
+		return round(mass_maxi_pilot,1)
 
 	def empty_arm(self) -> float:
 		# X0 = D1 +d
 		# D1 = M2 * D / (M1 + M2)
 		last_weighing = self.last_weighing()
+		if last_weighing is None:
+			raise ValueError('No weighing for this glider')
+
 		D1 = last_weighing.D * last_weighing.p2 / (last_weighing.p1 + last_weighing.p2)
 		x0 = D1 + last_weighing.A
-		return x0
+		return round(x0,2)
 	
 	def weight_and_balance_calculator(self, front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, wing_water_ballast_weight):
 		'''
 		return the total weight of the glider (kg) and the balance (mm)
 		'''
-
-		# TODO: Calcul valide si  et seulement si la référence est le bord d'attage de l'aile
-		glider_weight = self.empty_weight() + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight + wing_water_ballast_weight
-		moment_arm = (
-				self.empty_weight() * self.empty_arm() +
-				front_pilot_weight * self.arms.arm_front_pilot * -1 +
-				rear_pilot_weight * self.arms.arm_rear_pilot * -1 +
-				front_ballast_weight * self.arms.arm_front_ballast *-1 +
-				rear_ballast_weight * self.arms.arm_rear_watterballast_or_ballast +
-				wing_water_ballast_weight * self.arms.arm_waterballast
-			)
-		return glider_weight, moment_arm / glider_weight
-
+		# TODO: Calculation is valid if the pilot(s) is/are forward of datum 
+		if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
+			glider_weight = self.empty_weight() + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight + wing_water_ballast_weight
+			moment_arm = (
+					self.empty_weight() * self.empty_arm() +
+					front_pilot_weight * self.arms.arm_front_pilot * -1 +
+					rear_pilot_weight * self.arms.arm_rear_pilot * -1 +
+					front_ballast_weight * self.arms.arm_front_ballast *-1 +
+					rear_ballast_weight * self.arms.arm_rear_watterballast_or_ballast +
+					wing_water_ballast_weight * self.arms.arm_waterballast
+				)
+			return glider_weight, moment_arm / glider_weight
+		else:
+			raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
 
 if __name__ == '__main__':
-	gliders = Glider.from_database(DB_NAME)
-	print(gliders)
+	gliders = Glider.from_database(get_database_name())
+	glider = gliders['F-AAAA']
+	glider.delete()
+	logging.debug(gliders)
 	
-	# conn = duckdb.connect(DB_NAME)
+	# conn = duckdb.connect(get_database_name())
 	# conn.sql("select g.*, p.* from GLIDER g JOIN WB_LIMIT p USING (registration) ").show()
 
