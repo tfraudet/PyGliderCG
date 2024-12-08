@@ -1,6 +1,7 @@
 import streamlit as st
 import logging
 
+__version__ = "0.9.0"
 DEFAULT_DB_NAME = './data/gliders.db'
 
 def is_debug_mode() -> bool:

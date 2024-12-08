@@ -171,7 +171,9 @@ spike/
 .DS_Store
 data/*.db
 data/pp2_recovery/*.xls
+data/exported_db
+data/imported_db
 **/.venv-311
 **/.venv-312
 pages/weighing_ui_old.py
-
+**/logo

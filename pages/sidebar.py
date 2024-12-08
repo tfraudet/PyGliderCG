@@ -1,6 +1,6 @@
 import streamlit as st
 from users import Users
-from config import is_debug_mode
+from config import is_debug_mode, __version__
 
 def display_main_menu(users : Users):
 	if st.session_state.authenticated:
@@ -24,6 +24,9 @@ def sidebar_menu(users : Users):
 	# Authentication
 	if 'authenticated' not in st.session_state:
 		st.session_state.authenticated = False
+
+	# logo
+	st.logo(image='img/acph-logo.png',size='large', icon_image='img/acph-logo-short.png')
 
 	if not st.session_state.authenticated:
 		with st.sidebar:
@@ -56,3 +59,8 @@ def sidebar_menu(users : Users):
 		with st.sidebar:
 			st.write('---')
 			st.write(st.session_state)
+
+	# sidebar footer  color #D16D6A
+	st.sidebar.divider()
+	material_favorote_html = '<span role="img" aria-label="favorite icon" style="display: inline-block; font-family: &quot;Material Symbols Rounded&quot;; font-weight: 400; user-select: none; vertical-align: bottom; white-space: nowrap; overflow-wrap: normal;">favorite</span>'
+	st.sidebar.html('Made with <span style="color: green">{}</span> by <a href="https://aeroclub-issoire.fr/">ACPH</a> - version {}'.format(material_favorote_html, __version__))

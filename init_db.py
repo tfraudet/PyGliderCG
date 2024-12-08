@@ -28,12 +28,16 @@ def init_users_table(dbname):
 		logging.info("No users in table USERS, insert a dummy user.")
 
 		# Insert data in GLIDER table
-		conn.execute('INSERT INTO USERS VALUES (?, ?, ?, ?)',[
-			'admin',
-			'admin@gmail.com',
-			bcrypt.hashpw('admin'.encode('utf-8'), bcrypt.gensalt()),
-			'administrator'
-		])
+		try:
+			conn.execute('INSERT INTO USERS VALUES (?, ?, ?, ?)',[
+				'admin',
+				'admin@gmail.com',
+				bcrypt.hashpw('admin'.encode('utf-8'), bcrypt.gensalt()),
+				'administrator'
+			])
+		except duckdb.duckdb.ConstraintException as e:
+			# see https://duckdb.org/docs/sql/indexes for why this exception is raised
+			logger.error(e)
 
 	conn.close()
 	logger.debug('END init_users_table()')

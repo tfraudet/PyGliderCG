@@ -1,15 +1,74 @@
+import time
 import streamlit as st
 import pandas as pd
 import logging
 
+from config import get_database_name
 from pages.sidebar import sidebar_menu
 from users import UsersDuckDB, User, fetch_users
 
 logger = logging.getLogger(__name__)
 
+import duckdb
+import zipfile
+import os
+
+def export_database(exported_directory='data/exported_db'):
+	@st.dialog('Exporter la base de données')
+	def download_file(zip_filename):
+		with open(zip_filename, 'rb') as f:
+			st.write('Base de données zippée avec succès')
+			file_size = round(os.path.getsize(zip_filename) / 1024, 2)
+			st.write(f'Taille du fichier à télécharger: {file_size} KB')
+
+			if st.download_button('Télécharger', f, file_name=zip_filename):
+				st.success('La base de données a été téléchargée avec succès', icon=':material/check_circle:')
+	
+	# Connect to the DuckDB database
+	con = duckdb.connect(get_database_name())
+	
+	# Export the database to a directory
+	con.execute(f"EXPORT DATABASE '{exported_directory}' (FORMAT PARQUET);")
+	con.close()
+	
+	# Create a zip file of the exported directory
+	zip_filename = 'exported_db.zip'
+	with zipfile.ZipFile(zip_filename, 'w') as zipf:
+		for root, dirs, files in os.walk(exported_directory):
+			for file in files:
+				zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), exported_directory))
+	download_file(zip_filename)
+
+def import_database(imported_directory='data/imported_db'):
+	@st.dialog('Importer la base de données')
+	def import_file(imported_directory):
+		uploaded_file = st.file_uploader('Sélectionner un fichier zip', type='zip')
+		if uploaded_file is not None:
+			# unzip the file uploaded_file to the directory 'imported_db'
+			with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+				zip_ref.extractall(imported_directory)
+
+			# drop the old database and import the new one from the directory 'imported_db'
+			con = duckdb.connect(get_database_name())
+			con.execute(f"DROP TABLE WEIGHING;")
+			con.execute(f"DROP TABLE WB_LIMIT;")
+			con.execute(f"DROP TABLE INVENTORY;")
+			con.execute(f"DROP TABLE USERS;")
+			con.execute(f"DROP TABLE GLIDER;")
+			con.execute(f"DROP SEQUENCE inventory_id_seq;")
+			con.execute(f"DROP SEQUENCE auto_increment;")
+			con.execute(f"IMPORT DATABASE '{imported_directory}';")
+			con.close()
+			st.success('Base de données importée avec succès', icon=':material/check_circle:')
+			st.cache_data.clear()
+			with st.spinner('Vous allez être déconnecté dans 5 secondes...'):
+				time.sleep(5)
+			st.rerun()
+
+	import_file(imported_directory)
+
 
 logger.debug('START users_ui.py')
-
 st.set_page_config(
 	page_title='Weight & Balance Calculator',
 	page_icon='✈️',
@@ -20,7 +79,7 @@ st.set_page_config(
 if ('authenticated' not in st.session_state) or (not st.session_state.authenticated):
 	st.switch_page('streamlit_app.py')
 else:
-	st.header('Liste des utilisateurs')
+	st.header(':material/account_circle: Liste des utilisateurs')
 	users = fetch_users()
 	sidebar_menu(users)
 
@@ -111,5 +170,15 @@ else:
 			st.session_state.pop('FormSubmitter:users-form-Enregistrer')
 			st.session_state.pop('users_edit')
 
+	# Other admini function like import/export of the database
+	st.divider()
+	st.subheader(':material/settings: Administration')
+
+	if st.button(":material/cloud_download: Exporter la base de données"):
+		export_database()
+	if st.button(":material/cloud_upload: Importer la base de données"):
+		import_database()
+
 # st.write(st.session_state)
 logger.debug('END users_ui.py')
+ 
