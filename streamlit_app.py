@@ -18,6 +18,10 @@ from pages.sidebar import sidebar_menu, is_debug_mode
 from weighing_sheet import display_detail_weighing
 from streamlit_theme import st_theme
 from shapely.geometry import Point, Polygon
+from dotenv import load_dotenv
+
+# laod environement variabe in .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -47,7 +51,7 @@ def is_light_mode():
 	theme = st_theme()
 	return theme is not None and theme['backgroundColor'] == '#ffffff'
 
-def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, balance_empty_wb = None):
+def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, balance_empty_wb = None, weight_none_lift = None, balance_percent = None, balance_percent_wb_empty= None):
 	# Plot
 	df_limits = current_glider.limits_to_pandas()
 		
@@ -99,19 +103,20 @@ def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, 
 		)
 
 	# Add a hline for empty weight
-	fig.add_hline(y=current_glider.empty_weight(), 
-			annotation_text='Masse à vide: {} kg'.format(current_glider.empty_weight()), annotation_font=dict(size=14),
-			line_width=1, line_dash='dash', line_color=active_theme['emptyWeightLine'])
-	# fig.add_trace(
-	# 	go.Scatter(
-	# 		x=df_limits['centering'],
-	# 		y=[ask21.empty_weight()] * len(df_limits['centering']) ,
-	# 		mode='lines',  
-	# 		line=dict(color="coral", width=1, dash='dash'
-	# 		),
-	# 		name="Masse à vide (kg)"  
-	# 	)
-	# )
+	# fig.add_hline(y=current_glider.empty_weight(), 
+	# 		annotation_text='Masse à vide: {} kg'.format(current_glider.empty_weight()), annotation_font=dict(size=14),
+	# 		line_width=1, line_dash='dash', line_color=active_theme['emptyWeightLine'])
+
+	# Add maximum and compute weight of non-lifting elements + rear water ballast + gueuses
+	fig.add_hline(y=current_glider.limits.mmenp, 
+			annotation_text='Masse maximum élements non portants: {} kg'.format(current_glider.limits.mmenp), annotation_font=dict(size=14),
+			line_width=1, line_color=active_theme['emptyWeightLine'])
+	fig.add_trace(
+		go.Scatter(x=[balance], y=[weight_none_lift], mode='markers', name='Masse ENP + occupants + gueuses et/ou water ballast', marker_symbol = 'square',marker=dict(color=active_theme['emptyWeightLine'], size=10),
+			hovertemplate='<extra></extra>Masse éléments non portants + occupants + gueuses et/ou water ballast <b>%{y:.0f} kg</b>', hoverinfo='x+y', 
+		)
+	)
+	fig.add_annotation(x=balance+4, y=min_yaxis+14, text="{}%".format(round(balance_percent,1)), showarrow=False, font=dict(size=12, color=active_theme['cgCalcLine']) )
 
 	# Add the compute weight and balance on the plot
 	fig.add_trace(
@@ -139,6 +144,12 @@ def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, 
 		fig.add_trace(
 			go.Scatter(x=[balance_empty_wb, balance_empty_wb], y=[min_yaxis, weight_empty_wb], mode='lines', line=dict(color=active_theme['cgCalcLineWB'], width=1, dash='dot'),showlegend=False, hoverinfo='skip')
 		)
+		fig.add_annotation(x=balance_empty_wb+4, y=min_yaxis+14, text="{}%".format(round(balance_percent_wb_empty,1)), showarrow=False, font=dict(size=12, color=active_theme['cgCalcLineWB']) )
+		fig.add_trace(
+			go.Scatter(x=[balance_empty_wb], y=[weight_none_lift], mode='markers', name='Masse ENP + occupants + gueuses et/ou water ballast', marker_symbol = 'square',marker=dict(color=active_theme['emptyWeightLine'], size=10),
+				hovertemplate='<extra></extra>Masse éléments non portants + occupants + gueuses et/ou water ballast <b>%{y:.0f} kg</b>', hoverinfo='x+y', showlegend=False
+		)
+	)
 
 	fig.update_xaxes(showspikes=True, spikethickness=2)
 	fig.update_yaxes(showspikes=True, spikethickness=2)
@@ -168,25 +179,41 @@ def weight_and_balance_calculator(current_glider):
 			format='%0.1f', step=0.5, placeholder='Type a number...', disabled = True if (current_glider.single_seat) else False, key='rear_pilot_weight')
 		rear_ballast_weight = st.number_input( 'Masse Gueuse ou water ballast arrière (kg)', min_value=0.0, format='%0.1f', step=0.5, key = 'rear_ballast_weight', placeholder='Type a number...')
 
-	if st.button('Calculer',type='primary', icon=':material/calculate:'):
-		st.write('Limite centrage avant: :blue[{}] mm, centrage arrière: :blue[{}] mm'.format(current_glider.limits.front_centering, current_glider.limits.rear_centering))
-		
+	if st.button('Calculer',type='primary', icon=':material/calculate:'):		
 		# calcul du centrage : ∑ des moments / ∑ des masses
 		total_weight, balance = current_glider.weight_and_balance_calculator(front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, wing_water_ballast_weight)
-		st.write('Centrage calculé: masse total :green[{}] kg, centrage :green[{}] mm'.format(round(total_weight,1), round(balance,2)))
+
+		# centering in %
+		balance_percent = (balance - current_glider.limits.front_centering) / (current_glider.limits.rear_centering - current_glider.limits.front_centering) * 100
+
+		st.write('Centrage calculé :green[{}] mm (vs limite centrage avant: :blue[{}] mm, centrage arrière: :blue[{}] mm)'.format(
+			round(balance,0), current_glider.limits.front_centering, current_glider.limits.rear_centering
+		))
+		st.write('Masse totale calculée :green[{}] kg (vs masse maximum: :blue[{}] kg)'.format(round(total_weight,1), current_glider.limits.mmwp))
 
 		# calcul du centrage water-ballast à vide: ∑ des moments / ∑ des masses
 		if (wing_water_ballast_weight>0):
 			total_weight_WB_empty, balance_WB_empty = current_glider.weight_and_balance_calculator(front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, 0)
-			st.write('Centrage water-ballast vide: masse :orange[{}] kg, centrage :orange[{}] mm'.format(round(total_weight_WB_empty,1), round(balance_WB_empty,2)))
+			st.write('Centrage calculé (water ballast vide) :orange[{}] mm (vs limite centrage avant: :blue[{}] mm, centrage arrière: :blue[{}] mm)'.format(
+				round(balance_WB_empty,0), current_glider.limits.front_centering, current_glider.limits.rear_centering
+			))
+			st.write('Masse totale calculée  (water ballast vide) :orange[{}] kg (vs masse maximum: :blue[{}] kg)'.format(round(total_weight_WB_empty,1), current_glider.limits.mmwp))
+			balance_percent_wb_empty = (balance_WB_empty - current_glider.limits.front_centering) / (current_glider.limits.rear_centering - current_glider.limits.front_centering) * 100
 		else:
-			total_weight_WB_empty, balance_WB_empty = None, None
+			total_weight_WB_empty, balance_WB_empty, balance_percent_wb_empty = None, None, None
+
+		# check if the maximum weight of non-lift elements if not exceeded
+		weight_none_lift = current_glider.last_weighing().mvenp() + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight
+		if (weight_none_lift > current_glider.limits.mmenp):
+			st.error('La masse maximum des éléments non portants  + occupants + gueuese et /ou waterballast arrière dépasse la Masse maximum des élements non portants', icon=':material/error:')
+		else:
+			st.write('Masse éléments non portants + occupants + gueuse & water ballast arrière: :green[{}] kg (vs Masse maximum ENP :blue[{}] kg)'.format(weight_none_lift, current_glider.limits.mmenp))
 
 		polygon = Polygon(current_glider.limits_to_pandas()[['centering', 'mass']].values)
 		if not polygon.contains(Point(balance, total_weight)):
 			st.error('Centrage hors secteur.', icon=':material/error:')
 
-		display_plot(current_glider, total_weight, balance, total_weight_WB_empty, balance_WB_empty)
+		display_plot(current_glider, total_weight, balance, total_weight_WB_empty, balance_WB_empty, weight_none_lift, balance_percent, balance_percent_wb_empty)
 
 def data_sheet(glider):
 	st.subheader('Référence de pesée')

@@ -10,7 +10,7 @@ import streamlit as st
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 # from streamlit_cookies_controller import CookieController
-from config import get_database_name
+from config import get_cookie_key, get_database_name
 
 COOKIE_NAME = '_pyglidercg'
 COOKIE_EXPIRY_TIME = 1
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 @st.cache_data
 def fetch_users(show_spinner = 'Loading users'):
-	return UsersDuckDB(cookie_secret=st.secrets['COOKIE_KEY'], dbname=get_database_name())
+	return UsersDuckDB(cookie_secret=get_cookie_key(), dbname=get_database_name())
 
 @dataclass
 class User:

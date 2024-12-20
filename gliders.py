@@ -28,19 +28,19 @@ class DatumPilotPosition(Enum):
 DATUMS = {
 	DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM: {
 			'label': 'Bord d\'attaque de l\'aile - 2 point en arrière de la référence',
-			'image': 'img/datum-1.png'
+			'image': 'img/datum-hd-1.png'
 		},
 	DatumWeighingPoints.DATUM_WING_1POINT_AFT_OF_DATUM: {
 			'label': 'Bord d\'attaque de l\'aile - 1 point en avant de la référence',
-			'image': 'img/datum-2.png',
+			'image': 'img/datum-hd-2.png',
 	   },
 	DatumWeighingPoints.DATUM_WING_WHEEL_FORWARD_OF_DATUM: {
 			'label' : 'Bord d\'attaque de l\'aile - Train principal en avant de la référence',
-			'image': 'img/datum-4.png',
+			'image': 'img/datum-hd-4.png',
 		},
 	DatumWeighingPoints.DATUM_FORWARD_GLIDER: {
 			'label' : 'Devant le planeur',
-			'image': 'img/datum-3.png',
+			'image': 'img/datum-hd-3.png',
 		}
 }
 

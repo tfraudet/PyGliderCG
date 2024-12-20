@@ -42,6 +42,16 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
+## How to run it locally using docker (build image)
+
+```bash
+# First build the image from dockerfile
+docker build --tag tfraudet/pyglidercg --file './Dockerfile' .
+
+# Then run the image inside a container, mapping the host’s port 8050 to the container’s port 8050
+docker run -d -p 8501:8501 --name glider-cg -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
+```
+
 ## Utility to import PP2 application data
 
 PP2 or 'Pesée des Planeurs v2" is and old WinDev application develop by the [GNAV](https://www.g-nav.org/) to calculate weights and balance for gliders. You can import database from this application using the following steps:

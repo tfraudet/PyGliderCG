@@ -9,17 +9,20 @@ RUN apt-get update && apt-get install -y \
 	git \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Copy:clone app code
-# RUN git clone https://github.com/streamlit/streamlit-example.git .
 COPY . .
+
+# make a data directory for the app
+RUN mkdir -p /app/data
 
 # install python dependencies
 RUN pip3 install -r requirements.txt
 
 EXPOSE 8501
 
+ENV DB_NAME = './data/gliders.db'
+ENV APP_DEBUG_MODE = false
+ENV COOKIE_KEY = 'glider-cg-acph'
+
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-# ENTRYPOINT ["streamlit", "run", "test.py", "--server.port=8501", "--server.address=0.0.0.0"]
-# ENTRYPOINT ["streamlit", "run", "test.py"]
 ENTRYPOINT ["streamlit", "run", "streamlit_app.py"]

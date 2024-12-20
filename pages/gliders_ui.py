@@ -130,9 +130,11 @@ def edit_glider_datasheet(glider : Glider, mode = ModeEdition.EDIT):
 			logger.info('Force clear cache')
 			st.cache_data.clear()
 
-			# logger.info('Force rerun ')
-			# st.rerun(scope='app')
-
+			if mode == ModeEdition.NEW:
+				logger.info('Force rerun and set selected_registration to {} in the session'.format(glider.registration))
+				st.session_state.selected_registration = glider.registration
+				st.rerun(scope='app')
+			
 def edit_glider_inventory(glider : Glider, mode = ModeEdition.EDIT):	
 	form_name = 'edit-inventory' if mode == ModeEdition.EDIT else 'add-inventory'
 	with st.form(form_name, border=False):

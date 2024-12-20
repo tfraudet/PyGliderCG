@@ -1,4 +1,5 @@
 **/__pycache__
+**/*.pyc
 **/.devcontainer
 **/.github
 
@@ -7,24 +8,24 @@
 **/.venv-312
 **/.vscode
 
-**/data/pp2_recovery
-**/data/*.db
+data
 **/doc
 **/HFDA64Portable
 
 **/PP2
 **/spike
 
-**/.dockerignore
-**/.env
-**/.git
-**/.gitignore
-**/.project
-**/.settings
-**/.toolstarget
-**/.vs
-LICENSE
+**.dockerignore
+**.env
+**.git
+**.gitignore
+**.project
+**.settings
+**.toolstarget
+**.vs
+Dockerfile
 *.md
-**/.DS_Store
+**.DS_Store
+.streamlit/secrets.toml
 
 
