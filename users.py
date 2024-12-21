@@ -10,15 +10,18 @@ import streamlit as st
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 # from streamlit_cookies_controller import CookieController
+from audit_log import AuditLogDuckDB
 from config import get_cookie_key, get_database_name
 
 COOKIE_NAME = '_pyglidercg'
 COOKIE_EXPIRY_TIME = 1
 
 logger = logging.getLogger(__name__)
+audit = AuditLogDuckDB()
 
 @st.cache_data
 def fetch_users(show_spinner = 'Loading users'):
+	logger.info('Loading users from database...')
 	return UsersDuckDB(cookie_secret=get_cookie_key(), dbname=get_database_name())
 
 @dataclass
@@ -117,6 +120,7 @@ class UsersDuckDB(Users):
 			user.role
 		])
 		conn.close()
+		audit.log(st.session_state.username, 'Create user {}'.format(user.username))
 	
 	def update(self, user : User):
 		logger.debug('User to update in DB is {}'.format(user))
@@ -141,6 +145,7 @@ class UsersDuckDB(Users):
 			user.role
 		])
 		conn.close()
+		audit.log(st.session_state.username, 'User {} updated'.format(user.username))
 
 	
 	def delete(self, username: str):
@@ -148,7 +153,8 @@ class UsersDuckDB(Users):
 		conn = duckdb.connect(self.dbname)
 		conn.execute('DELETE FROM USERS WHERE username=\'{}\''.format(username))
 		conn.close()
-	
+		audit.log(st.session_state.username, 'User {} deleted'.format(username))
+
 
 
 

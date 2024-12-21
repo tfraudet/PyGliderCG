@@ -114,7 +114,7 @@ def edit_glider_datasheet(glider : Glider, mode = ModeEdition.EDIT):
 			if not is_valid_registration(glider.registration):
 				st.error('Le numero de registration n\'est pas valide, il doit être de la forme x-xxxx, avec x représentant un caractère alphanumérique, majuscule uniquement.', icon=':material/error:')
 			else:
-				logger.info('Create glider {} datasheet on database'.format(glider.registration))
+				logger.debug('Create glider {} datasheet on database'.format(glider.registration))
 				glider.save()
 				cache_to_refresh = True
 				st.success('Planeur {}, modèle {} de la marque {} créé avec succès '.format(glider.registration, glider.model, glider.brand), icon=':material/check_circle:')
@@ -123,15 +123,16 @@ def edit_glider_datasheet(glider : Glider, mode = ModeEdition.EDIT):
 			cache_to_refresh = True
 
 			st.success('Planeur {}, modèle {}, marque {} mis à jour avec succès '.format(glider.registration, glider.model, glider.brand), icon=':material/check_circle:')
-			logger.info('Update glider {} datasheet on database'.format(glider.registration))
+			logger.debug('Update glider {} datasheet on database'.format(glider.registration))
 
 		# refresh cache and rerun if the glider has been updated
 		if cache_to_refresh:
-			logger.info('Force clear cache')
-			st.cache_data.clear()
+			logger.debug('Force glider clear cache')
+			# st.cache_data.clear()
+			fetch_gliders.clear()
 
 			if mode == ModeEdition.NEW:
-				logger.info('Force rerun and set selected_registration to {} in the session'.format(glider.registration))
+				logger.debug('Force rerun and set selected_registration to {} in the session'.format(glider.registration))
 				st.session_state.selected_registration = glider.registration
 				st.rerun(scope='app')
 			
@@ -179,7 +180,7 @@ def edit_glider_inventory(glider : Glider, mode = ModeEdition.EDIT):
 				seat = row['seat'] if 'seat' in row.keys() else ''
 				equipment = Instrument(None, on_board, instrument, brand, type, number, date, seat)
 				glider.instruments.append(equipment)
-			logger.info('equipement(s) added, the inventory is now {}'.format(glider.instruments))
+			logger.debug('equipement(s) added, the inventory is now {}'.format(glider.instruments))
 			glider.save_instruments()
 			cache_to_refresh = True
 
@@ -197,7 +198,7 @@ def edit_glider_inventory(glider : Glider, mode = ModeEdition.EDIT):
 					instrument_to_update.number = row_to_update['number']
 					instrument_to_update.date = row_to_update['date']
 					instrument_to_update.seat = row_to_update['seat']
-			logger.info('equipement(s) modified in the inventory {}'.format(glider.instruments))
+			logger.debug('equipement(s) modified in the inventory {}'.format(glider.instruments))
 			glider.save_instruments()
 			cache_to_refresh = True
 
@@ -208,16 +209,17 @@ def edit_glider_inventory(glider : Glider, mode = ModeEdition.EDIT):
 			for instrument in instruments_to_delete:
 				instrument.delete()
 				glider.instruments.remove(instrument)
-			logger.info('equipement(s) deleted, the inventory is now {}'.format(glider.instruments))
+			logger.debug('equipement(s) deleted, the inventory is now {}'.format(glider.instruments))
 			cache_to_refresh = True
 
-		logger.info('update glider {} inventory on database'.format(glider.registration))
+		logger.debug('update glider {} inventory on database'.format(glider.registration))
 		st.success('Inventaire du planeur {} mis à jour avec succès '.format(glider.registration), icon=':material/check_circle:')
 
 		# refresh the cache if the list of equipements have been updated
 		if cache_to_refresh:
-			logger.info('Force clear cache')
-			st.cache_data.clear()
+			logger.debug('Force glider clear cache')
+			# st.cache_data.clear()
+			fetch_gliders.clear()
 
 def edit_glider_weight_and_balance(glider : Glider):
 	st.write('Valeur constructeur masse/centrage')
@@ -261,7 +263,7 @@ def edit_glider_weight_and_balance(glider : Glider):
 				row_to_update = edited_w_and_b.iloc[key]
 				glider.weight_and_balances[key] = (row_to_update['balance'], row_to_update['weight'])
 
-			logger.info('Points(s) modified in weight and center of gravity  {}'.format(glider.weight_and_balances))
+			logger.debug('Points(s) modified in weight and center of gravity  {}'.format(glider.weight_and_balances))
 			glider.save_weight_and_balance()
 			cache_to_refresh = True
 
@@ -275,13 +277,14 @@ def edit_glider_weight_and_balance(glider : Glider):
 			glider.save_weight_and_balance()
 			cache_to_refresh = True
 
-		logger.info('update glider {} weight and center of gravity points on database'.format(glider.registration))
+		logger.debug('update glider {} weight and center of gravity points on database'.format(glider.registration))
 		st.success('Points masse & centrage du planeur {} mis à jour avec succès '.format(glider.registration), icon=':material/check_circle:')
 
 		# refresh cache and rerun if the list of users have been updated
 		if cache_to_refresh:
-			logger.info('Force clear cache')
-			st.cache_data.clear()
+			logger.debug('Force glider clear cache')
+			# st.cache_data.clear()
+			fetch_gliders.clear()
 
 def edit_glider(glider_registration):
 	with glider_placeholder:
@@ -305,7 +308,8 @@ def delete_glider(glider_registration):
 		glider.delete()
 		
 		st.success('Planeur {} effacé avec succès !'.format(glider_registration), icon=':material/check_circle:')
-		st.cache_data.clear()
+		# st.cache_data.clear()
+		fetch_gliders.clear()
 
 def new_glider():
 	with glider_placeholder:

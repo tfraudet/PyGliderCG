@@ -134,7 +134,7 @@ else:
 			# refresh cache and rerun if the list of weighing have been updated
 			if cache_to_refresh:
 				logger.debug('Force clear cache')
-				st.cache_data.clear()
+				fetch_gliders.clear()
 			else:
 				st.warning('Aucun enregistrement a sauvegarder/effacer, vérifiez qu\'un des champs dans le tableau ne soit pas en erreur', icon=':material/warning:')
 

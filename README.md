@@ -49,7 +49,8 @@ streamlit run streamlit_app.py
 docker build --tag tfraudet/pyglidercg --file './Dockerfile' .
 
 # Then run the image inside a container, mapping the host’s port 8050 to the container’s port 8050
-docker run -d -p 8501:8501 --name glider-cg -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
+docker run -d -p 8501:8501 --name glider-cg  -e APP_DEBUG_MODE='false' -e DB_NAME='./data/gliders.db' -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
+
 ```
 
 ## Utility to import PP2 application data

@@ -7,12 +7,15 @@ import duckdb
 import pandas as pd
 import streamlit as st
 
+from audit_log import AuditLogDuckDB
 from config import get_database_name
 
 logger = logging.getLogger(__name__)
+audit = AuditLogDuckDB()
 
 @st.cache_data
-def fetch_gliders(show_spinner = 'Loading gliders'):	
+def fetch_gliders(show_spinner = 'Loading gliders'):
+	logger.info('Loading gliders from database...')
 	return Glider.from_database(get_database_name())
 
 class DatumWeighingPoints(Enum):
@@ -90,7 +93,8 @@ class Weighing:
 		conn.execute('DELETE FROM WEIGHING WHERE id={}'.format(self.id))
 		conn.close()
 		logger.debug('{} deleted from the database'.format(self))
-	
+		audit.log(st.session_state.username, 'Weighing #{} from {} deleted'.format(self.id, self.date))
+
 	def mve(self) -> float:
 		'''
 		Retourne la masse a vide équipée (MVE) en Kg
@@ -119,6 +123,7 @@ class Instrument:
 		conn.execute('DELETE FROM INVENTORY WHERE id={}'.format(self.id))
 		conn.close()
 		logger.debug('{} deleted from the database'.format(self))
+		audit.log(st.session_state.username, 'Instruments {} deleted'.format(self.instrument))
 
 @dataclass
 class Glider:
@@ -197,12 +202,9 @@ class Glider:
 			self.arms.arm_gas_tank,
 			self.arms.arm_instruments_panel
 		])
-
-		# save the instrument list
-
 		conn.close()
 		logger.debug('{} datasheet saved in database'.format(self.registration))
-
+		audit.log(st.session_state.username, 'Datasheet for glider {} updated'.format(self.registration))
 
 	def save_weight_and_balance(self):
 		conn = duckdb.connect(get_database_name())
@@ -219,9 +221,10 @@ class Glider:
 					point[1]
 				])
 
-			logger.debug('{} deleted from the database'.format(self.registration))
+			logger.debug('Weight & balance for glider {} updated'.format(self.registration))
 		finally:
 			conn.close()	
+		audit.log(st.session_state.username, 'Weight & balance {} for glider {} updated'.format(self.weight_and_balances, self.registration))
 
 	def save_instruments(self):
 		conn = duckdb.connect(get_database_name())
@@ -248,6 +251,7 @@ class Glider:
 
 		conn.close()
 		logger.debug('{} instruments saved in database'.format(self.registration))
+		audit.log(st.session_state.username, 'Instruments {} updated for glider {} '.format(self.instruments, self.registration))
 
 	def save_weighings(self):
 		conn = duckdb.connect(get_database_name())
@@ -276,7 +280,8 @@ class Glider:
 			logger.debug('{} instrument saved in database'.format(weighing))
 
 		conn.close()
-		logger.debug('{} instruments saved in database'.format(self.registration))
+		logger.debug('{} weighings saved in database'.format(self.registration))
+		audit.log(st.session_state.username, 'Weighings {} updated for glider {} '.format(self.weighings, self.registration))
 
 	def delete(self):
 		conn = duckdb.connect(get_database_name())
@@ -298,7 +303,9 @@ class Glider:
 			# conn.commit()
 			logger.debug('{} deleted from the database'.format(self.registration))
 		finally:
-			conn.close()	
+			conn.close()
+		audit.log(st.session_state.username, 'Glider {} deleted'.format(self.registration))
+
 
 	@classmethod
 	def from_database(cls, database_name: str) -> dict:
@@ -419,12 +426,4 @@ class Glider:
 		else:
 			raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
 
-if __name__ == '__main__':
-	gliders = Glider.from_database(get_database_name())
-	glider = gliders['F-AAAA']
-	glider.delete()
-	logging.debug(gliders)
-	
-	# conn = duckdb.connect(get_database_name())
-	# conn.sql("select g.*, p.* from GLIDER g JOIN WB_LIMIT p USING (registration) ").show()
 

@@ -16,16 +16,33 @@ from users import fetch_users
 from init_db import initialize_database
 from pages.sidebar import sidebar_menu, is_debug_mode
 from weighing_sheet import display_detail_weighing
+from audit_log import AuditLogDuckDB
 from streamlit_theme import st_theme
 from shapely.geometry import Point, Polygon
 from dotenv import load_dotenv
 
-# laod environement variabe in .env file
+# load environment variables from .env file
 load_dotenv()
 
+# Initialize the logger
+# Based on streamlit logging level defined in config.toml, define the logging level for the python logger
 logger = logging.getLogger(__name__)
+if st.get_option("logger.level").lower() == 'debug':
+	level_logging=logging.DEBUG
+elif st.get_option("logger.level").lower() == 'info':
+	level_logging=logging.INFO
+elif st.get_option("logger.level").lower() == 'warning':
+	level_logging=logging.WARNING
+elif st.get_option("logger.level").lower() == 'error':
+	level_logging=logging.ERROR
+elif st.get_option("logger.level").lower() == 'critical':
+	level_logging=logging.CRITICAL
+else:
+	level_logging=logging.INFO,
+
 logging.basicConfig(
-	level=logging.INFO,
+	level=level_logging,
+	# level=logging.DEBUG,
 	# format='%(asctime)s - %(levelname)s - %(message)s',
 	format='%(asctime)s %(levelname) -7s %(name)s: %(message)s',
 	handlers=[logging.StreamHandler()   ]
@@ -50,6 +67,7 @@ THEME_DARK = {
 def is_light_mode():
 	theme = st_theme()
 	return theme is not None and theme['backgroundColor'] == '#ffffff'
+	# return False
 
 def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, balance_empty_wb = None, weight_none_lift = None, balance_percent = None, balance_percent_wb_empty= None):
 	# Plot
@@ -277,6 +295,7 @@ def weighing_sheet(glider):
 	last_weighing = glider.last_weighing()
 	display_detail_weighing(last_weighing, glider)
 
+logger.debug('START streamlit_app.py')
 # set up page details
 st.set_page_config(
 	page_title='Weight & Balance Calculator',
@@ -292,6 +311,10 @@ initialize_database(get_database_name())
 # load data
 gliders =fetch_gliders()
 users = fetch_users()
+
+# Initialize the audit logger
+audit = AuditLogDuckDB().set_database_name(get_database_name())
+logger.debug('Audit log: {}'.format(audit))
 
 # gliders_options = [ x.registration for x in gliders]
 gliders_options = gliders.keys()
@@ -339,3 +362,4 @@ else:
 
 # display sidebar menu
 sidebar_menu(users)
+logger.debug('END streamlit_app.py')

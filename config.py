@@ -2,7 +2,7 @@ import streamlit as st
 import logging
 import os
 
-__version__ = "0.9.2"
+__version__ = "0.9.3"
 DEFAULT_DB_NAME = './data/gliders.db'
 DEFAULT_COOKIE_KEY = 'glider-cg-acph'
 
@@ -47,7 +47,6 @@ def get_database_name() -> str:
 
 	logging.getLogger(__name__).info(f'DB_NAME is: {dbanme} ')
 	return dbanme
-
 
 @st.cache_data()
 def get_cookie_key() -> str:

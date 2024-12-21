@@ -17,6 +17,7 @@ def display_main_menu(users : Users):
 
 			if users.is_admin(username):
 				st.sidebar.page_link("pages/users_ui.py", label="Utilisateurs", icon='👩🏻‍💼')
+				st.sidebar.page_link("pages/audit_ui.py", label="Audit Log", icon=':material/description:')
 
 def sidebar_menu(users : Users):
 	DEBUG = is_debug_mode()

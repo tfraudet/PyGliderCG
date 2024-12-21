@@ -6,6 +6,24 @@ from  config import is_debug_mode
 
 logger = logging.getLogger(__name__)
 
+def init_audit_log_table(dbname):
+	logger.debug('START init_audit_log_table()')
+	conn = duckdb.connect(dbname)
+
+	# Create table user
+	# conn.execute('DROP TABLE IF EXISTS USERS')
+	sql = '''
+			CREATE TABLE IF NOT EXISTS AUDITLOG (
+				timestamp TIMESTAMP PRIMARY KEY,
+				username VARCHAR,
+				event VARCHAR,
+			)
+	'''
+	conn.execute(sql)
+	conn.close()
+	logger.debug('END init_audit_log_table()')
+
+
 def init_users_table(dbname):
 	logger.debug('START init_users_table()')
 	conn = duckdb.connect(dbname)
@@ -156,6 +174,7 @@ def display_information(dbname):
 def initialize_database(dbname):
 	init_users_table(dbname)
 	init_gliders_tables(dbname)
+	init_audit_log_table(dbname)
 
 	# if is_debug_mode():
 	# 	display_information(dbname)

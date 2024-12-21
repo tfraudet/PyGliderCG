@@ -157,8 +157,8 @@ else:
 
 		# refresh cache and rerun if the list of users have been updated
 		if cache_to_refresh:
-			logger.debug('Force clear cache')
-			st.cache_data.clear()
+			logger.debug('Force users clear cache')
+			fetch_users.clear()
 
 			# logger.debug('Force rerun ')
 			# st.rerun(scope='app')

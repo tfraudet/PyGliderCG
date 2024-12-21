@@ -19,9 +19,9 @@ RUN pip3 install -r requirements.txt
 
 EXPOSE 8501
 
-ENV DB_NAME = './data/gliders.db'
-ENV APP_DEBUG_MODE = false
-ENV COOKIE_KEY = 'glider-cg-acph'
+ENV DB_NAME='./data/gliders.db'
+ENV APP_DEBUG_MODE='false'
+ENV COOKIE_KEY='glider-cg-acph'
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
