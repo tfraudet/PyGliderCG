@@ -2,9 +2,11 @@ import streamlit as st
 import logging
 import os
 
-__version__ = "0.9.3"
+__version__ = "0.9.4"
 DEFAULT_DB_NAME = './data/gliders.db'
 DEFAULT_COOKIE_KEY = 'glider-cg-acph'
+
+FAVICON_WEB = './img/icon/web/icon-512.png'
 
 @st.cache_data()
 def is_debug_mode() -> bool:

@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import logging
 
-from config import get_database_name
+from config import FAVICON_WEB, get_database_name
 from pages.sidebar import sidebar_menu
 from users import UsersDuckDB, User, fetch_users
 
@@ -71,7 +71,7 @@ def import_database(imported_directory='data/imported_db'):
 logger.debug('START users_ui.py')
 st.set_page_config(
 	page_title='Weight & Balance Calculator',
-	page_icon='✈️',
+	page_icon=FAVICON_WEB,
 	layout='wide',
 	# initial_sidebar_state='expanded'
 )

@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import logging
 
+from config import FAVICON_WEB
 from pages.sidebar import sidebar_menu
 from users import fetch_users
 from gliders import fetch_gliders, Weighing
@@ -68,7 +69,7 @@ def weihging_deleted(current_glider):
 logger.debug('START weighing_ui.py')
 st.set_page_config(
 	page_title='Weight & Balance Calculator',
-	page_icon='✈️',
+	page_icon=FAVICON_WEB,
 	layout='wide',
 	# initial_sidebar_state='expanded'
 )

@@ -11,7 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from gliders import fetch_gliders, get_datum_image_by_label, DATUMS
-from config import get_database_name
+from config import FAVICON_WEB, get_database_name
 from users import fetch_users
 from init_db import initialize_database
 from pages.sidebar import sidebar_menu, is_debug_mode
@@ -63,6 +63,18 @@ THEME_DARK = {
 	# "cgLimitLine": "cornflowerblue",
 	'cgLimitLine': 'deepskyblue',
 }
+
+
+# this doesn't work, need to try to inject the custom content to the index.html file at runtime.
+# hack possible here https://stackoverflow.com/questions/70520191/how-to-add-the-google-analytics-tag-to-website-developed-with-streamlit/78992559#78992559 
+import streamlit.components.v1 as components
+def add_apple_icon():
+	components.html(
+		"""
+		<link rel="apple-touch-icon" href="./img/icon/web/apple-touch-icon.png">
+		""",
+		height=0 # Important: Set height to 0 to avoid extra space
+	)
 
 def is_light_mode():
 	theme = st_theme()
@@ -299,10 +311,11 @@ logger.debug('START streamlit_app.py')
 # set up page details
 st.set_page_config(
 	page_title='Weight & Balance Calculator',
-	page_icon='✈️',
+	page_icon=FAVICON_WEB,
 	layout='wide',
 	initial_sidebar_state='collapsed'
 )
+# add_apple_icon()
 
 active_theme = THEME_LIGHT if is_light_mode() else THEME_DARK
 st.header('✈️ Calculateur Centrage Planeur')
@@ -315,6 +328,9 @@ users = fetch_users()
 # Initialize the audit logger
 audit = AuditLogDuckDB().set_database_name(get_database_name())
 logger.debug('Audit log: {}'.format(audit))
+
+# warning message
+st.warning('Attention : Ce logiciel est un outil d\'aide à la décision pour le calcul du centrage. La fiche de pesée est le document de référence, et la responsabilité finale du centrage incombe au commandant de bord.', icon=':material/warning:')
 
 # gliders_options = [ x.registration for x in gliders]
 gliders_options = gliders.keys()

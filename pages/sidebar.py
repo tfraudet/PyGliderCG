@@ -27,7 +27,8 @@ def sidebar_menu(users : Users):
 		st.session_state.authenticated = False
 
 	# logo
-	st.logo(image='img/acph-logo.png',size='large', icon_image='img/acph-logo-short.png')
+	# st.logo(image='img/app-logo.png',size='large', icon_image='img/app-logo-short.png')
+	st.logo(image='img/app-logo-v2.png',size='large', icon_image='img/app-logo-short-v2.png')
 
 	if not st.session_state.authenticated:
 		with st.sidebar:
@@ -64,4 +65,6 @@ def sidebar_menu(users : Users):
 	# sidebar footer  color #D16D6A
 	st.sidebar.divider()
 	material_favorote_html = '<span role="img" aria-label="favorite icon" style="display: inline-block; font-family: &quot;Material Symbols Rounded&quot;; font-weight: 400; user-select: none; vertical-align: bottom; white-space: nowrap; overflow-wrap: normal;">favorite</span>'
+
+	st.sidebar.image('img/acph-logo-v2017-gray.png', width=100)
 	st.sidebar.html('Made with <span style="color: green">{}</span> by <a href="https://aeroclub-issoire.fr/">ACPH</a> - version {}'.format(material_favorote_html, __version__))
