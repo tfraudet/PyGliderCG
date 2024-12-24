@@ -53,7 +53,7 @@ streamlit run streamlit_app.py
 docker build --tag tfraudet/pyglidercg --file './Dockerfile' .
 
 # Or pull the image from docker hub
-docker pull	tfraudet/pyglidercg:latest
+docker pull tfraudet/pyglidercg:latest
 
 # Then run the image inside a container, mapping the host’s port 8501 to the container’s port 8501
 docker run -d -p 8501:8501 --name glider-cg  -e APP_DEBUG_MODE='false' -e DB_NAME='./data/gliders.db' -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
