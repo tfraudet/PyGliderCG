@@ -15,3 +15,4 @@ PyJwt==2.9.0
 st-theme==1.2.3
 shapely==2.0.6
 python-dotenv==1.0.1
+xhtml2pdf==0.2.16

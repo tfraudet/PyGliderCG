@@ -376,6 +376,12 @@ class Glider:
 		
 		return round(self.limits.mmenp - last_weighing.mvenp(), 2)
 	
+	def cu(self) -> float:
+		'''
+		Retourne la charge utile en kg, défini comme le minimum entre la charge variable max et la charge utile max
+		'''
+		return min(self.cv_max(), self.cu_max())
+	
 	def pilot_av_mini(self) -> float:
 		mass_mini_pilot = None
 		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
