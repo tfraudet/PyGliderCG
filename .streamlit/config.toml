@@ -3,6 +3,10 @@
 # Default: true
 gatherUsageStats = false
 
+[theme]
+#base="light"
+base="dark"
+
 [logger]
 # Level of logging for Streamlit's internal logger: "error", "warning",
 # "info", or "debug".

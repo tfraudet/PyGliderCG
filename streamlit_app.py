@@ -77,9 +77,9 @@ def add_apple_icon():
 	)
 
 def is_light_mode():
-	theme = st_theme()
-	return theme is not None and theme['backgroundColor'] == '#ffffff'
-	# return False
+	# theme = st_theme()
+	# return theme is not None and theme['backgroundColor'] == '#ffffff'
+	return True if st.get_option("theme.base")=='light' else False
 
 def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, balance_empty_wb = None, weight_none_lift = None, balance_percent = None, balance_percent_wb_empty= None):
 	# Plot
