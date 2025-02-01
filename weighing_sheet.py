@@ -182,11 +182,11 @@ html_body_template = """
 					<tr><td class="w150 thick">Limite centrage avant</td><td>{front_centering} mm</td></tr>
 					<tr><td class="w150 thick">Limite centrage arrière</td><td>{rear_centering} mm</td></tr>
 
-					<tr><td class="w150 thick">Bras de levier Pilot avant</td><td>{rear_centering} mm</td></tr>
-					<tr><td class="w150 thick">Bras de levier Pilot arrière</td><td>{rear_centering} mm</td></tr>
-					<tr><td class="w150 thick">Bras de levier WB ailes</td><td>{rear_centering} mm</td></tr>
-					<tr><td class="w150 thick">Bras de levier gueuse avant</td><td>{rear_centering} mm</td></tr>
-					<tr><td class="w150 thick">Bras de levier gueuse arrière </td><td>{rear_centering} mm</td></tr>
+					<tr><td class="w150 thick">Bras de levier Pilot avant</td><td>{arm_front_pilot} mm</td></tr>
+					<tr><td class="w150 thick">Bras de levier Pilot arrière</td><td>{arm_rear_pilot} mm</td></tr>
+					<tr><td class="w150 thick">Bras de levier WB ailes</td><td>{arm_waterballast} mm</td></tr>
+					<tr><td class="w150 thick">Bras de levier gueuse avant</td><td>{arm_front_ballast} mm</td></tr>
+					<tr><td class="w150 thick">Bras de levier gueuse arrière </td><td>{arm_rear_watterballast_or_ballast} mm</td></tr>
 
 				</table>
 			</td>
@@ -307,6 +307,11 @@ def handle_print_weighing_sheet(weighing, current_glider):
 		mm_harnais=current_glider.limits.mm_harnais,
 		front_centering=current_glider.limits.front_centering,
 		rear_centering=current_glider.limits.rear_centering,
+		arm_front_pilot=current_glider.arms.arm_front_pilot,
+		arm_rear_pilot=current_glider.arms.arm_rear_pilot,
+		arm_waterballast=current_glider.arms.arm_waterballast,
+		arm_front_ballast=current_glider.arms.arm_front_ballast,
+		arm_rear_watterballast_or_ballast=current_glider.arms.arm_rear_watterballast_or_ballast,
 		image=imgData,
 		datum_label = current_glider.datum_label,
 		wedge = current_glider.wedge,
