@@ -55,6 +55,7 @@ def import_database(imported_directory='data/imported_db'):
 			con.execute(f"DROP TABLE INVENTORY;")
 			con.execute(f"DROP TABLE USERS;")
 			con.execute(f"DROP TABLE GLIDER;")
+			con.execute(f"DROP TABLE AUDITLOG;")
 			con.execute(f"DROP SEQUENCE inventory_id_seq;")
 			con.execute(f"DROP SEQUENCE auto_increment;")
 			con.execute(f"IMPORT DATABASE '{imported_directory}';")
