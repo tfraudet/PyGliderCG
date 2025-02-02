@@ -382,6 +382,7 @@ def weighing_sheet_footer_single_seat(weighing, current_glider):
 def weighing_sheet_footer_double_seat(weighing, current_glider):
 	maxPilotWeight, idx_max = min_with_index(current_glider.pilot_av_maxi(),current_glider.cu_max() , current_glider.cv_max(), current_glider.limits.mm_harnais)
 	minPilotWeight, idx_min = max_with_index(current_glider.limits.weight_min_pilot, current_glider.pilot_av_mini())
+	minPilotWeightDuo, idx_min_duo = max_with_index(current_glider.limits.weight_min_pilot, current_glider.pilot_av_mini_duo())
 
 	with st.container(border=True):
 		col1, col2 = st.columns(2)
@@ -397,15 +398,16 @@ def weighing_sheet_footer_double_seat(weighing, current_glider):
 	with st.container(border=True):
 		col1, col2 = st.columns(2)
 		with col1:
-			st.write('En Bibplace',)
-			st.write('Masse mini pilote avant calculé: :green[{}] kg'.format(current_glider.pilot_av_mini()))
+			st.write('En biplace',)
+			# st.write('Masse mini pilote avant calculé: :green[{}] kg'.format(current_glider.pilot_av_mini()))
+			st.write('Masse mini pilote avant calculé: :green[{}] kg'.format(current_glider.pilot_av_mini_duo()))
 			st.write('Masse maxi pilote avant calculé: :green[{}] kg'.format(current_glider.pilot_av_maxi()))
 			
 		with col2:
 			st.write('Etiquette cabine / Valeurs retenues')
 			# st.write('Masse mini Pilot :green[{}] kg'.format(current_glider.limits.weight_min_pilot))
 			# st.write('Masse maxi Pilot :green[{}] kg'.format(current_glider.limits.mm_harnais))
-			st.write('Masse mini pilote avant :green[{}] kg, ({})'.format(minPilotWeight, MAX_LIMITS_BY[idx_min]))
+			st.write('Masse mini pilote avant :green[{}] kg, ({})'.format(minPilotWeightDuo, MAX_LIMITS_BY[idx_min_duo]))
 			st.write('Masse maxi pilote avant :green[{}] kg, ({})'.format(maxPilotWeight, MIN_LIMITS_BY[idx_max]))
 
 			st.info('Charge utile de :green[{}] kg dans le respect des limitations de masse de centrage et de siège à :green[{}] kg'

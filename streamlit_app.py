@@ -96,7 +96,7 @@ def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, 
 
 	# define yaxis range
 	YAXIS_DTICK = 25
-	min_yaxis = ((df_limits['mass'].min()-50) // YAXIS_DTICK) * YAXIS_DTICK
+	min_yaxis = ((min(df_limits['mass'].min(), weight_none_lift)-50) // YAXIS_DTICK) * YAXIS_DTICK
 	min_yaxis = min(min_yaxis, total_weight)
 	max_yaxis = ((df_limits['mass'].max()+50) // YAXIS_DTICK) * YAXIS_DTICK
 	max_yaxis = max(max_yaxis, total_weight)
@@ -131,7 +131,7 @@ def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, 
 				titlefont_size=22,
 			)
 		)
-
+	
 	# Add a hline for empty weight
 	# fig.add_hline(y=current_glider.empty_weight(), 
 	# 		annotation_text='Masse à vide: {} kg'.format(current_glider.empty_weight()), annotation_font=dict(size=14),
@@ -186,7 +186,7 @@ def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, 
 
 	# Show the plot
 	fig.update_layout(
-		height=600,
+		height=800,
 	 	margin=dict(l=0, r=0, b=0, t=20),
 		legend=dict( orientation="h", yanchor="bottom", y=-0.2 ),
 		template=active_theme['template'],
@@ -199,13 +199,13 @@ def weight_and_balance_calculator(current_glider):
 	col1, col2 = st.columns(2)
 
 	with col1:
-		front_pilot_weight = st.number_input( 'Masse pilote avant (en kg)', min_value=0.0, max_value=current_glider.limits.mm_harnais,
+		front_pilot_weight = st.number_input( 'Masse pilote avant équipé (en kg)', min_value=0.0, max_value=current_glider.limits.mm_harnais,
 			format='%0.1f', step=0.5, key = 'front_pilot_weight', placeholder='Type a number...')
 		front_ballast_weight = st.number_input( 'Masse Gueuse avant (kg)', min_value=0.0, format='%0.1f', step=0.5, key = 'front_ballast_weight', placeholder='Type a number...')
 		wing_water_ballast_weight = st.number_input( 'Masse d\'eau dans les ailes (kg)', min_value=0.0, format='%0.1f', step=0.5, key = 'wing_water_ballast_weight', placeholder='Type a number...')
 
 	with col2:
-		rear_pilot_weight = st.number_input( 'Masse pilote arrière (kg)', min_value=0.0, max_value=current_glider.limits.mm_harnais, 
+		rear_pilot_weight = st.number_input( 'Masse pilote arrière équipé (kg)', min_value=0.0, max_value=current_glider.limits.mm_harnais, 
 			format='%0.1f', step=0.5, placeholder='Type a number...', disabled = True if (current_glider.single_seat) else False, key='rear_pilot_weight')
 		rear_ballast_weight = st.number_input( 'Masse Gueuse ou water ballast arrière (kg)', min_value=0.0, format='%0.1f', step=0.5, key = 'rear_ballast_weight', placeholder='Type a number...')
 

@@ -23,7 +23,11 @@ class ModeEdition(Enum):
 
 def is_valid_registration(input_string):
 	# Define the pattern: one alphanumeric character, a dash, then four alphanumeric characters
-	pattern = r'^[A-Z0-9]-[A-Z0-9]{4}$'
+	# pattern = r'^[A-Z0-9]-[A-Z0-9]{4}$'
+
+	# Define the pattern: one alphanumeric character, a dash, then four alphanumeric characters
+	# or one alphanumeric character, a dash, then four alphanumeric characters, a forward slash, one or more digits, and the letter 'm'	
+	pattern = r'^[A-Za-z0-9]-[A-Za-z0-9]{4}(?:/[0-9]+m)?$'
 	match = re.match(pattern, input_string)
 	return bool(match)
 
@@ -113,7 +117,8 @@ def edit_glider_datasheet(glider : Glider, mode = ModeEdition.EDIT):
 	
 		if mode == ModeEdition.NEW:
 			if not is_valid_registration(glider.registration):
-				st.error('Le numero de registration n\'est pas valide, il doit être de la forme x-xxxx, avec x représentant un caractère alphanumérique, majuscule uniquement.', icon=':material/error:')
+				# st.error('Le numero de registration n\'est pas valide, il doit être de la forme x-xxxx, avec x représentant un caractère alphanumérique, majuscule uniquement.', icon=':material/error:')
+				st.error('Le numero de registration n\'est pas valide, il doit être de la forme x-xxxx ou x-xxxx/yym, avec x représentant un caractère alphanumérique (majuscule uniquement), et yy l\'envergure', icon=':material/error:')
 			else:
 				logger.debug('Create glider {} datasheet on database'.format(glider.registration))
 				glider.save()

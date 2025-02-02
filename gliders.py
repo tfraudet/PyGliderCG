@@ -42,9 +42,13 @@ DATUMS = {
 			'image': 'img/datum-hd-4.png',
 		},
 	DatumWeighingPoints.DATUM_FORWARD_GLIDER: {
-			'label' : 'Devant le planeur',
-			'image': 'img/datum-hd-3.png',
+			'label' : 'Devant le planeur - 2 point en arrière de la référence',
+			'image': 'img/datum-hd-snc34c.png',
 		}
+	# DatumWeighingPoints.DATUM_FORWARD_GLIDER: {
+	# 		'label' : 'Devant le planeur',
+	# 		'image': 'img/datum-hd-3.png',
+	# 	}
 }
 
 def get_datum_image_by_label(label):
@@ -388,8 +392,29 @@ class Glider:
 			# Masse à vide * (X0 - limite centrage arrière) / Bras de levier pilote + limite centrage arrière
 			mass_mini_pilot = self.empty_weight() * (self.empty_arm() - self.limits.rear_centering) / (self.arms.arm_front_pilot + self.limits.rear_centering)
 		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
-			# Masse à vide * (X0 - limite centrage arrière ) / limite centrage arrière - Bras de levier pilote
-			mass_mini_pilot = self.empty_weight() * (self.limits.rear_centering - self.empty_arm()) / (self.limits.rear_centering - self.arms.arm_front_pilot)
+			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
+				# Masse à vide * (X0 - limite centrage arrière ) / limite centrage arrière - Bras de levier pilote avant
+				mass_mini_pilot = self.empty_weight() * (self.limits.rear_centering - self.empty_arm()) / (self.limits.rear_centering - self.arms.arm_front_pilot)
+			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
+				# (p1 + p2) * (X0 - limite centrage arrière ) / limite centrage arrière - Bras de levier pilote avant
+				mass_mini_pilot = self.empty_weight() * (self.empty_arm() - self.limits.rear_centering) / (self.limits.rear_centering - self.arms.arm_front_pilot)
+			else:
+				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
+		return round(mass_mini_pilot,1)
+
+	def pilot_av_mini_duo(self) -> float:
+		mass_mini_pilot = None
+		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
+			# TODO: check calculation
+			return self.pilot_av_mini()
+		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
+			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
+				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
+			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
+				# masse mini pilot avant solo - (masse mini pilote  * ((limite centrage arrière - bras de levier pilote avant) / (limite centrage arrière - bras de levier pilote avant)
+				mass_mini_pilot = self.pilot_av_mini() - ( self.limits.weight_min_pilot * (self.limits.rear_centering - self.arms.arm_rear_pilot)) / (self.limits.rear_centering - self.arms.arm_front_pilot)
+			else:
+				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
 		return round(mass_mini_pilot,1)
 
 	def pilot_av_maxi(self) -> float:
@@ -398,33 +423,54 @@ class Glider:
 			# Masse à vide * (X0 - limite centrage avant) / Bras de levier pilote + limite centrage avant
 			mass_maxi_pilot = self.empty_weight() * (self.empty_arm() - self.limits.front_centering) / (self.arms.arm_front_pilot + self.limits.front_centering)
 		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
-			# Masse à vide * (X0 - limite centrage avant ) / limite centrage avant - Bras de levier pilote
-			mass_maxi_pilot = self.empty_weight() * (self.limits.front_centering - self.empty_arm()) / (self.limits.front_centering - self.arms.arm_front_pilot)
+			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
+				# Masse à vide * (X0 - limite centrage avant ) / limite centrage avant - Bras de levier pilote
+				mass_maxi_pilot = self.empty_weight() * (self.limits.front_centering - self.empty_arm()) / (self.limits.front_centering - self.arms.arm_front_pilot)
+			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
+				# (p1 + p2) * (X0 - limite centrage avant ) / limite centrage avant - Bras de levier pilote avant
+				mass_maxi_pilot = self.empty_weight() * (self.empty_arm() - self.limits.front_centering) / (self.limits.front_centering - self.arms.arm_front_pilot)
+			else:
+				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
 		return round(mass_maxi_pilot,1)
 
 	def empty_arm(self) -> float:
-		# X0 = D1 +d
-		# D1 = M2 * D / (M1 + M2)
 		last_weighing = self.last_weighing()
 		if last_weighing is None:
 			raise ValueError('No weighing for this glider')
-
-		D1 = last_weighing.D * last_weighing.p2 / (last_weighing.p1 + last_weighing.p2)
-		x0 = D1 + last_weighing.A
-		return round(x0,2)
+		
+		if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
+			# X0 = D1 + d , D1 = M2 * D / (M1 + M2)
+			D1 = last_weighing.D * last_weighing.p2 / (last_weighing.p1 + last_weighing.p2)
+			x0 = D1 + last_weighing.A
+			return round(x0,0)
+		elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
+			x0 = last_weighing.D - (last_weighing.p1 * (last_weighing.D - last_weighing.A))/(last_weighing.p1 + last_weighing.p2)
+			return round(x0,0)
+		else:
+			raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
 	
 	def weight_and_balance_calculator(self, front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, wing_water_ballast_weight):
 		'''
 		return the total weight of the glider (kg) and the balance (mm)
 		'''
-		# TODO: Calculation is valid if the pilot(s) is/are forward of datum 
+
+		glider_weight = self.empty_weight() + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight + wing_water_ballast_weight
 		if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
-			glider_weight = self.empty_weight() + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight + wing_water_ballast_weight
 			moment_arm = (
 					self.empty_weight() * self.empty_arm() +
 					front_pilot_weight * self.arms.arm_front_pilot * -1 +
 					rear_pilot_weight * self.arms.arm_rear_pilot * -1 +
 					front_ballast_weight * self.arms.arm_front_ballast *-1 +
+					rear_ballast_weight * self.arms.arm_rear_watterballast_or_ballast +
+					wing_water_ballast_weight * self.arms.arm_waterballast
+				)
+			return glider_weight, moment_arm / glider_weight
+		elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
+			moment_arm = (
+					self.empty_weight() * self.empty_arm() +
+					front_pilot_weight * self.arms.arm_front_pilot +
+					rear_pilot_weight * self.arms.arm_rear_pilot +
+					front_ballast_weight * self.arms.arm_front_ballast +
 					rear_ballast_weight * self.arms.arm_rear_watterballast_or_ballast +
 					wing_water_ballast_weight * self.arms.arm_waterballast
 				)
