@@ -6,9 +6,8 @@ from  config import is_debug_mode
 
 logger = logging.getLogger(__name__)
 
-def init_audit_log_table(dbname):
+def init_audit_log_table(conn):
 	logger.debug('START init_audit_log_table()')
-	conn = duckdb.connect(dbname)
 
 	# Create table user
 	# conn.execute('DROP TABLE IF EXISTS USERS')
@@ -20,13 +19,11 @@ def init_audit_log_table(dbname):
 			)
 	'''
 	conn.execute(sql)
-	conn.close()
 	logger.debug('END init_audit_log_table()')
 
 
-def init_users_table(dbname):
+def init_users_table(conn):
 	logger.debug('START init_users_table()')
-	conn = duckdb.connect(dbname)
 
 	# Create table user
 	# conn.execute('DROP TABLE IF EXISTS USERS')
@@ -43,7 +40,7 @@ def init_users_table(dbname):
 	# if no user exists, create a dummy admin
 	number_of_rows = conn.execute('SELECT count(*) FROM USERS').fetchone()[0]
 	if (number_of_rows == 0):
-		logging.info("No users in table USERS, insert a dummy user.")
+		logging.debug("No users in table USERS, insert a dummy user.")
 
 		# Insert data in GLIDER table
 		try:
@@ -57,14 +54,10 @@ def init_users_table(dbname):
 			# see https://duckdb.org/docs/sql/indexes for why this exception is raised
 			logger.error(e)
 
-	conn.close()
 	logger.debug('END init_users_table()')
 
-def init_gliders_tables(dbname):
+def init_gliders_tables(conn):
 	logger.debug('START init_gliders_tables()')
-
-	# Init database
-	conn = duckdb.connect(dbname)
 
 	# Drop tables if exists
 	# conn.execute('DROP TABLE IF EXISTS WB_LIMIT')		
@@ -151,7 +144,6 @@ def init_gliders_tables(dbname):
 		)
 	'''
 	conn.execute(sql)
-	conn.close()
 	logger.debug('END init_gliders_tables()')
 
 
@@ -172,9 +164,21 @@ def display_information(dbname):
 	conn.close()
 
 def initialize_database(dbname):
-	init_users_table(dbname)
-	init_gliders_tables(dbname)
-	init_audit_log_table(dbname)
+	try:
+		logger.info('initialise Database...')
+
+		# The DuckDBPyConnection object is not thread-safe. If you would like to write to the same database from multiple threads,
+		# create a cursor for each thread 
+		# https://duckdb.org/docs/stable/clients/python/overview.html#using-connections-in-parallel-python-programs
+		conn = duckdb.connect(dbname).cursor()
+		init_users_table(conn)
+		init_gliders_tables(conn)
+		init_audit_log_table(conn)
+	except Exception as e:
+		logger.error(f'Error on database {dbname}: {e}')
+	finally:
+		conn.close()
+		logger.info('Database connection closed	')
 
 	# if is_debug_mode():
 	# 	display_information(dbname)

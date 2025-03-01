@@ -93,9 +93,14 @@ class Weighing:
 	D: int = 0
 
 	def delete(self):
-		conn = duckdb.connect(get_database_name())
-		conn.execute('DELETE FROM WEIGHING WHERE id={}'.format(self.id))
-		conn.close()
+		dbname = get_database_name()
+		try:
+			conn = duckdb.connect(dbname)
+			conn.execute('DELETE FROM WEIGHING WHERE id={}'.format(self.id))
+		except Exception as e:	
+			logger.error(f'Error on database {dbname} when deleting weighing: {e}')
+		finally:
+			conn.close()
 		logger.debug('{} deleted from the database'.format(self))
 		audit.log(st.session_state.username, 'Weighing #{} from {} deleted'.format(self.id, self.date))
 
@@ -123,9 +128,14 @@ class Instrument:
 	seat: str
 
 	def delete(self):
-		conn = duckdb.connect(get_database_name())
-		conn.execute('DELETE FROM INVENTORY WHERE id={}'.format(self.id))
-		conn.close()
+		dbname = get_database_name()
+		try:
+			conn = duckdb.connect(dbname)
+			conn.execute('DELETE FROM INVENTORY WHERE id={}'.format(self.id))
+		except Exception as e:	
+			logger.error(f'Error on database {dbname} when deleting instrument: {e}')
+		finally:
+			conn.close()
 		logger.debug('{} deleted from the database'.format(self))
 		audit.log(st.session_state.username, 'Instruments {} deleted'.format(self.instrument))
 
@@ -171,48 +181,55 @@ class Glider:
 
 	def save(self):
 		logger.debug('save {} in database'.format(self))
-		conn = duckdb.connect(get_database_name())
+		dbname = get_database_name()
+		try:
+			conn = duckdb.connect(get_database_name())
 
-		# save the glider datasheet
-		conn.execute('INSERT OR REPLACE INTO GLIDER VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',[
-			self.model,
-			self.registration,
-			self.brand,
-			self.serial_number,
-			self.single_seat,
-			
-			# Datum for weighings
-			self.datum,
-			self.pilot_position,
-			self.datum_label,
-			self.wedge,
-			self.wedge_position,
+			# save the glider datasheet
+			conn.execute('INSERT OR REPLACE INTO GLIDER VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',[
+				self.model,
+				self.registration,
+				self.brand,
+				self.serial_number,
+				self.single_seat,
+				
+				# Datum for weighings
+				self.datum,
+				self.pilot_position,
+				self.datum_label,
+				self.wedge,
+				self.wedge_position,
 
-			# Limits
-			self.limits.mmwp,
-			self.limits.mmwv,
-			self.limits.mmenp,
-			self.limits.mm_harnais,
-			self.limits.weight_min_pilot,
-			self.limits.front_centering,
-			self.limits.rear_centering,
+				# Limits
+				self.limits.mmwp,
+				self.limits.mmwv,
+				self.limits.mmenp,
+				self.limits.mm_harnais,
+				self.limits.weight_min_pilot,
+				self.limits.front_centering,
+				self.limits.rear_centering,
 
-			# Arms
-			self.arms.arm_front_pilot,
-			self.arms.arm_rear_pilot,
-			self.arms.arm_waterballast,
-			self.arms.arm_front_ballast,
-			self.arms.arm_rear_watterballast_or_ballast,
-			self.arms.arm_gas_tank,
-			self.arms.arm_instruments_panel
-		])
-		conn.close()
+				# Arms
+				self.arms.arm_front_pilot,
+				self.arms.arm_rear_pilot,
+				self.arms.arm_waterballast,
+				self.arms.arm_front_ballast,
+				self.arms.arm_rear_watterballast_or_ballast,
+				self.arms.arm_gas_tank,
+				self.arms.arm_instruments_panel
+			])
+		except Exception as e:	
+			logger.error(f'Error on database {dbname} when saving glider: {e}')
+		finally:
+			conn.close()
 		logger.debug('{} datasheet saved in database'.format(self.registration))
 		audit.log(st.session_state.username, 'Datasheet for glider {} updated'.format(self.registration))
 
 	def save_weight_and_balance(self):
-		conn = duckdb.connect(get_database_name())
+		dbname = get_database_name()
 		try:
+			conn = duckdb.connect(dbname)
+	
 			#  Delete all points
 			conn.execute('DELETE FROM WB_LIMIT WHERE registration=\'{}\''.format(self.registration))
 
@@ -226,70 +243,81 @@ class Glider:
 				])
 
 			logger.debug('Weight & balance for glider {} updated'.format(self.registration))
+		except Exception as e:	
+			logger.error(f'Error on database {dbname} when saving weight and balance limits: {e}')
 		finally:
 			conn.close()	
 		audit.log(st.session_state.username, 'Weight & balance {} for glider {} updated'.format(self.weight_and_balances, self.registration))
 
 	def save_instruments(self):
-		conn = duckdb.connect(get_database_name())
-		for instrument in self.instruments:
-			if instrument.id is None:
-				instrument.id = conn.execute('SELECT nextval(\'inventory_id_seq\')').fetchone()[0]
-				logger.debug('Next instrument id is {} '.format(instrument.id))
+		dbname = get_database_name()
+		try:
+			conn = duckdb.connect(dbname)
+			for instrument in self.instruments:
+				if instrument.id is None:
+					instrument.id = conn.execute('SELECT nextval(\'inventory_id_seq\')').fetchone()[0]
+					logger.debug('Next instrument id is {} '.format(instrument.id))
 
-			conn.execute('''
-					INSERT OR REPLACE INTO INVENTORY (id, registration, on_board, instrument, brand, type, number, date, seat)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-				''', [
-					instrument.id,
-					self.registration,
-					instrument.on_board,
-					instrument.instrument,
-					instrument.brand,
-					instrument.type,
-					instrument.number,
-					instrument.date,
-					instrument.seat
-				])
-			logger.debug('{} instrument saved in database'.format(instrument))
-
-		conn.close()
+				conn.execute('''
+						INSERT OR REPLACE INTO INVENTORY (id, registration, on_board, instrument, brand, type, number, date, seat)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+					''', [
+						instrument.id,
+						self.registration,
+						instrument.on_board,
+						instrument.instrument,
+						instrument.brand,
+						instrument.type,
+						instrument.number,
+						instrument.date,
+						instrument.seat
+					])
+				logger.debug('{} instrument saved in database'.format(instrument))
+		except Exception as e:	
+			logger.error(f'Error on database {dbname} when saving instruments: {e}')
+		finally:
+			conn.close()
 		logger.debug('{} instruments saved in database'.format(self.registration))
 		audit.log(st.session_state.username, 'Instruments {} updated for glider {} '.format(self.instruments, self.registration))
 
 	def save_weighings(self):
-		conn = duckdb.connect(get_database_name())
-		for weighing in self.weighings:
-			if weighing.id is None:
-				weighing.id = conn.execute('SELECT nextval(\'auto_increment\')').fetchone()[0]
-				logger.debug('Next weighing id is {} '.format(weighing.id))
+		dbname = get_database_name()
+		try:
+			conn = duckdb.connect(dbname)
+			for weighing in self.weighings:
+				if weighing.id is None:
+					weighing.id = conn.execute('SELECT nextval(\'auto_increment\')').fetchone()[0]
+					logger.debug('Next weighing id is {} '.format(weighing.id))
 
-			conn.execute('''
-					INSERT OR REPLACE INTO WEIGHING (id, date, registration, p1, p2, right_wing_weight, left_wing_weight, tail_weight, fuselage_weight, fix_ballast_weight, A, D)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-				''', [
-					weighing.id,
-					weighing.date,
-					self.registration,
-					weighing.p1,
-					weighing.p2,
-					weighing.right_wing_weight,
-					weighing.left_wing_weight,
-					weighing.tail_weight,
-					weighing.fuselage_weight,
-					weighing.fix_ballast_weight,
-					weighing.A,
-					weighing.D
-				])
-			logger.debug('{} instrument saved in database'.format(weighing))
-
-		conn.close()
+				conn.execute('''
+						INSERT OR REPLACE INTO WEIGHING (id, date, registration, p1, p2, right_wing_weight, left_wing_weight, tail_weight, fuselage_weight, fix_ballast_weight, A, D)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+					''', [
+						weighing.id,
+						weighing.date,
+						self.registration,
+						weighing.p1,
+						weighing.p2,
+						weighing.right_wing_weight,
+						weighing.left_wing_weight,
+						weighing.tail_weight,
+						weighing.fuselage_weight,
+						weighing.fix_ballast_weight,
+						weighing.A,
+						weighing.D
+					])
+				logger.debug('{} instrument saved in database'.format(weighing))
+		except Exception as e:	
+			logger.error(f'Error on database {dbname} when saving weighings: {e}')
+		finally:
+			conn.close()
 		logger.debug('{} weighings saved in database'.format(self.registration))
 		audit.log(st.session_state.username, 'Weighings {} updated for glider {} '.format(self.weighings, self.registration))
 
 	def delete(self):
-		conn = duckdb.connect(get_database_name())
+		dbname = get_database_name()
 		try:
+			conn = duckdb.connect(dbname)
 			# conn.begin()
 
 			#  Delete all weihings 
@@ -306,14 +334,15 @@ class Glider:
 
 			# conn.commit()
 			logger.debug('{} deleted from the database'.format(self.registration))
+		except Exception as e:	
+			logger.error(f'Error on database {dbname} when delete: {e}')		
 		finally:
 			conn.close()
 		audit.log(st.session_state.username, 'Glider {} deleted'.format(self.registration))
 
-
 	@classmethod
 	def from_database(cls, database_name: str) -> dict:
-		conn = duckdb.connect(database_name)
+		conn = duckdb.connect(database_name, config = {'access_mode': 'READ_ONLY'})
 		results  = conn.execute('SELECT * from GLIDER').fetchall()
 
 		def construct_row(values) -> Glider:

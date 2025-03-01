@@ -40,22 +40,30 @@ class AuditLogDuckDB(AuditLog):
 		return self.dbname
 
 	def load_events(self):
-		conn = duckdb.connect(self.dbname)
+		conn = duckdb.connect(self.dbname,config = {'access_mode': 'READ_ONLY'})
 		events = conn.execute("SELECT * FROM AUDITLOG ORDER BY timestamp DESC").df()
 		return events
 	
 	def	delete_events(self):
-		conn = duckdb.connect(self.dbname)
-		conn.execute("DELETE FROM AUDITLOG")
-		conn.close()
+		try:
+			conn = duckdb.connect(self.dbname)
+			conn.execute("DELETE FROM AUDITLOG")
+		except Exception as e:	
+			logger.error(f'Error on database {self.dbname} when deleting entry in audit log: {e}')		
+		finally:
+			conn.close()
 		logger.debug('All events deleted from AUDITLOG table.')
 
 	def log(self, username : str, event : str):
-		conn = duckdb.connect(self.dbname)
-		conn.execute('INSERT INTO AUDITLOG VALUES (?, ?, ?)',[
-			datetime.now(),
-			username,
-			event
-		])
-		conn.close()
+		try:
+			conn = duckdb.connect(self.dbname)
+			conn.execute('INSERT INTO AUDITLOG VALUES (?, ?, ?)',[
+				datetime.now(),
+				username,
+				event
+			])
+		except Exception as e:	
+			logger.error(f'Error on database {self.dbname} when loggin in audit log: {e}')		
+		finally:
+			conn.close()
 		logger.debug(f'User {username} has logged event [{event}] in AUDITLOG table.')
