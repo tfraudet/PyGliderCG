@@ -47,6 +47,7 @@ logging.basicConfig(
 	format='%(asctime)s %(levelname) -7s %(name)s: %(message)s',
 	handlers=[logging.StreamHandler()   ]
 )
+audit = AuditLogDuckDB()
 
 THEME_LIGHT = {
 	'template' : 'plotly',			# "plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white",
@@ -248,6 +249,10 @@ def weight_and_balance_calculator(current_glider):
 			st.error('Centrage hors secteur.', icon=':material/error:')
 
 		display_plot(current_glider, total_weight, balance, total_weight_WB_empty, balance_WB_empty, weight_none_lift, balance_percent, balance_percent_wb_empty)
+
+		#log the calculation evebt
+		by_user = st.session_state.user if 'user' in st.session_state else 'unknown'
+		audit.log(by_user, f'Calcul centrage planeur pour {current_glider.registration} : {total_weight} kg, {round(balance,0)} mm')
 
 def data_sheet(glider):
 	st.subheader('Référence de pesée')

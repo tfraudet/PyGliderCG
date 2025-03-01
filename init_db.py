@@ -165,7 +165,7 @@ def display_information(dbname):
 
 def initialize_database(dbname):
 	try:
-		logger.info('initialise Database...')
+		logger.debug('initialise Database...')
 
 		# The DuckDBPyConnection object is not thread-safe. If you would like to write to the same database from multiple threads,
 		# create a cursor for each thread 
@@ -178,7 +178,7 @@ def initialize_database(dbname):
 		logger.error(f'Error on database {dbname}: {e}')
 	finally:
 		conn.close()
-		logger.info('Database connection closed	')
+		logger.debug('Database connection closed	')
 
 	# if is_debug_mode():
 	# 	display_information(dbname)
