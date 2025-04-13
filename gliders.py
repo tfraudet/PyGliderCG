@@ -389,19 +389,20 @@ class Glider:
 	
 	def cv_max(self) -> float:
 		'''
-		Retourne la charge variable maximum en kg, défini comme la différence entre la masse maximale de l'appareil et la masse à vide équipée.
+		Retourne la charge variable maximum en kg, défini comme la différence entre la masse maximale de l'appareil waterballast vide et la masse à vide équipée.
 		CV max = MMA - MVE
 		'''
 		last_weighing = self.last_weighing()
 		if last_weighing is None:
 			raise ValueError('No weighing for this glider')
 		
-		return round(self.limits.mmwp - last_weighing.mve(), 2)
+		# return round(self.limits.mmwp - last_weighing.mve(), 2)
+		return round(self.limits.mmwv - last_weighing.mve(), 2)
 
 	def cu_max(self) -> float:
 		'''
-		Retourne la charge utile maximum en kg, défini comme la différence entre la masse maximale des elements non portant 
-		et la masse à vide des élement non portant. CU max = MMENP - MVENP
+		Retourne la charge utile maximum en kg, défini comme la différence entre la masse maximale des elements non portant
+		et la masse à vide des élement non portant. CU max = MMWV - MVENP
 		'''
 		last_weighing = self.last_weighing()
 		if last_weighing is None:
