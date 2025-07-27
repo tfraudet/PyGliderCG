@@ -131,6 +131,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.vscode/
 
 # Spyder project settings
 .spyderproject
@@ -168,11 +169,9 @@ PP2/
 HFDA64Portable/
 spike/
 .DS_Store
-data/*.db
-data/pp2_recovery/*.xls
-data/exported_db
-data/imported_db
-**/.venv-311
-**/.venv-312
+data/
 pages/weighing_ui_old.py
 **/logo
+
+.vscode/settings.json
+
