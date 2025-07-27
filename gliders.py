@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, fields
 from datetime import date
 from enum import Enum
 import logging
+from typing import List, Tuple
 
 import duckdb
 import pandas as pd
@@ -154,9 +155,9 @@ class Glider:
 		
 	limits : Limits = None
 	arms: Arms = None
-
-	weighings : list[Weighing] = field(default_factory=list)
-	weight_and_balances: list[(int, float)] = field(default_factory=list)  # list of tuple (centering in mm, weight in Kg)
+	weighings : List[Weighing] = field(default_factory=list)
+	weight_and_balances: List[Tuple[int, float]] = field(default_factory=list)  # list of tuple (centering in mm, weight in Kg)
+	instruments: List[Instrument] = field(default_factory=list)
 	instruments: list[Instrument] = field(default_factory=list)
 
 	def limits_to_pandas(self) -> pd.DataFrame:
