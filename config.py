@@ -18,7 +18,7 @@ def is_debug_mode() -> bool:
 
 		# if not found in environment variables look in secrets.toml file 
 		try:
-			debug = st.secrets['APP_DEBUG_MODE']
+			debug = st.secrets.get('APP_DEBUG_MODE', False)
 		except KeyError as ke:
 			logging.getLogger(__name__).warning('APP_DEBUG_MODE not found in secrets.toml file, defaulting to False')
 			debug = False
@@ -39,7 +39,7 @@ def get_database_name() -> str:
 
 		# if not found in environment variables look in secrets.toml file 
 		try:
-			dbanme = st.secrets['DB_NAME']
+			dbanme = st.secrets.get('DB_NAME', DEFAULT_DB_NAME)
 		except KeyError as ke:
 			logging.getLogger(__name__).warning('DB_NAME not found in secrets.toml file, defaulting to DEFAULT_DB_NAME')
 			dbanme = DEFAULT_DB_NAME

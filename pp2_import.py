@@ -205,7 +205,8 @@ def cli(filename):
 		print('  insert weighing for glider {}'.format(row['Immat']))
 
 		# Insert equiments installed in INVENTORY table
-		next_id = conn.execute('SELECT nextval(\'inventory_id_seq\')').fetchone()[0]
+		next_id_result = conn.execute('SELECT nextval(\'inventory_id_seq\')').fetchone()
+		next_id = next_id_result[0] if next_id_result is not None else None
 		print('next_id is {}'.format(next_id))
 		instruments = row.loc[["E{}".format(i) for i in range(1, 26)]].reset_index(drop=True)
 		instruments.name = "Instrument"

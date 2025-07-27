@@ -50,7 +50,7 @@ def init_users_table(conn):
 				bcrypt.hashpw('admin'.encode('utf-8'), bcrypt.gensalt()),
 				'administrator'
 			])
-		except duckdb.duckdb.ConstraintException as e:
+		except duckdb.ConstraintException as e:
 			# see https://duckdb.org/docs/sql/indexes for why this exception is raised
 			logger.error(e)
 
