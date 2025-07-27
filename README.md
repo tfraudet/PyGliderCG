@@ -10,7 +10,7 @@ A simple Streamlit app to calculate center of gravity for [ACPH](https://aeroclu
 
 ## Requirements
 
-* Python 3.11
+* Python 3.12
 
 ## How to run it on your own machine
 
@@ -58,6 +58,8 @@ docker pull tfraudet/pyglidercg:latest
 # Then run the image inside a container, mapping the host’s port 8501 to the container’s port 8501
 docker run -d -p 8501:8501 --name glider-cg  -e APP_DEBUG_MODE='false' -e DB_NAME='./data/gliders.db' -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
 
+# or
+docker run -d -p 8501:8501 --name glider-cg  --env-file "$(pwd)"/.env  -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
 ```
 
 ## Utility to import PP2 application data
