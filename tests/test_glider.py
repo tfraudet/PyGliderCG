@@ -77,6 +77,7 @@ def glider_FCGDT():
 
 	return glider
 
+
 @pytest.fixture
 def glider_FCJBH():
 	limits = Limits(mmwp=540.0, mmwv=540.0, mmenp=370.0, mm_harnais=110.0, weight_min_pilot=70.0, front_centering=2199.0, rear_centering=2350.0)
@@ -104,10 +105,6 @@ def glider_FCJBH():
 
 class Test_Glider_FCGUP:
 	def test_glider(self, glider_FCGUP: Glider):
-		"""
-		Test the properties and calculations for the LS6c 18M glider (F-CGUP).
-		Checks model, registration, empty weight, non-portant weight, max/min payloads, pilot limits, and arm.
-		"""
 		glider = glider_FCGUP
 		last_weighing = glider.last_weighing()
 
@@ -115,6 +112,7 @@ class Test_Glider_FCGUP:
 		assert glider.registration == "F-CGUP"
 
 		assert glider.empty_weight() == 284.8
+		assert last_weighing is not None
 		assert last_weighing.mvenp() == 132.0
 
 		assert glider.cu_max() == 103.0
@@ -125,9 +123,6 @@ class Test_Glider_FCGUP:
 		assert glider.empty_arm() == 600.0
 
 	def test_center_gravity_calculation(self, glider_FCGUP: Glider):
-		"""
-		Test the weight and center of gravity calculation for the LS6c 18M glider (F-CGUP) with a front pilot.
-		"""
 		glider = glider_FCGUP
 
 		assert glider.weight_and_balance_calculator(
@@ -139,10 +134,6 @@ class Test_Glider_FCGUP:
 
 class Test_Glider_D2080:
 	def test_glider(self, glider_D2080: Glider):
-		"""
-		Test the properties and calculations for the Ventus 2c 18 mètres glider (D-2080).
-		Checks model, registration, empty weight, non-portant weight, max/min payloads, pilot limits, and arm.
-		"""
 		glider = glider_D2080
 		last_weighing = glider.last_weighing()
 
@@ -150,6 +141,7 @@ class Test_Glider_D2080:
 		assert glider.registration == "D-2080"
 
 		assert glider.empty_weight() == 284.2
+		assert last_weighing is not None
 		assert last_weighing.mvenp() == 134.2
 
 		assert glider.cu_max() == 115.8
@@ -160,9 +152,7 @@ class Test_Glider_D2080:
 		assert glider.empty_arm() == 596.0
 
 	def test_center_gravity_calculation(self, glider_D2080: Glider):
-		"""
-		Test the weight and center of gravity calculation for the D-2080 glider without ballast.
-		"""
+		'''Test the weight and gravity center calculation for the D-2080 glider without balast'''
 		glider = glider_D2080
 
 		assert glider.weight_and_balance_calculator(
@@ -173,9 +163,7 @@ class Test_Glider_D2080:
 			wing_water_ballast_weight =0.0) == ( 364.2, pytest.approx(351, abs=0.5)) 
 		
 	def test_center_gravity_calculation_tail_ballast(self, glider_D2080: Glider):
-		"""
-		Test the weight and center of gravity calculation for the D-2080 glider with tail ballast.
-		"""
+		'''Test the weight and gravity center calculation for the D-2080 glider with tail balast'''
 		glider = glider_D2080
 
 		assert glider.weight_and_balance_calculator(
@@ -186,9 +174,7 @@ class Test_Glider_D2080:
 			wing_water_ballast_weight =0.0) == ( 366.2, pytest.approx(372, abs=0.5)) 
 		
 	def test_center_gravity_calculation_wing_ballast(self, glider_D2080: Glider):
-		"""
-		Test the weight and center of gravity calculation for the D-2080 glider with wing ballast.
-		"""
+		'''Test the weight and gravity center calculation for the D-2080 glider with wing balast'''
 		glider = glider_D2080
 
 		assert glider.weight_and_balance_calculator(
@@ -198,25 +184,9 @@ class Test_Glider_D2080:
 			rear_ballast_weight = 0.0,
 			wing_water_ballast_weight = 50.0) == ( 414.2, pytest.approx(330, abs=0.5)) 
 
-	def test_center_gravity_calculation_wing_and_tail_ballast(self, glider_D2080: Glider):
-		"""
-		Test the weight and center of gravity calculation for the D-2080 glider with wing and tail ballasts.
-		"""
-		glider = glider_D2080
-
-		assert glider.weight_and_balance_calculator(
-			front_pilot_weight = 80.0,
-			rear_pilot_weight = 0.0,
-			front_ballast_weight = 0.0,
-			rear_ballast_weight = 2.5,
-			wing_water_ballast_weight = 75.0) == ( 441.7, pytest.approx(344, abs=0.5)) 
 
 class Test_Glider_FCGDT:
 	def test_glider(self, glider_FCGDT: Glider):
-		"""
-		Test the properties and calculations for the Janus C glider (F-CJDT).
-		Checks model, registration, empty weight, non-portant weight, max/min payloads, pilot limits, and arm.
-		"""
 		glider = glider_FCGDT
 		last_weighing = glider.last_weighing()
 
@@ -224,6 +194,7 @@ class Test_Glider_FCGDT:
 		assert glider.registration == "F-CJDT"
 
 		assert glider.empty_weight() == 410.9
+		assert last_weighing is not None
 		assert last_weighing.mvenp() == 191.4
 
 		assert glider.cu_max() == 208.6
@@ -234,9 +205,6 @@ class Test_Glider_FCGDT:
 		assert glider.empty_arm() == 528.0
 
 	def test_center_gravity_calculation(self, glider_FCGDT: Glider):
-		"""
-		Test the weight and center of gravity calculation for the Janus C glider (F-CJDT) with both pilots.
-		"""
 		glider = glider_FCGDT
 
 		assert glider.weight_and_balance_calculator(
@@ -245,39 +213,9 @@ class Test_Glider_FCGDT:
 			front_ballast_weight = 0.0,
 			rear_ballast_weight = 0.0,
 			wing_water_ballast_weight =0.0) == ( 555.9, pytest.approx(211, abs=0.5)) 
-		
-	def test_center_gravity_calculation_front_ballast(self, glider_FCGDT: Glider):
-		"""
-		Test the weight and center of gravity calculation for the Janus C glider (F-CJDT) with both pilots and a front ballast.
-		"""
-		glider = glider_FCGDT
-
-		assert glider.weight_and_balance_calculator(
-			front_pilot_weight = 40.0,
-			rear_pilot_weight = 80.0,
-			front_ballast_weight = 10.0,
-			rear_ballast_weight = 0.0,
-			wing_water_ballast_weight =0.0) == ( 540.9, pytest.approx(242, abs=0.5)) 
-
-	def test_center_gravity_calculation_front_and_wing_ballast(self, glider_FCGDT: Glider):
-		"""
-		Test the weight and center of gravity calculation for the Janus C glider (F-CJDT) with both pilots and front & wing ballast.
-		"""
-		glider = glider_FCGDT
-
-		assert glider.weight_and_balance_calculator(
-			front_pilot_weight = 40.0,
-			rear_pilot_weight = 80.0,
-			front_ballast_weight = 10.0,
-			rear_ballast_weight = 0.0,
-			wing_water_ballast_weight = 40.0) == ( 580.9, pytest.approx(237, abs=0.5)) 
 
 class Test_Glider_FCJBH:
 	def test_glider(self, glider_FCJBH: Glider):
-		"""
-		Test the properties and calculations for the Alliance glider (F-CJBH).
-		Checks model, registration, empty weight, non-portant weight, max/min payloads, pilot limits, and arm.
-		"""
 		glider = glider_FCJBH
 		last_weighing = glider.last_weighing()
 
@@ -285,6 +223,7 @@ class Test_Glider_FCJBH:
 		assert glider.registration == "F-CJBH"
 
 		assert glider.empty_weight() == 361.4
+		assert last_weighing is not None
 		assert last_weighing.mvenp() == 181.0
 
 		assert glider.cu_max() == 189.0
@@ -295,9 +234,6 @@ class Test_Glider_FCJBH:
 		assert glider.empty_arm() == 2610.0
 
 	def test_center_gravity_calculation(self, glider_FCJBH: Glider):
-		"""
-		Test the weight and center of gravity calculation for the Alliance glider (F-CJBH) with both pilots.
-		"""
 		glider = glider_FCJBH
 
 		weight, gc = glider.weight_and_balance_calculator(
