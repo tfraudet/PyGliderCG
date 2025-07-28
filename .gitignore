@@ -175,3 +175,10 @@ pages/weighing_ui_old.py
 
 .vscode/settings.json
 
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/tests-examples/

@@ -2,7 +2,7 @@
 	 <img src="img/app-logo-short-v2.png" width="100" >
 </p>
 
- # Center of Gravity Calculator for ACPH Gliders
+# Center of Gravity Calculator for ACPH Gliders
 
 A simple Streamlit app to calculate center of gravity for [ACPH](https://aeroclub-issoire.fr/) gliders.
 
@@ -60,6 +60,42 @@ docker run -d -p 8501:8501 --name glider-cg  -e APP_DEBUG_MODE='false' -e DB_NAM
 
 # or
 docker run -d -p 8501:8501 --name glider-cg  --env-file "$(pwd)"/.env  -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
+```
+
+## Run the tests
+
+Launch the app locally and open a new terminal/command prompt in the same folder.
+
+```bash
+streamlit run streamlit_app.py
+```
+
+### Run unit tests
+
+```bash
+# Install PyTest
+pip install pytest
+
+# Run the tests
+pytest
+```
+
+### Run end to end tests
+
+You can run the tests using [Playwright](https://playwright.dev/) framework. Make sure you have installed the requirements and Playwright dependencies.
+
+```bash
+# Install Playwright dependencies
+playwright install
+
+# Run the tests
+npx playwright test --headed --config=playwright.config.ts
+
+# Run the tests with a specific browser
+npx playwright test --headed --config=playwright.config.ts --project=chromium
+
+# To open last HTML report run
+npx playwright show-report
 ```
 
 ## Utility to import PP2 application data

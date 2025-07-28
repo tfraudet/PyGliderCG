@@ -8,5 +8,9 @@
 			"database": "${workspaceFolder:PyGliderCG}/data/gliders.db",
 			"name": "gliders"
 		}
-	]
+	],
+	"python.analysis.typeCheckingMode": "basic",
+	"python.analysis.diagnosticSeverityOverrides": {
+		
+	}
 }
