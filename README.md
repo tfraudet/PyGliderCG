@@ -94,6 +94,9 @@ npx playwright test --headed --config=playwright.config.ts
 # Run the tests with a specific browser
 npx playwright test --headed --config=playwright.config.ts --project=chromium
 
+# Run the tests with a specific browser and in sequential mode
+npx playwright test --headed --config=playwright.config.ts --project=chromium --workers=1
+
 # To open last HTML report run
 npx playwright show-report
 ```

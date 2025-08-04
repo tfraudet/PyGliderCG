@@ -1,5 +1,10 @@
 .streamlit/secrets.toml
 
+# Environment variables
+.env
+.env.*
+!.env.example
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

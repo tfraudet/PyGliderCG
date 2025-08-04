@@ -17,7 +17,7 @@ test.describe('Center of gravity for glider F-CGUP', () => {
     await select_glider(page, 'F-CGUP');
   });
 
-  test('should compute weight with a 80kg pilot', async ({ page }) => {
+  test('should compute CG with a 80kg pilot', async ({ page }) => {
     // Check that glider F-CGUP is selected
     await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace F-CGUP');
 
@@ -39,7 +39,7 @@ test.describe('Center of gravity for glider F-CGUP', () => {
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('212.0');
   }); 
 
-  test('should compute weight with a 95kg pilot', async ({ page }) => {
+  test('should compute CG with a 95kg pilot', async ({ page }) => {
     // Check that glider F-CGUP is selected
     await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace F-CGUP');
 
@@ -59,7 +59,7 @@ test.describe('Center of gravity for glider F-CGUP', () => {
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('227.0');
   });
 
-  test('should compute with a 62kg pilot', async ({ page }) => {
+  test('should compute CG with a 62kg pilot', async ({ page }) => {
     // Check that glider F-CGUP is selected
     await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace F-CGUP');
 
@@ -89,7 +89,7 @@ test.describe('Center of gravity for glider D-2080', () => {
     await select_glider(page, 'D-2080');
   });
 
-  test('should compute weight with a 80kg pilot', async ({ page }) => {
+  test('should compute CG with a 80kg pilot', async ({ page }) => {
     // Check that the correcty glider is selected
     await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace D-2080');
 
@@ -111,7 +111,7 @@ test.describe('Center of gravity for glider D-2080', () => {
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('214.2');
   }); 
 
-  test('should compute weight with a 80kg pilot and a 3kg tail ballast', async ({ page }) => {
+  test('should compute CG with a 80kg pilot and a 3kg tail ballast', async ({ page }) => {
     // Check that the correcty glider is selected
     await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace D-2080');
 
@@ -143,7 +143,7 @@ test.describe('Center of gravity for glider D-2080', () => {
 
   }); 
 
-  test('should compute weight with a 65kg pilot and 5kg front ballast', async ({ page }) => {
+  test('should compute CG with a 65kg pilot and 5kg front ballast', async ({ page }) => {
     // Check that the correcty glider is selected
     await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace D-2080');
 
@@ -170,7 +170,7 @@ test.describe('Center of gravity for glider D-2080', () => {
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('204.2');
   }); 
 
-  test('should compute weight with a 75kg pilot and 150kg in wings ballast', async ({ page }) => {
+  test('should compute CG with a 75kg pilot and 150kg in wings ballast', async ({ page }) => {
     // Check that the correcty glider is selected
     await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace D-2080');
 
