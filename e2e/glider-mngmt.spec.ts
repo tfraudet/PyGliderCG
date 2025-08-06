@@ -5,7 +5,7 @@ import {
 	TYPING_SPEED_MS,
 	KEY_PRESS_DELAY_MS,
 	loginAsAdmin,
-	selectD8207,
+	selectGliderByKey,
 	setupTestLogging
 } from './test-utils';
 
@@ -111,7 +111,7 @@ test.describe('Glider Management', () => {
 		await page.getByRole('link', { name: 'Planeurs' }).click();
 
 		// Select glider D-8207
-		await selectD8207(page, 'D-8207',11);
+		await selectGliderByKey(page, 'D-8207',11);
 
 		// Click edit button
 		await page.getByRole('button', { name: 'L\'editer' }).click();
@@ -184,7 +184,7 @@ test.describe('Glider Management', () => {
 		await page.getByRole('link', { name: 'Planeurs' }).click();
 
 		// Select glider D-8207
-		await selectD8207(page, 'D-8207',11);
+		await selectGliderByKey(page, 'D-8207',11);
 
 		// Click edit button
 		await page.getByRole('button', { name: 'L\'editer' }).click();

@@ -80,10 +80,10 @@ export async function selectGlider(page: Page, glider: string): Promise<void> {
 }
 
 /**
- * Function to select D-8207 glider with keyboard navigation
+ * Function to select glider with keyboard navigation
  */
-export async function selectD8207(page: Page, glider: string, numberOfKeyPresses: number = 10): Promise<void> {
-	await page.getByTestId('stSelectbox').click();
+export async function selectGliderByKey(page: Page, glider: string, numberOfKeyPresses: number = 10): Promise<void> {
+	await page.getByTestId('stSelectbox').first().click();
 	for (let i = 0; i < numberOfKeyPresses; i++) {
 		await page.keyboard.press('ArrowDown');
 	}
