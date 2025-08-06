@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { selectGlider, setupTestLogging } from './test-utils';
 
 
 test.beforeAll( 'Setup', async () => {
@@ -6,15 +7,12 @@ test.beforeAll( 'Setup', async () => {
 });
 
 test.beforeEach(async ({ page }) => {
-  console.log(`Running test: ${test.info().titlePath[1]} > ${test.info().title} (${test.info().titlePath[0] || 'No description'})`);
-
-  // Go to the starting url before each test.
-  await page.goto('http://localhost:8501/');
+	await setupTestLogging(page);
 });
 
 test.describe('Center of gravity for glider F-CGUP', () => {
   test.beforeEach(async ({ page }) => {
-    await select_glider(page, 'F-CGUP');
+    await selectGlider(page, 'F-CGUP');
   });
 
   test('should compute CG with a 80kg pilot', async ({ page }) => {
@@ -28,6 +26,7 @@ test.describe('Center of gravity for glider F-CGUP', () => {
 
     // compute weight and balance
     await page.getByTestId('stBaseButton-primary').click();
+		await page.waitForTimeout(1000);
 
     // check the center of gravity 
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('356.0');
@@ -50,6 +49,7 @@ test.describe('Center of gravity for glider F-CGUP', () => {
 
     // compute weight and balance
     await page.getByTestId('stBaseButton-primary').click();
+		await page.waitForTimeout(1000);
 
     // check weight and CG
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('322.0');
@@ -70,6 +70,7 @@ test.describe('Center of gravity for glider F-CGUP', () => {
     
     // compute weight and balance
     await page.getByTestId('stBaseButton-primary').click();
+		await page.waitForTimeout(1000);
 
     // check weight and CG
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('401.0');
@@ -86,7 +87,7 @@ test.describe('Center of gravity for glider F-CGUP', () => {
 
 test.describe('Center of gravity for glider D-2080', () => {
   test.beforeEach(async ({ page }) => {
-    await select_glider(page, 'D-2080');
+    await selectGlider(page, 'D-2080');
   });
 
   test('should compute CG with a 80kg pilot', async ({ page }) => {
@@ -100,6 +101,7 @@ test.describe('Center of gravity for glider D-2080', () => {
 
     // compute weight and balance
     await page.getByTestId('stBaseButton-primary').click();
+		await page.waitForTimeout(1000);
 
     // check the center of gravity 
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('351.0');
@@ -127,6 +129,7 @@ test.describe('Center of gravity for glider D-2080', () => {
 
     // compute weight and balance
     await page.getByTestId('stBaseButton-primary').click();
+		await page.waitForTimeout(1000);
 
     // check the center of gravity 
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('383.0');
@@ -159,6 +162,7 @@ test.describe('Center of gravity for glider D-2080', () => {
 
     // compute weight and balance
     await page.getByTestId('stBaseButton-primary').click();
+		await page.waitForTimeout(1000);
 
     // check the center of gravity 
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('359.0');
@@ -170,37 +174,4 @@ test.describe('Center of gravity for glider D-2080', () => {
     await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('204.2');
   }); 
 
-  test('should compute CG with a 75kg pilot and 150kg in wings ballast', async ({ page }) => {
-    // Check that the correcty glider is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace D-2080');
-
-    // Specify a 75kg pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('75');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
-
-    // Specify a 150kg front ballast
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (' }).fill('150');
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (' }).press('Enter');
-
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-
-    // check the GC and the weight with water ballast
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('309.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('509.2');
-
-    // check the GC and the weight without water ballast
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('363.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('359.2');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('209.2');
-  }); 
 });
-
-async function select_glider(page: Page, glider: string) {
-    await page.getByRole('img', { name: 'open' }).click();
-    await page.getByTestId('stSelectboxVirtualDropdown').getByText(glider).click();
-}

@@ -1,31 +1,25 @@
 import { test, expect } from '@playwright/test';
-import dotenv from 'dotenv';
-
-// Load environment variables from .env file
-dotenv.config();
-
-const TEST_ADMIN_USERNAME = process.env.TEST_ADMIN_USERNAME || 'admin-user';
-const TEST_ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'admin-user-password';
-
-const TEST_EDITOR_USERNAME = process.env.TEST_EDITOR_USERNAME || 'editor-user';
-const TEST_EDITOR_PASSWORD = process.env.TEST_EDITOR_PASSWORD || 'editor-user-password';
-
-const INCORRECT_PASSWORD = 'bad-password';
-
-const TYPING_SPEED_MS = 20;
-const KEY_PRESS_DELAY_MS = 80
+import {
+	TEST_ADMIN_USERNAME,
+	TEST_ADMIN_PASSWORD,
+	TEST_EDITOR_USERNAME,
+	TEST_EDITOR_PASSWORD,
+	INCORRECT_PASSWORD,
+	TYPING_SPEED_MS,
+	KEY_PRESS_DELAY_MS,
+	goToLoginPage,
+	loginAsAdmin,
+	setupTestLogging
+} from './test-utils';
 
 test.beforeEach(async ({ page }) => {
-	console.log(`Running test: ${test.info().titlePath[1]} > ${test.info().title} (${test.info().titlePath[0] || 'No description'})`);
-
-	// Go to the starting url before each test.
-	await page.goto('http://localhost:8501/');
+	await setupTestLogging(page);
 });
 
 test.describe('Login Functionality', () => {
 	test.beforeEach(async ({ page }) => {
-			// go to login page
-			await page.getByTestId('stExpandSidebarButton').click();
+		// go to login page
+		await goToLoginPage(page);
 	});
 
 	test('should fail to login with an incorrect password', async ({ page }) => {
@@ -139,27 +133,9 @@ test.describe('Login Functionality', () => {
 
 test.describe('Users management', () => {
 	test.beforeEach(async ({ page }) => {
-		// go to login page
-		await page.getByTestId('stExpandSidebarButton').click();
-
-		// check that we are well in the login page
-		await expect(page.getByRole('heading', { name: 'Connexion' })).toBeVisible();
-
-		// verify the presence and text of the login button
-		const loginButton = page.getByTestId('stBaseButton-secondary');
-		await expect(loginButton).toBeVisible();
-		await expect(loginButton).toContainText('Se connecter');
-
-		// enter admin username and password
-		await page.getByRole('textbox', { name: 'Identifiant' }).click();
-		await page.getByRole('textbox', { name: 'Identifiant' }).fill(TEST_ADMIN_USERNAME);
-		await page.getByRole('textbox', { name: 'Mot de passe' }).click();
-		await page.getByRole('textbox', { name: 'Mot de passe' }).fill(TEST_ADMIN_PASSWORD);
-		await page.getByTestId('stBaseButton-secondary').click();
-
-		// go to users management page
+		// Login as admin and go to users management page
+		await loginAsAdmin(page);
 		await page.getByRole('link', { name: 'Utilisateurs' }).click();
-
 	});
 
 	test('should successfully create a new user', async ({ page }) => {
@@ -249,6 +225,53 @@ test.describe('Users management', () => {
 		// Step 8: Click on the "Ok" button
 		await expect(page.getByRole('button', { name: 'Ok' })).toBeVisible();
 		await page.getByRole('button', { name: 'Ok' }).click();
+	});
+
+});
+
+test.describe('Import/export', () => {
+	test.beforeEach(async ({ page }) => {
+		// Login as admin and go to users management page
+		await loginAsAdmin(page);
+		await page.getByRole('link', { name: 'Utilisateurs' }).click();
+	});
+	
+	test('should successfully export the database', async ({ page }) => {
+		// Check tha admin section and buttons are displyed
+		await expect(page.locator('#settings-administration')).toContainText('settings Administration');
+		await expect(page.getByRole('button', { name: 'cloud_download icon Exporter' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'cloud_upload icon Importer la' })).toBeVisible();
+
+		// Click on the export button
+		await page.getByRole('button', { name: 'cloud_download icon Exporter' }).click();
+		await expect(page.getByLabel('dialog')).toContainText('Base de données zippée avec succès');
+
+		// execute the export
+		await page.getByTestId('stDownloadButton').getByTestId('stBaseButton-secondary').click();
+		const download = await page.waitForEvent('download');;
+
+		// Check that the export is successfull
+		await expect(page.getByTestId('stAlertContainer')).toBeVisible();
+		await expect(page.getByTestId('stAlertContentSuccess').getByRole('paragraph')).toContainText('La base de données a été téléchargée avec succès');
+		await page.getByRole('button', { name: 'Close' }).click();
+	});
+
+	test('should successfully import the database', async ({ page }) => {
+		// Check tha admin section and buttons are displyed
+		await expect(page.locator('#settings-administration')).toContainText('settings Administration');
+		await expect(page.getByRole('button', { name: 'cloud_download icon Exporter' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'cloud_upload icon Importer la' })).toBeVisible();
+		
+		// Click on the import button
+		await page.getByRole('button', { name: 'cloud_upload icon Importer la' }).click();
+
+		// Select the file to import
+		await page.getByTestId('stFileUploaderDropzoneInput').setInputFiles('./data/test_import_db.zip');
+	
+		// Check that the import is successfull
+		await expect(page.getByTestId('stAlertContainer')).toBeVisible();
+		await expect(page.getByTestId('stAlertContentSuccess').getByRole('paragraph')).toContainText('Base de données importée avec succès');
+
 	});
 
 });

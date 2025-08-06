@@ -174,8 +174,7 @@ PP2/
 HFDA64Portable/
 spike/
 .DS_Store
-data/
-pages/weighing_ui_old.py
+data
 **/logo
 
 .vscode/settings.json
