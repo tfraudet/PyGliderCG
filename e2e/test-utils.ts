@@ -13,7 +13,7 @@ export const INCORRECT_PASSWORD = 'bad-password';
 
 // Timing constants
 export const TYPING_SPEED_MS = 20;
-export const KEY_PRESS_DELAY_MS = 80;
+export const KEY_PRESS_DELAY_MS = 100;
 
 // Base URL constant
 export const BASE_URL = 'http://localhost:8501/';
@@ -83,12 +83,15 @@ export async function selectGlider(page: Page, glider: string): Promise<void> {
  * Function to select glider with keyboard navigation
  */
 export async function selectGliderByKey(page: Page, glider: string, numberOfKeyPresses: number = 10): Promise<void> {
+	// await page.getByTestId('stSelectbox').first().click();
+	// for (let i = 0; i < numberOfKeyPresses; i++) {
+	// 	await page.keyboard.press('ArrowDown');
+	// }
 	await page.getByTestId('stSelectbox').first().click();
-	for (let i = 0; i < numberOfKeyPresses; i++) {
-		await page.keyboard.press('ArrowDown');
-	}
+	await page.keyboard.type(glider, { delay: TYPING_SPEED_MS });
 	await page.keyboard.press('Enter');
 }
+
 
 /**
  * Common beforeEach setup for test logging and navigation

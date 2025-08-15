@@ -5,7 +5,7 @@ import {
 	TYPING_SPEED_MS,
 	KEY_PRESS_DELAY_MS,
 	loginAsAdmin,
-	selectGliderByKey,
+	selectGliderByKey,	
 	setupTestLogging
 } from './test-utils';
 
@@ -70,14 +70,14 @@ test.describe('Glider Management', () => {
 		await page.locator('label').filter({ hasText: 'En avant de la référence' }).locator('div').first().click();
 
 		// Step 8: mass limit and lever arms
-		await page.getByRole('spinbutton', { name: 'MMWP (kg)' }).fill('525.0');
-		await expect(page.getByRole('spinbutton', { name: 'MMWP (kg)' })).toHaveValue('525.0');
+		await page.getByRole('spinbutton', { name: 'MMWP (kg)' }).fill('700.0');
+		await expect(page.getByRole('spinbutton', { name: 'MMWP (kg)' })).toHaveValue('700.0');
 
-		await page.getByRole('spinbutton', { name: 'MMWV (kg)' }).fill('525.0');
-		await expect(page.getByRole('spinbutton', { name: 'MMWV (kg)' })).toHaveValue('525.0');
+		await page.getByRole('spinbutton', { name: 'MMWV (kg)' }).fill('670.0');
+		await expect(page.getByRole('spinbutton', { name: 'MMWV (kg)' })).toHaveValue('670.0');
 
-		await page.getByRole('spinbutton', { name: 'MMENP (kg)' }).fill('235.0');
-		await expect(page.getByRole('spinbutton', { name: 'MMENP (kg)' })).toHaveValue('235.0');
+		await page.getByRole('spinbutton', { name: 'MMENP (kg)' }).fill('440.0');
+		await expect(page.getByRole('spinbutton', { name: 'MMENP (kg)' })).toHaveValue('440.0');
 
 		await page.getByRole('spinbutton', { name: 'MHarnais (kg)' }).fill('110.0');
 		await expect(page.getByRole('spinbutton', { name: 'MHarnais (kg)' })).toHaveValue('110.0');
@@ -85,14 +85,26 @@ test.describe('Glider Management', () => {
 		await page.getByRole('spinbutton', { name: 'Masse mini pilote (kg)' }).fill('70.0');
 		await expect(page.getByRole('spinbutton', { name: 'Masse mini pilote (kg)' })).toHaveValue('70.0');
 
-		await page.getByRole('spinbutton', { name: 'Bras de levier pilote avant(mm)' }).fill('513.0');
-		await expect(page.getByRole('spinbutton', { name: 'Bras de levier pilote avant(mm)' })).toHaveValue('513.0');
+		await page.getByRole('spinbutton', { name: 'Bras de levier pilote avant(mm)' }).fill('1400.0');
+		await expect(page.getByRole('spinbutton', { name: 'Bras de levier pilote avant(mm)' })).toHaveValue('1400.0');
 
-		await page.getByRole('spinbutton', { name: 'Centrage avant (mm)' }).fill('250');
-		await expect(page.getByRole('spinbutton', { name: 'Centrage avant (mm)' })).toHaveValue('250');
+		await page.getByRole('spinbutton', { name: 'Bras de levier pilote arrière (mm)' }).fill('290.0');
+		await expect(page.getByRole('spinbutton', { name: 'Bras de levier pilote arrière (mm)' })).toHaveValue('290.0');
+		
+		await page.getByRole('spinbutton', { name: 'Bras de levier waterballast (mm)' }).fill('65');
+		await expect(page.getByRole('spinbutton', { name: 'Bras de levier waterballast (mm)' })).toHaveValue('65');
 
-		await page.getByRole('spinbutton', { name: 'Centrage arrière (mm)' }).fill('400');
-		await expect(page.getByRole('spinbutton', { name: 'Centrage arrière (mm)' })).toHaveValue('400');
+		await page.getByRole('spinbutton', { name: 'Bras de levier gueuse avant (mm)' }).fill('2055');
+		await expect(page.getByRole('spinbutton', { name: 'Bras de levier gueuse avant (mm)' })).toHaveValue('2055');
+
+		await page.getByRole('spinbutton', { name: 'Bras de levier ballast ou gueuse arrière (mm)' }).fill('5320');
+		await expect(page.getByRole('spinbutton', { name: 'Bras de levier ballast ou gueuse arrière (mm)' })).toHaveValue('5320');
+
+		await page.getByRole('spinbutton', { name: 'Centrage avant (mm)' }).fill('45');
+		await expect(page.getByRole('spinbutton', { name: 'Centrage avant (mm)' })).toHaveValue('45');
+
+		await page.getByRole('spinbutton', { name: 'Centrage arrière (mm)' }).fill('250');
+		await expect(page.getByRole('spinbutton', { name: 'Centrage arrière (mm)' })).toHaveValue('250');
 		
 		// Verify save button is available
 		await expect(page.getByRole('button', { name: 'save Enregistrer' })).toBeVisible();
@@ -102,7 +114,7 @@ test.describe('Glider Management', () => {
 		await page.waitForTimeout(1000);
 
 		// and verify the alert message is displayed
-		await expect(page.getByTestId('stAlertContainer')).toBeVisible();
+		await expect(page.getByTestId('stAlertContainer').first()).toBeVisible();
 		await expect(page.getByTestId('stAlertContentInfo').getByRole('paragraph')).toContainText('Ajout d\'un nouveau planeur');
 	});
 
@@ -111,7 +123,7 @@ test.describe('Glider Management', () => {
 		await page.getByRole('link', { name: 'Planeurs' }).click();
 
 		// Select glider D-8207
-		await selectGliderByKey(page, 'D-8207',11);
+		await selectGliderByKey(page, 'D-8207',12);
 
 		// Click edit button
 		await page.getByRole('button', { name: 'L\'editer' }).click();
@@ -179,12 +191,142 @@ test.describe('Glider Management', () => {
 		await expect(page.getByTestId('stAlertContentSuccess').getByRole('paragraph')).toContainText('Points masse & centrage du planeur D-8207 mis à jour avec succès');
 	});
 
+	test('should add equipements to an existing glider', async ({ page }) => {
+		// Navigate to "Planeurs" menu
+		await page.getByRole('link', { name: 'Planeurs' }).click();
+
+		// Select glider D-8207
+		await selectGliderByKey(page, 'D-8207',12);
+
+		// Click edit button
+		await page.getByRole('button', { name: 'L\'editer' }).click();
+		await page.waitForTimeout(1000);
+
+		await expect(page.getByTestId('stAlertContainer')).toBeVisible();
+		await expect(page.getByTestId('stAlertContentInfo').getByRole('paragraph')).toContainText('Modification du planeur D-8207');
+
+		// Select the Mass/Balance tab
+		await page.getByRole('tab', { name: 'Equipements' }).click();
+
+		// Add a rows to the mass/balance table
+		await page.locator('.dvn-scroller').click(); 
+
+		await page.getByRole('button', { name: 'Add row' }).click();
+		await page.getByTestId('data-grid-canvas').press('Enter');
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('instrument-1', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('marque-1', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('type-1', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('12345', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('enter', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('01', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('01', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('1970', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('AV', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Enter', { delay: KEY_PRESS_DELAY_MS });
+
+		await page.getByRole('button', { name: 'Add row' }).click();
+		await page.getByTestId('data-grid-canvas').press('Enter');
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.getByTestId('data-grid-canvas').press('ArrowLeft');
+		await page.getByTestId('data-grid-canvas').press('ArrowLeft');
+		await page.getByTestId('data-grid-canvas').press('ArrowLeft');
+		await page.getByTestId('data-grid-canvas').press('ArrowLeft');
+		await page.getByTestId('data-grid-canvas').press('ArrowLeft');
+		await page.getByTestId('data-grid-canvas').press('ArrowLeft');
+		await page.keyboard.press('Enter', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('instrument-2', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('marque-2', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('type-2', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('12345', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('enter', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('02', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('02', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('1971', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('AV', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Enter', { delay: KEY_PRESS_DELAY_MS });
+
+		// save modifications
+		await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeVisible();
+		await page.getByRole('button', { name: 'Enregistrer' }).click();
+
+		await expect(page.getByRole('alert').filter({ hasText: 'infoAjout d\'équipement(s)' })).toBeVisible();
+		await expect(page.getByTestId('stTabs').getByTestId('stAlertContentInfo').getByRole('paragraph')).toContainText('Ajout d\'équipement(s)');
+		await expect(page.getByRole('alert').filter({ hasText: 'check_circleInventaire du' })).toBeVisible();
+		await expect(page.getByTestId('stAlertContentSuccess').getByRole('paragraph')).toContainText('Inventaire du planeur D-8207 mis à jour avec succès');
+
+	});
+
+	test('should add a new weigh-in for an existing glider', async ({ page }) => {
+		// Navigate to "Planeurs" menu
+		await page.getByRole('link', { name: 'Pesées' }).click();
+
+		// Select glider D-8207
+		await selectGliderByKey(page, 'D-8207',12);
+
+		// Add a rows to the weigh-in table 
+		await page.locator('.dvn-scroller').click(); 
+		await page.getByRole('button', { name: 'Add row' }).click();
+		await page.getByTestId('data-grid-canvas').press('Enter');
+		await page.keyboard.type('enter', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('17', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('06', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.type('2025', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('379.8', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('38.0', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('65', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('5265', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('102.7', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('102.7', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });	
+		await page.keyboard.type('9.6', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('202.8', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+		await page.keyboard.type('0.0', { delay: TYPING_SPEED_MS });	
+		await page.keyboard.press('Tab', { delay: KEY_PRESS_DELAY_MS });
+
+		// save modifications
+		await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeVisible();
+		await page.getByRole('button', { name: 'Enregistrer' }).click();
+		
+		// test save is ok
+		await expect(page.getByRole('alert').filter({ hasText: 'check_circlePesée(s) ajoutée(' })).toBeVisible();
+		await expect(page.getByTestId('stAlertContentSuccess').getByRole('paragraph')).toContainText('Pesée(s) ajoutée(s) avec succès');
+		
+		// test wieghin result is displayed
+		await expect(page.getByTestId('stMainBlockContainer')).toContainText('417.8');
+		await expect(page.getByTestId('stMainBlockContainer')).toContainText('212.4');
+		await expect(page.getByTestId('stMainBlockContainer')).toContainText('227.6');
+		await expect(page.getByTestId('stMainBlockContainer')).toContainText('252.2');
+		await expect(page.getByTestId('stMainBlockContainer')).toContainText('544.0');
+		await expect(page.getByTestId('stMainBlockContainer')).toContainText('74.4');
+		await expect(page.getByTestId('stMainBlockContainer')).toContainText('144.3');
+});
+
 	test('should delete an existing glider ', async ({ page }) => {
 		// Navigate to "Planeurs" menu
 		await page.getByRole('link', { name: 'Planeurs' }).click();
 
 		// Select glider D-8207
-		await selectGliderByKey(page, 'D-8207',11);
+		await selectGliderByKey(page, 'D-8207',12);
 
 		// Click edit button
 		await page.getByRole('button', { name: 'L\'editer' }).click();
