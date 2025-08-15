@@ -1,0 +1,28 @@
+{
+  "name": "pyglidercg",
+  "version": "1.0.0",
+  "description": "<p align=\"center\"> \t <img src=\"img/app-logo-short-v2.png\" width=\"100\" > </p>",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc",
+    "test": "tests"
+  },
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tfraudet/PyGliderCG.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/tfraudet/PyGliderCG/issues"
+  },
+  "homepage": "https://github.com/tfraudet/PyGliderCG#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.54.1",
+    "@types/node": "^24.1.0",
+    "dotenv": "^17.2.1"
+  }
+}

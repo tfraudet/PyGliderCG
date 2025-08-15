@@ -94,10 +94,14 @@ class UsersDuckDB(Users):
 		logger.debug('in UsersDuckDB.load_users() users is\n {}'.format(users))
 		return users
 
-	def get_user(self, username : str) -> User:
+	from typing import Optional
+
+	def get_user(self, username : str) -> Optional[User]:
 		return self.find_by_username(username)
 	
 	def find_by_username(self, username: str):
+		if self.users is None:
+			return None
 		list_of_username = self.users['username'].unique().tolist()
 		if username in list_of_username:
 			user_row = self.users[self.users['username'] == username]
@@ -128,7 +132,8 @@ class UsersDuckDB(Users):
 
 		# Encrypt the password if not yet done
 		if not user.password.startswith('$2b$12$'):
-			user.password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
+			# 	user.password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
+			user.password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 	
 		# could also use 'INSERT OR REPLACE INTO USERS VALUES (?, ?, ?, ?)'
 		sql = '''

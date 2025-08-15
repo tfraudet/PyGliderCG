@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, fields
 from datetime import date
 from enum import Enum
 import logging
+from typing import List, Tuple, Optional
 
 import duckdb
 import pandas as pd
@@ -152,20 +153,19 @@ class Glider:
 	wedge : str
 	wedge_position : str
 		
-	limits : Limits = None
-	arms: Arms = None
-
-	weighings : list[Weighing] = field(default_factory=list)
-	weight_and_balances: list[(int, float)] = field(default_factory=list)  # list of tuple (centering in mm, weight in Kg)
-	instruments: list[Instrument] = field(default_factory=list)
+	limits : Optional[Limits] = None
+	arms: Optional[Arms] = None
+	weighings : List[Weighing] = field(default_factory=list)
+	weight_and_balances: List[Tuple[int, float]] = field(default_factory=list)  # list of tuple (centering in mm, weight in Kg)
+	instruments: List[Instrument] = field(default_factory=list)
 
 	def limits_to_pandas(self) -> pd.DataFrame:
 		return pd.DataFrame(self.weight_and_balances, columns=['centering', 'mass'])
 	
-	def get_instrument_by_id(self, id : int) -> Instrument:
+	def get_instrument_by_id(self, id : int) -> Optional[Instrument]:
 		return next((instrument for instrument in self.instruments if instrument.id == id), None)
 	
-	def get_weighing_by_id(self, id : int) -> Instrument:
+	def get_weighing_by_id(self, id : int) -> Optional[Weighing]:
 		return next((weighing for weighing in self.weighings if weighing.id == id), None)
 	
 	def instruments_to_pandas(self) -> pd.DataFrame:
@@ -201,22 +201,22 @@ class Glider:
 				self.wedge_position,
 
 				# Limits
-				self.limits.mmwp,
-				self.limits.mmwv,
-				self.limits.mmenp,
-				self.limits.mm_harnais,
-				self.limits.weight_min_pilot,
-				self.limits.front_centering,
-				self.limits.rear_centering,
+				self.limits.mmwp if self.limits else None,
+				self.limits.mmwv if self.limits else None,
+				self.limits.mmenp if self.limits else None,
+				self.limits.mm_harnais if self.limits else None,
+				self.limits.weight_min_pilot if self.limits else None,
+				self.limits.front_centering if self.limits else None,
+				self.limits.rear_centering if self.limits else None,
 
 				# Arms
-				self.arms.arm_front_pilot,
-				self.arms.arm_rear_pilot,
-				self.arms.arm_waterballast,
-				self.arms.arm_front_ballast,
-				self.arms.arm_rear_watterballast_or_ballast,
-				self.arms.arm_gas_tank,
-				self.arms.arm_instruments_panel
+				self.arms.arm_front_pilot if self.arms else None,
+				self.arms.arm_rear_pilot if self.arms else None,
+				self.arms.arm_waterballast if self.arms else None,
+				self.arms.arm_front_ballast if self.arms else None,
+				self.arms.arm_rear_watterballast_or_ballast if self.arms else None,
+				self.arms.arm_gas_tank if self.arms else None,
+				self.arms.arm_instruments_panel if self.arms else None
 			])
 		except Exception as e:	
 			logger.error(f'Error on database {dbname} when saving glider: {e}')
@@ -255,8 +255,13 @@ class Glider:
 			conn = duckdb.connect(dbname)
 			for instrument in self.instruments:
 				if instrument.id is None:
-					instrument.id = conn.execute('SELECT nextval(\'inventory_id_seq\')').fetchone()[0]
-					logger.debug('Next instrument id is {} '.format(instrument.id))
+					result = conn.execute('SELECT nextval(\'inventory_id_seq\')').fetchone()
+					if result is not None:
+						instrument.id = result[0]
+						logger.debug('Next instrument id is {} '.format(instrument.id))
+					else:
+						logger.error('Failed to get next instrument id from inventory_id_seq')
+						raise ValueError('Could not retrieve next instrument id')
 
 				conn.execute('''
 						INSERT OR REPLACE INTO INVENTORY (id, registration, on_board, instrument, brand, type, number, date, seat)
@@ -286,8 +291,13 @@ class Glider:
 			conn = duckdb.connect(dbname)
 			for weighing in self.weighings:
 				if weighing.id is None:
-					weighing.id = conn.execute('SELECT nextval(\'auto_increment\')').fetchone()[0]
-					logger.debug('Next weighing id is {} '.format(weighing.id))
+					result = conn.execute('SELECT nextval(\'auto_increment\')').fetchone()
+					if result is not None:
+						weighing.id = result[0]
+						logger.debug('Next weighing id is {} '.format(weighing.id))
+					else:
+						logger.error('Failed to get next weighing id from auto_increment')
+						raise ValueError('Could not retrieve next weighing id')
 
 				conn.execute('''
 						INSERT OR REPLACE INTO WEIGHING (id, date, registration, p1, p2, right_wing_weight, left_wing_weight, tail_weight, fuselage_weight, fix_ballast_weight, A, D)
@@ -375,7 +385,7 @@ class Glider:
 		conn.close()
 		return rows
 	
-	def last_weighing(self) -> Weighing:
+	def last_weighing(self) -> Optional[Weighing]:
 		return max(self.weighings, key=lambda x: x.date) if len(self.weighings)>0 else None
 	
 	def empty_weight(self) -> float:
@@ -395,6 +405,8 @@ class Glider:
 		last_weighing = self.last_weighing()
 		if last_weighing is None:
 			raise ValueError('No weighing for this glider')
+		if self.limits is None or self.limits.mmwv is None:
+			raise ValueError('Limits or mmwv is not set for this glider')
 		
 		# return round(self.limits.mmwp - last_weighing.mve(), 2)
 		return round(self.limits.mmwv - last_weighing.mve(), 2)
@@ -407,6 +419,8 @@ class Glider:
 		last_weighing = self.last_weighing()
 		if last_weighing is None:
 			raise ValueError('No weighing for this glider')
+		if self.limits is None or self.limits.mmenp is None:
+			raise ValueError('Limits or mmenp is not set for this glider')
 		
 		return round(self.limits.mmenp - last_weighing.mvenp(), 2)
 	
@@ -417,51 +431,55 @@ class Glider:
 		return min(self.cv_max(), self.cu_max())
 	
 	def pilot_av_mini(self) -> float:
-		mass_mini_pilot = None
+		if self.limits is None or self.arms is None:
+			raise ValueError('Limits or arms are not set for this glider')
+		mass_mini_pilot: Optional[float] = None
 		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
-			# Masse à vide * (X0 - limite centrage arrière) / Bras de levier pilote + limite centrage arrière
 			mass_mini_pilot = self.empty_weight() * (self.empty_arm() - self.limits.rear_centering) / (self.arms.arm_front_pilot + self.limits.rear_centering)
 		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
 			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
-				# Masse à vide * (X0 - limite centrage arrière ) / limite centrage arrière - Bras de levier pilote avant
 				mass_mini_pilot = self.empty_weight() * (self.limits.rear_centering - self.empty_arm()) / (self.limits.rear_centering - self.arms.arm_front_pilot)
 			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
-				# (p1 + p2) * (X0 - limite centrage arrière ) / limite centrage arrière - Bras de levier pilote avant
 				mass_mini_pilot = self.empty_weight() * (self.empty_arm() - self.limits.rear_centering) / (self.limits.rear_centering - self.arms.arm_front_pilot)
 			else:
 				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-		return round(mass_mini_pilot,1)
+		if mass_mini_pilot is None:
+			raise ValueError('Failed to calculate mass_mini_pilot')
+		return round(mass_mini_pilot, 1)
 
 	def pilot_av_mini_duo(self) -> float:
-		mass_mini_pilot = None
+		if self.limits is None or self.arms is None:
+			raise ValueError('Limits or arms are not set for this glider')
+		mass_mini_pilot: Optional[float] = None
 		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
-			# TODO: check calculation
 			return self.pilot_av_mini()
 		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
 			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
 				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
 			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
-				# masse mini pilot avant solo - (masse mini pilote  * ((limite centrage arrière - bras de levier pilote avant) / (limite centrage arrière - bras de levier pilote avant)
-				mass_mini_pilot = self.pilot_av_mini() - ( self.limits.weight_min_pilot * (self.limits.rear_centering - self.arms.arm_rear_pilot)) / (self.limits.rear_centering - self.arms.arm_front_pilot)
+				mass_mini_pilot = self.pilot_av_mini() - (self.limits.weight_min_pilot * (self.limits.rear_centering - self.arms.arm_rear_pilot)) / (self.limits.rear_centering - self.arms.arm_front_pilot)
 			else:
 				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-		return round(mass_mini_pilot,1)
+		if mass_mini_pilot is None:
+			raise ValueError('Failed to calculate mass_mini_pilot')
+		return round(mass_mini_pilot, 1)
 
 	def pilot_av_maxi(self) -> float:
-		mass_maxi_pilot = None
+		if self.limits is None or self.arms is None:
+			raise ValueError('Limits or arms are not set for this glider')
+		mass_maxi_pilot: Optional[float] = None
 		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
-			# Masse à vide * (X0 - limite centrage avant) / Bras de levier pilote + limite centrage avant
 			mass_maxi_pilot = self.empty_weight() * (self.empty_arm() - self.limits.front_centering) / (self.arms.arm_front_pilot + self.limits.front_centering)
 		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
 			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
-				# Masse à vide * (X0 - limite centrage avant ) / limite centrage avant - Bras de levier pilote
 				mass_maxi_pilot = self.empty_weight() * (self.limits.front_centering - self.empty_arm()) / (self.limits.front_centering - self.arms.arm_front_pilot)
 			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
-				# (p1 + p2) * (X0 - limite centrage avant ) / limite centrage avant - Bras de levier pilote avant
 				mass_maxi_pilot = self.empty_weight() * (self.empty_arm() - self.limits.front_centering) / (self.limits.front_centering - self.arms.arm_front_pilot)
 			else:
 				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-		return round(mass_maxi_pilot,1)
+		if mass_maxi_pilot is None:
+			raise ValueError('Failed to calculate mass_maxi_pilot')
+		return round(mass_maxi_pilot, 1)
 
 	def empty_arm(self) -> float:
 		last_weighing = self.last_weighing()
@@ -485,6 +503,8 @@ class Glider:
 		'''
 
 		glider_weight = self.empty_weight() + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight + wing_water_ballast_weight
+		if self.arms is None:
+			raise ValueError('Arms data is missing for this glider')
 		if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
 			moment_arm = (
 					self.empty_weight() * self.empty_arm() +

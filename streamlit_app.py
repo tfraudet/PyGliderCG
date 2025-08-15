@@ -121,15 +121,19 @@ def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, 
 	fig.update_layout(
 			xaxis=dict(
 				dtick=YAXIS_DTICK, 
-				title='<b>Centrage (mm)</b>',
-				titlefont=dict(size=22,)
+				title=dict(
+					text = '<b>Centrage (mm)</b>',
+					font = dict(size=22)
+				)
 			)
 		)
 	fig.update_layout(
 			yaxis=dict(
 				dtick=YAXIS_DTICK, 
-				title='<b>Masse (kg)</b>',
-				titlefont_size=22,
+				title = dict(
+					text = '<b>Masse (kg)</b>',
+					font = dict(size=22)
+				)
 			)
 		)
 	

@@ -2,7 +2,7 @@
 	 <img src="img/app-logo-short-v2.png" width="100" >
 </p>
 
- # Center of Gravity Calculator for ACPH Gliders
+# Center of Gravity Calculator for ACPH Gliders
 
 A simple Streamlit app to calculate center of gravity for [ACPH](https://aeroclub-issoire.fr/) gliders.
 
@@ -10,7 +10,7 @@ A simple Streamlit app to calculate center of gravity for [ACPH](https://aeroclu
 
 ## Requirements
 
-* Python 3.11
+* Python 3.12
 
 ## How to run it on your own machine
 
@@ -58,6 +58,50 @@ docker pull tfraudet/pyglidercg:latest
 # Then run the image inside a container, mapping the host’s port 8501 to the container’s port 8501
 docker run -d -p 8501:8501 --name glider-cg  -e APP_DEBUG_MODE='false' -e DB_NAME='./data/gliders.db' -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
 
+# or
+docker run -d -p 8501:8501 --name glider-cg  --env-file "$(pwd)"/.env  -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
+```
+
+## Run the tests
+
+Launch the app locally and open a new terminal/command prompt in the same folder.
+
+```bash
+streamlit run streamlit_app.py
+```
+
+### Run unit tests
+
+```bash
+# Install PyTest
+pip install pytest
+
+# Run the tests
+pytest
+```
+
+### Run end to end tests
+
+You can run the tests using [Playwright](https://playwright.dev/) framework. Make sure you have installed the requirements and Playwright dependencies.
+
+```bash
+# Install Playwright dependencies
+playwright install
+
+# Run the tests
+npx playwright test --headed --config=playwright.config.ts
+
+# Run the tests with a specific browser
+npx playwright test --headed --config=playwright.config.ts --project=chromium
+
+# Run the tests with a specific browser and in sequential mode
+npx playwright test --headed --config=playwright.config.ts --project=chromium --workers=1
+
+# Run specifi test with a specific browser and in sequential mode
+npx playwrightc test e2e/glider-mngmt.spec.ts --headed --config=playwright.config.ts --project=chromium --workers=1
+
+# To open last HTML report run
+npx playwright show-report
 ```
 
 ## Utility to import PP2 application data

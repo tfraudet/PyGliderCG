@@ -2,7 +2,7 @@ import streamlit as st
 import logging
 import os
 
-__version__ = "0.9.9"
+__version__ = "1.0.0"
 DEFAULT_DB_NAME = './data/gliders.db'
 DEFAULT_COOKIE_KEY = 'glider-cg-acph'
 
@@ -18,7 +18,7 @@ def is_debug_mode() -> bool:
 
 		# if not found in environment variables look in secrets.toml file 
 		try:
-			debug = st.secrets['APP_DEBUG_MODE']
+			debug = st.secrets.get('APP_DEBUG_MODE', False)
 		except KeyError as ke:
 			logging.getLogger(__name__).warning('APP_DEBUG_MODE not found in secrets.toml file, defaulting to False')
 			debug = False
@@ -39,7 +39,7 @@ def get_database_name() -> str:
 
 		# if not found in environment variables look in secrets.toml file 
 		try:
-			dbanme = st.secrets['DB_NAME']
+			dbanme = st.secrets.get('DB_NAME', DEFAULT_DB_NAME)
 		except KeyError as ke:
 			logging.getLogger(__name__).warning('DB_NAME not found in secrets.toml file, defaulting to DEFAULT_DB_NAME')
 			dbanme = DEFAULT_DB_NAME
@@ -62,10 +62,10 @@ def get_cookie_key() -> str:
 		try:
 			cookie_key = st.secrets['COOKIE_KEY']
 		except KeyError as ke:
-			logging.getLogger(__name__).warning('COOKIE_KEY not found in secrets.toml file, defaulting to DEFAULT_DB_NAME')
+			logging.getLogger(__name__).warning('COOKIE_KEY not found in secrets.toml file, defaulting to DEFAULT_COOKIE_KEY')
 			cookie_key = DEFAULT_COOKIE_KEY
 		except Exception as e:
-			logging.getLogger(__name__).warning(f'secrets.toml file not found, defaulting to DEFAULT_DB_NAME: error is: {e} ')
+			logging.getLogger(__name__).warning(f'secrets.toml file not found, defaulting to DEFAULT_COOKIE_KEY: error is: {e} ')
 			cookie_key = DEFAULT_COOKIE_KEY
 
 	logging.getLogger(__name__).info(f'COOKIE_KEY is: {cookie_key} ')
