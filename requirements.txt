@@ -4,7 +4,7 @@ streamlit==1.47.1
 streamlit-cookies-controller==0.0.4
 st-theme==1.2.3
 plotly==6.2.0
-python-dotenv==1.1.1
+python-dotenv==1.2.2
 xhtml2pdf==0.2.17
 pyyaml==6.0.2
 click==8.2.1
