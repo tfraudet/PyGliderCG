@@ -36,7 +36,7 @@ else:
 	audit_logger = AuditLogDuckDB()
 	# st.write(audit_logger)
 
-	st.dataframe(audit_logger.load_events(),hide_index=True, use_container_width=True,
+	st.dataframe(audit_logger.load_events(),hide_index=True, width='stretch',
 		column_config={
 			'timestamp' : st.column_config.DatetimeColumn('Horodatage', width='small', format='DD-MM-YYYY à HH:mm:ss'),
 			'username': st.column_config.Column('Nom utilisateur', width='small'),

@@ -38,7 +38,7 @@ elif st.get_option("logger.level").lower() == 'error':
 elif st.get_option("logger.level").lower() == 'critical':
 	level_logging=logging.CRITICAL
 else:
-	level_logging=logging.INFO,
+	level_logging=logging.INFO
 
 logging.basicConfig(
 	level=level_logging,
@@ -264,7 +264,9 @@ def data_sheet(glider):
 	datum_and_weighing_points_position = st.selectbox('Plan de référence et type d\'appui',datum_labels, index=glider.datum-1, disabled=True)
 	col1, col2 = st.columns(2)
 	with col1:
-		st.image(get_datum_image_by_label(datum_and_weighing_points_position), use_container_width=True)
+		image_src = get_datum_image_by_label(datum_and_weighing_points_position)
+		if image_src is not None:
+			st.image(image_src, width='stretch')
 		pilote_position = st.radio('Position du pilote', options=['En avant de la référence', 'En arrière de la référence'], index=glider.pilot_position-1,  disabled=True)
 
 	with col2:
@@ -303,18 +305,21 @@ def data_sheet(glider):
 	# display equipements installed
 	st.divider()
 	st.subheader('Inventaire')
-	st.dataframe(current_glider.instruments, use_container_width=True, hide_index=True,
-		column_config={
-			'id' : {'hidden': True},
-			"on_board": st.column_config.CheckboxColumn(label="Installé", help='Coché si l\'instrument est en place au moment de la pesée'),
-			"instrument": "Instrument",
-			"brand": "Marque",
-			"type": "Type",
-			"number": "N°",
-			'date': None,
-			"seat": "Où",
-		}
-	)
+	if current_glider is not None :
+		st.dataframe(current_glider.instruments, width='stretch', hide_index=True,
+			column_config={
+				'id' : {'hidden': True},
+				"on_board": st.column_config.CheckboxColumn(label="Installé", help='Coché si l\'instrument est en place au moment de la pesée'),
+				"instrument": "Instrument",
+				"brand": "Marque",
+				"type": "Type",
+				"number": "N°",
+				'date': None,
+				"seat": "Où",
+			}
+		)
+	else:
+		st.warning('Aucun planeur trouvé dans la base de données', icon=':material/warning:')
 
 def weighing_sheet(glider):
 	last_weighing = glider.last_weighing()

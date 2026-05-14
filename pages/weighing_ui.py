@@ -100,7 +100,7 @@ else:
 			
 		wheighings_df = current_glider.wheighings_to_pandas()
 		with st.form('weighing-form'):
-			edited_wheighings_df = st.data_editor(wheighings_df, key="weighing_edit", use_container_width=True, num_rows='dynamic', 
+			edited_wheighings_df = st.data_editor(wheighings_df, key="weighing_edit", width='stretch', num_rows='dynamic', 
 				disabled=True if st.session_state.get('FormSubmitter:weighing-form-Enregistrer') else False,
 				column_order=['date', 'p1', "p2",  "A", "D", "right_wing_weight", "left_wing_weight", "tail_weight", "fuselage_weight", "fix_ballast_weight"],
 				column_config={

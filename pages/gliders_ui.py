@@ -48,7 +48,7 @@ def edit_glider_datasheet(glider : Glider, mode = ModeEdition.EDIT):
 	datum_and_weighing_points_position = st.selectbox('Plan de référence et type d\'appui',datum_labels, index=glider.datum-1)
 	col1, col2 = st.columns(2)
 	with col1:
-		st.image(get_datum_image_by_label(datum_and_weighing_points_position), use_container_width=True)
+		st.image(get_datum_image_by_label(datum_and_weighing_points_position), width='stretch')
 		pilote_position = st.radio('Position du pilote', options=['En avant de la référence', 'En arrière de la référence'], index=glider.pilot_position-1)
 
 	with col2:
@@ -147,7 +147,7 @@ def edit_glider_inventory(glider : Glider, mode = ModeEdition.EDIT):
 	with st.form(form_name, border=False):
 		# display equipements installed
 		inventory_df = glider.instruments_to_pandas()
-		edited_inventory_df = st.data_editor(inventory_df, use_container_width=True, key="inventory_edit", hide_index=True, num_rows='dynamic',
+		edited_inventory_df = st.data_editor(inventory_df, width='stretch', key="inventory_edit", hide_index=True, num_rows='dynamic',
 			column_config={
 				'id' : {'hidden': True},
 				"on_board": st.column_config.CheckboxColumn(label="Installé", help='Coché si l\'instrument est en place au moment de la pesée'),
@@ -231,7 +231,7 @@ def edit_glider_weight_and_balance(glider : Glider):
 	st.write('Valeur constructeur masse/centrage')
 	with st.form('edit-weight-balance', border=False):
 		w_and_b_df = glider.weight_and_balances_to_pandas()
-		edited_w_and_b = st.data_editor(w_and_b_df, use_container_width=True, key="wandb_edit", hide_index=True, num_rows='dynamic',
+		edited_w_and_b = st.data_editor(w_and_b_df, width='stretch', key="wandb_edit", hide_index=True, num_rows='dynamic',
 			column_config={
 				'balance' : st.column_config.NumberColumn(
 					label='Centrage (mm)',
@@ -340,7 +340,7 @@ def display_glider():
 			'serial_number': value.serial_number,
 			'single_seat' : value.single_seat,
 		} for key, value in gliders.items()]
-		st.dataframe(rows,use_container_width=True)
+		st.dataframe(rows,width='stretch')
 		# st.write(gliders)
 
 def handle_button_state(boutton):

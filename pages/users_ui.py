@@ -86,7 +86,7 @@ else:
 
 	users_df = users.get_users()
 	with st.form('users-form'):
-		edited_users_df = st.data_editor(users.get_users(), key="users_edit", use_container_width=True, num_rows='dynamic',
+		edited_users_df = st.data_editor(users.get_users(), key="users_edit", width='stretch', num_rows='dynamic',
 				# disabled=True if st.session_state.get('FormSubmitter:users-form-Enregistrer') else False,
 				column_config={
 					"username": st.column_config.TextColumn(
