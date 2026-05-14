@@ -22,6 +22,9 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 # Clean up build tools to save space
 RUN apk del .build-deps
 
+# Update repositories and install curl
+RUN apk add --no-cache curl
+
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
