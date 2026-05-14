@@ -12,9 +12,9 @@ import plotly.graph_objects as go
 
 from gliders import fetch_gliders, get_datum_image_by_label, DATUMS
 from config import FAVICON_WEB, get_database_name
-from users import fetch_users
 from init_db import initialize_database
-from pages.sidebar import sidebar_menu, is_debug_mode
+from pages.sidebar import sidebar_menu
+from config import is_debug_mode
 from weighing_sheet import display_detail_weighing
 from audit_log import AuditLogDuckDB
 from streamlit_theme import st_theme
@@ -340,8 +340,7 @@ st.header('✈️ Calculateur Centrage Planeur')
 initialize_database(get_database_name())
 
 # load data
-gliders =fetch_gliders()
-users = fetch_users()
+gliders = fetch_gliders()
 
 # Initialize the audit logger
 audit = AuditLogDuckDB().set_database_name(get_database_name())
@@ -395,5 +394,5 @@ else:
 	st.warning('Aucun planeur trouvé dans la base de données', icon=':material/warning:')
 
 # display sidebar menu
-sidebar_menu(users)
+sidebar_menu()
 logger.debug('END streamlit_app.py')

@@ -124,7 +124,7 @@ class UsersDuckDB(Users):
 			user.role
 		])
 		conn.close()
-		audit.log(st.session_state.username, 'Create user {}'.format(user.username))
+		audit.log(st.session_state.get('current_user', {}).get('username', 'unknown'), 'Create user {}'.format(user.username))
 	
 	def update(self, user : User):
 		logger.debug('User to update in DB is {}'.format(user))
@@ -150,7 +150,7 @@ class UsersDuckDB(Users):
 			user.role
 		])
 		conn.close()
-		audit.log(st.session_state.username, 'User {} updated'.format(user.username))
+		audit.log(st.session_state.get('current_user', {}).get('username', 'unknown'), 'User {} updated'.format(user.username))
 
 	
 	def delete(self, username: str):
@@ -158,7 +158,7 @@ class UsersDuckDB(Users):
 		conn = duckdb.connect(self.dbname)
 		conn.execute('DELETE FROM USERS WHERE username=\'{}\''.format(username))
 		conn.close()
-		audit.log(st.session_state.username, 'User {} deleted'.format(username))
+		audit.log(st.session_state.get('current_user', {}).get('username', 'unknown'), 'User {} deleted'.format(username))
 
 
 

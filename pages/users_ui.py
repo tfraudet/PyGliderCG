@@ -82,7 +82,7 @@ if ('authenticated' not in st.session_state) or (not st.session_state.authentica
 else:
 	st.header(':material/account_circle: Liste des utilisateurs')
 	users = fetch_users()
-	sidebar_menu(users)
+	sidebar_menu()
 
 	users_df = users.get_users()
 	with st.form('users-form'):

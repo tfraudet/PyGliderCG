@@ -1,0 +1,104 @@
+version: '3.8'
+
+# Production Docker Compose configuration
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  # FastAPI Backend Service (Production)
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: pyglider-backend:latest
+    container_name: pyglider-backend-prod
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=false
+      - DB_NAME=/app/data/gliders.db
+      - DB_PATH=/app/data
+      - HOST=0.0.0.0
+      - PORT=8000
+      - COOKIE_KEY=${COOKIE_KEY:?error}
+      - LOG_LEVEL=WARNING
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - /var/lib/pyglider/data:/app/data
+      - /var/lib/pyglider/logs:/app/logs
+    networks:
+      - pyglider-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+  # Streamlit Frontend Service (Production)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: pyglider-frontend:latest
+    container_name: pyglider-frontend-prod
+    restart: always
+    ports:
+      - "8501:8501"
+    environment:
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_CLIENT_TOOLBAR_MODE=minimal
+      - DEBUG=false
+      - DB_NAME=/app/data/gliders.db
+      - DB_PATH=/app/data
+      - BACKEND_URL=http://backend:8000
+      - COOKIE_KEY=${COOKIE_KEY:?error}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - /var/lib/pyglider/data:/app/data
+      - /var/lib/pyglider/logs:/app/logs
+    networks:
+      - pyglider-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8501/_stcore/health']
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+networks:
+  pyglider-network:
+    driver: bridge

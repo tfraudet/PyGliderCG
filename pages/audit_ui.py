@@ -6,7 +6,6 @@ import logging
 from audit_log import AuditLogDuckDB
 from config import FAVICON_WEB, get_database_name
 from pages.sidebar import sidebar_menu
-from users import fetch_users
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +28,7 @@ if ('authenticated' not in st.session_state) or (not st.session_state.authentica
 	st.switch_page('streamlit_app.py')
 else:
 	st.header(':material/description: Audit log')
-	users = fetch_users()
-	sidebar_menu(users)
+	sidebar_menu()
 	
 	# audit_logger = AuditLogDuckDB().set_database_name(get_database_name())
 	audit_logger = AuditLogDuckDB()

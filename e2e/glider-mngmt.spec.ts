@@ -186,7 +186,7 @@ test.describe('Glider Management', () => {
 		await page.getByRole('button', { name: 'save Enregistrer' }).click();
 
 		await expect(page.getByRole('alert').filter({ hasText: 'infoAjout de point(s)' })).toBeVisible();
-		await expect(page.getByTestId('stTabs').getByTestId('stAlertContentInfo').getByRole('paragraph')).toContainText('Ajout de point(s)');
+		await expect(page.getByTestId('stTabs').getByTestId('stAlertContentInfo').getByRole('paragraph').first()).toContainText('Ajout de point(s)');
 		await expect(page.getByRole('alert').filter({ hasText: 'check_circlePoints masse &' })).toBeVisible();
 		await expect(page.getByTestId('stAlertContentSuccess').getByRole('paragraph')).toContainText('Points masse & centrage du planeur D-8207 mis à jour avec succès');
 	});
@@ -262,7 +262,7 @@ test.describe('Glider Management', () => {
 		await page.getByRole('button', { name: 'Enregistrer' }).click();
 
 		await expect(page.getByRole('alert').filter({ hasText: 'infoAjout d\'équipement(s)' })).toBeVisible();
-		await expect(page.getByTestId('stTabs').getByTestId('stAlertContentInfo').getByRole('paragraph')).toContainText('Ajout d\'équipement(s)');
+		await expect(page.getByTestId('stTabs').getByTestId('stAlertContentInfo').getByRole('paragraph').first()).toContainText('Ajout d\'équipement(s)');
 		await expect(page.getByRole('alert').filter({ hasText: 'check_circleInventaire du' })).toBeVisible();
 		await expect(page.getByTestId('stAlertContentSuccess').getByRole('paragraph')).toContainText('Inventaire du planeur D-8207 mis à jour avec succès');
 

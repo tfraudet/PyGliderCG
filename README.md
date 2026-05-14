@@ -46,6 +46,82 @@ pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
+## Backend Setup
+
+PyGliderCG includes a FastAPI backend for programmatic access and advanced features.
+
+### Install Backend Dependencies
+
+```bash
+pip install -r requirements-backend.txt
+```
+
+### Configure the Backend
+
+Create a `.env` file in the project root:
+
+```bash
+# Server Configuration
+DEBUG=false
+HOST=0.0.0.0
+PORT=8000
+
+# Database
+DB_NAME=pyglider
+DB_PATH=./data/
+
+# Authentication (generate with: openssl rand -hex 32)
+COOKIE_KEY=your-secret-key-here
+
+# Token Expiration
+JWT_EXPIRY_HOURS=24
+
+# CORS Origins (comma-separated)
+CORS_ORIGINS=http://localhost:8501,http://localhost:3000
+
+# Logging
+LOG_LEVEL=INFO
+```
+
+### Run the Backend
+
+```bash
+python backend/main.py
+```
+
+The API will be available at `http://localhost:8000`. Full API documentation is available in [API.md](./API.md).
+
+### Quick API Test
+
+```bash
+# Login and get token
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin"}' | jq -r '.access_token')
+
+# List gliders
+curl http://localhost:8000/api/gliders \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Running Frontend and Backend Together
+
+In separate terminals:
+
+**Terminal 1 - Backend:**
+```bash
+python backend/main.py
+```
+
+**Terminal 2 - Frontend:**
+```bash
+streamlit run streamlit_app.py
+```
+
+The frontend will be available at `http://localhost:8501` and will communicate with the backend at `http://localhost:8000`.
+
+For detailed API documentation including all endpoints, authentication details, data models, and code examples, see [API.md](./API.md).
+
 ## How to run it locally using docker (build image)
 
 ```bash
