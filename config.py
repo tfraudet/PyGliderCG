@@ -2,7 +2,7 @@ import streamlit as st
 import logging
 import os
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 DEFAULT_DB_NAME = './data/gliders.db'
 DEFAULT_COOKIE_KEY = 'glider-cg-acph'
 
