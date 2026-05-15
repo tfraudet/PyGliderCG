@@ -37,9 +37,9 @@ The API is production-ready and designed for aviation professionals managing gli
 │                    Streamlit Frontend                           │
 │                   (localhost:8501)                              │
 └────────────────────────────┬────────────────────────────────────┘
-                             │
-                    (HTTP with JWT)
-                             │
+							 │
+					(HTTP with JWT)
+							 │
 ┌────────────────────────────▼────────────────────────────────────┐
 │                      FastAPI Backend                            │
 │                    (localhost:8000)                             │
@@ -60,9 +60,9 @@ The API is production-ready and designed for aviation professionals managing gli
 │                    (Business Logic)                            │
 │                                                                 │
 └────────────────────────────┬────────────────────────────────────┘
-                             │
-                    (SQL Queries)
-                             │
+							 │
+					(SQL Queries)
+							 │
 ┌────────────────────────────▼────────────────────────────────────┐
 │                     DuckDB Database                             │
 │                   (data/pyglider.duckdb)                        │
@@ -183,8 +183,8 @@ curl -X POST http://localhost:8000/api/auth/login \
 import requests
 
 response = requests.post(
-    'http://localhost:8000/api/auth/login',
-    json={'username': 'pilot1', 'password': 'secret123'}
+	'http://localhost:8000/api/auth/login',
+	json={'username': 'pilot1', 'password': 'secret123'}
 )
 token = response.json()['access_token']
 ```
@@ -303,19 +303,19 @@ List all gliders with pagination support.
 ```json
 {
   "gliders": [
-    {
-      "glider_id": "g001",
-      "name": "ASW-28",
-      "type": "Single-seat",
-      "manufacturer": "Alexander Schleicher",
-      "wing_area": 10.4,
-      "mass_empty": 230,
-      "max_mass": 525,
-      "cg_forward": 23.5,
-      "cg_aft": 26.2,
-      "created_at": "2024-01-10T08:00:00Z",
-      "updated_at": "2024-01-10T08:00:00Z"
-    }
+	{
+	  "glider_id": "g001",
+	  "name": "ASW-28",
+	  "type": "Single-seat",
+	  "manufacturer": "Alexander Schleicher",
+	  "wing_area": 10.4,
+	  "mass_empty": 230,
+	  "max_mass": 525,
+	  "cg_forward": 23.5,
+	  "cg_aft": 26.2,
+	  "created_at": "2024-01-10T08:00:00Z",
+	  "updated_at": "2024-01-10T08:00:00Z"
+	}
   ],
   "total": 42,
   "skip": 0,
@@ -420,14 +420,14 @@ curl -X POST http://localhost:8000/api/gliders \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "ASW-27",
-    "type": "Single-seat",
-    "manufacturer": "Alexander Schleicher",
-    "wing_area": 10.3,
-    "mass_empty": 245,
-    "max_mass": 525,
-    "cg_forward": 24.0,
-    "cg_aft": 26.5
+	"name": "ASW-27",
+	"type": "Single-seat",
+	"manufacturer": "Alexander Schleicher",
+	"wing_area": 10.3,
+	"mass_empty": 245,
+	"max_mass": 525,
+	"cg_forward": 24.0,
+	"cg_aft": 26.5
   }'
 ```
 
@@ -597,20 +597,20 @@ List audit logs. **Requires admin role.**
 ```json
 {
   "logs": [
-    {
-      "log_id": "l001",
-      "user_id": "u123",
-      "username": "admin1",
-      "action": "CREATE",
-      "resource_type": "glider",
-      "resource_id": "g001",
-      "timestamp": "2024-01-15T10:30:00Z",
-      "changes": {
-        "name": "ASW-28",
-        "wing_area": 10.4
-      },
-      "ip_address": "192.168.1.100"
-    }
+	{
+	  "log_id": "l001",
+	  "user_id": "u123",
+	  "username": "admin1",
+	  "action": "CREATE",
+	  "resource_type": "glider",
+	  "resource_id": "g001",
+	  "timestamp": "2024-01-15T10:30:00Z",
+	  "changes": {
+		"name": "ASW-28",
+		"wing_area": 10.4
+	  },
+	  "ip_address": "192.168.1.100"
+	}
   ],
   "total": 245
 }
@@ -636,25 +636,25 @@ Get change history for a specific resource.
   "resource_id": "g001",
   "resource_type": "glider",
   "history": [
-    {
-      "version": 1,
-      "timestamp": "2024-01-10T08:00:00Z",
-      "action": "CREATE",
-      "user_id": "u001",
-      "changes": {
-        "name": "ASW-28",
-        "wing_area": 10.4
-      }
-    },
-    {
-      "version": 2,
-      "timestamp": "2024-01-15T10:30:00Z",
-      "action": "UPDATE",
-      "user_id": "u123",
-      "changes": {
-        "cg_forward": 23.5
-      }
-    }
+	{
+	  "version": 1,
+	  "timestamp": "2024-01-10T08:00:00Z",
+	  "action": "CREATE",
+	  "user_id": "u001",
+	  "changes": {
+		"name": "ASW-28",
+		"wing_area": 10.4
+	  }
+	},
+	{
+	  "version": 2,
+	  "timestamp": "2024-01-15T10:30:00Z",
+	  "action": "UPDATE",
+	  "user_id": "u123",
+	  "changes": {
+		"cg_forward": 23.5
+	  }
+	}
   ]
 }
 ```
@@ -682,13 +682,13 @@ Get all actions performed by a user. Users can view own actions; admins can view
   "user_id": "u123",
   "username": "pilot1",
   "actions": [
-    {
-      "log_id": "l042",
-      "action": "READ",
-      "resource_type": "glider",
-      "resource_id": "g001",
-      "timestamp": "2024-01-20T14:05:00Z"
-    }
+	{
+	  "log_id": "l042",
+	  "action": "READ",
+	  "resource_type": "glider",
+	  "resource_id": "g001",
+	  "timestamp": "2024-01-20T14:05:00Z"
+	}
   ],
   "total": 127
 }
@@ -741,11 +741,11 @@ Status: `403 Forbidden`
 ```json
 {
   "detail": [
-    {
-      "loc": ["body", "wing_area"],
-      "msg": "ensure this value is greater than 0",
-      "type": "value_error.number.not_gt"
-    }
+	{
+	  "loc": ["body", "wing_area"],
+	  "msg": "ensure this value is greater than 0",
+	  "type": "value_error.number.not_gt"
+	}
   ]
 }
 ```
@@ -759,101 +759,101 @@ Status: `422 Unprocessable Entity`
 
 ```python
 class User:
-    user_id: str
-    username: str
-    password_hash: str  # Never returned in API responses
-    role: Literal["admin", "editor", "viewer"]
-    created_at: datetime
-    is_active: bool
+	user_id: str
+	username: str
+	password_hash: str  # Never returned in API responses
+	role: Literal["admin", "editor", "viewer"]
+	created_at: datetime
+	is_active: bool
 ```
 
 ### LoginRequest
 
 ```python
 class LoginRequest:
-    username: str  # Required, 3-50 characters
-    password: str  # Required, 8+ characters
+	username: str  # Required, 3-50 characters
+	password: str  # Required, 8+ characters
 ```
 
 ### UserResponse
 
 ```python
 class UserResponse:
-    user_id: str
-    username: str
-    role: str
-    created_at: datetime
+	user_id: str
+	username: str
+	role: str
+	created_at: datetime
 ```
 
 ### TokenResponse
 
 ```python
 class TokenResponse:
-    access_token: str  # JWT token
-    token_type: str    # Always "bearer"
-    expires_in: int    # Seconds until expiration
+	access_token: str  # JWT token
+	token_type: str    # Always "bearer"
+	expires_in: int    # Seconds until expiration
 ```
 
 ### GliderRequest
 
 ```python
 class GliderRequest:
-    name: str              # Aircraft model name
-    type: str              # "Single-seat", "Two-seat", etc.
-    manufacturer: str      # Aircraft manufacturer
-    wing_area: float       # m² (must be > 0)
-    mass_empty: float      # kg
-    max_mass: float        # kg
-    cg_forward: float      # % MAC (must be < cg_aft)
-    cg_aft: float          # % MAC (must be > cg_forward)
+	name: str              # Aircraft model name
+	type: str              # "Single-seat", "Two-seat", etc.
+	manufacturer: str      # Aircraft manufacturer
+	wing_area: float       # m² (must be > 0)
+	mass_empty: float      # kg
+	max_mass: float        # kg
+	cg_forward: float      # % MAC (must be < cg_aft)
+	cg_aft: float          # % MAC (must be > cg_forward)
 ```
 
 ### GliderResponse
 
 ```python
 class GliderResponse:
-    glider_id: str
-    name: str
-    type: str
-    manufacturer: str
-    wing_area: float
-    mass_empty: float
-    max_mass: float
-    cg_forward: float
-    cg_aft: float
-    created_at: datetime
-    updated_at: datetime
+	glider_id: str
+	name: str
+	type: str
+	manufacturer: str
+	wing_area: float
+	mass_empty: float
+	max_mass: float
+	cg_forward: float
+	cg_aft: float
+	created_at: datetime
+	updated_at: datetime
 ```
 
 ### WeightBalanceCalculation
 
 ```python
 class WeightBalanceCalculation:
-    glider_id: str
-    total_mass: float           # kg
-    calculated_cg: float        # % MAC
-    cg_percent_mac: float       # Position as percentage
-    within_envelope: bool       # True if CG is within limits
-    margin_forward: float       # Distance to forward limit
-    margin_aft: float           # Distance to aft limit
-    moment: float               # Total moment
-    status: str                 # "SAFE", "CAUTION", "OUT_OF_LIMITS"
-    warnings: List[str]         # Safety warnings
+	glider_id: str
+	total_mass: float           # kg
+	calculated_cg: float        # % MAC
+	cg_percent_mac: float       # Position as percentage
+	within_envelope: bool       # True if CG is within limits
+	margin_forward: float       # Distance to forward limit
+	margin_aft: float           # Distance to aft limit
+	moment: float               # Total moment
+	status: str                 # "SAFE", "CAUTION", "OUT_OF_LIMITS"
+	warnings: List[str]         # Safety warnings
 ```
 
 ### AuditLog
 
 ```python
 class AuditLog:
-    log_id: str
-    user_id: str
-    username: str
-    action: str                 # CREATE, READ, UPDATE, DELETE
-    resource_type: str          # glider, user, config
-    resource_id: str
-    timestamp: datetime
-    changes: dict               # Fields that changed
-    ip_address: str
+	log_id: str
+	user_id: str
+	username: str
+	action: str                 # CREATE, READ, UPDATE, DELETE
+	resource_type: str          # glider, user, config
+	resource_id: str
+	timestamp: datetime
+	changes: dict               # Fields that changed
+	ip_address: str
 ```
 
 ---
@@ -872,53 +872,53 @@ BASE_URL = 'http://localhost:8000/api'
 
 # Step 1: Login
 login_response = requests.post(
-    f'{BASE_URL}/auth/login',
-    json={
-        'username': 'pilot1',
-        'password': 'my_secure_password'
-    }
+	f'{BASE_URL}/auth/login',
+	json={
+		'username': 'pilot1',
+		'password': 'my_secure_password'
+	}
 )
 
 if login_response.status_code != 200:
-    print(f'Login failed: {login_response.json()}')
-    exit(1)
+	print(f'Login failed: {login_response.json()}')
+	exit(1)
 
 token = login_response.json()['access_token']
 headers = {'Authorization': f'Bearer {token}'}
 
 # Step 2: List gliders
 gliders_response = requests.get(
-    f'{BASE_URL}/gliders?limit=10',
-    headers=headers
+	f'{BASE_URL}/gliders?limit=10',
+	headers=headers
 )
 
 print(f'Found {gliders_response.json()["total"]} gliders')
 for glider in gliders_response.json()['gliders']:
-    print(f"  - {glider['name']} ({glider['glider_id']})")
+	print(f"  - {glider['name']} ({glider['glider_id']})")
 
 # Step 3: Calculate W&B for first glider
 if gliders_response.json()['gliders']:
-    glider_id = gliders_response.json()['gliders'][0]['glider_id']
-    
-    calc_response = requests.post(
-        f'{BASE_URL}/gliders/{glider_id}/calculate',
-        headers=headers,
-        json={
-            'pilot_mass': 75,
-            'ballast_mass': 10,
-            'fuel_mass': 0,
-            'equipment_mass': 5,
-            'configuration': 'cruise'
-        }
-    )
-    
-    result = calc_response.json()
-    print(f"\nW&B Calculation Result:")
-    print(f"  Total Mass: {result['total_mass']} kg")
-    print(f"  CG Position: {result['calculated_cg']}% MAC")
-    print(f"  Status: {result['status']}")
-    if not result['within_envelope']:
-        print(f"  WARNING: CG outside envelope!")
+	glider_id = gliders_response.json()['gliders'][0]['glider_id']
+	
+	calc_response = requests.post(
+		f'{BASE_URL}/gliders/{glider_id}/calculate',
+		headers=headers,
+		json={
+			'pilot_mass': 75,
+			'ballast_mass': 10,
+			'fuel_mass': 0,
+			'equipment_mass': 5,
+			'configuration': 'cruise'
+		}
+	)
+	
+	result = calc_response.json()
+	print(f"\nW&B Calculation Result:")
+	print(f"  Total Mass: {result['total_mass']} kg")
+	print(f"  CG Position: {result['calculated_cg']}% MAC")
+	print(f"  Status: {result['status']}")
+	if not result['within_envelope']:
+		print(f"  WARNING: CG outside envelope!")
 
 # Step 4: Logout
 requests.post(f'{BASE_URL}/auth/logout', headers=headers)
@@ -935,14 +935,14 @@ curl -X POST http://localhost:8000/api/gliders \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "DG-100G",
-    "type": "Single-seat",
-    "manufacturer": "Deutschman",
-    "wing_area": 9.3,
-    "mass_empty": 240,
-    "max_mass": 525,
-    "cg_forward": 23.8,
-    "cg_aft": 27.5
+	"name": "DG-100G",
+	"type": "Single-seat",
+	"manufacturer": "Deutschman",
+	"wing_area": 9.3,
+	"mass_empty": 240,
+	"max_mass": 525,
+	"cg_forward": 23.8,
+	"cg_aft": 27.5
   }' \
   | jq .
 ```

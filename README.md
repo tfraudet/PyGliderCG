@@ -4,17 +4,22 @@
 
 # Center of Gravity Calculator for ACPH Gliders
 
-A simple Streamlit app to calculate center of gravity for [ACPH](https://aeroclub-issoire.fr/) gliders.
+PyGliderCG is now a two-tier application:
+- **Frontend:** Streamlit UI (pilot and admin workflows)
+- **Backend:** FastAPI service (business logic, auth, database access)
+
+This architecture keeps UI and API concerns separated while preserving the existing Streamlit experience.
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://glider-cg.streamlit.app/)
 
 ## Requirements
 
-* Python 3.12
+- Python 3.12
+- Node.js (for Playwright E2E tests)
 
-## How to run it on your own machine
+## Local development setup
 
-We suggest you to create a virtual environment for running this app with Python 3. Clone this repository and open your terminal/command prompt in a folder.
+Create a virtual environment, clone the repository, then install both frontend and backend dependencies.
 
 ```bash
 git clone https://github.com/tfraudet/PyGliderCG.git
@@ -34,62 +39,43 @@ On Window systems
 .venv\scripts\activate
 ```
 
-### Install the requirements
+### Install dependencies
 
 ```bash
 pip install -r requirements.txt
-```
-
-### Run the app
-
-```bash
-streamlit run streamlit_app.py
-```
-
-## Backend Setup
-
-PyGliderCG includes a FastAPI backend for programmatic access and advanced features.
-
-### Install Backend Dependencies
-
-```bash
 pip install -r requirements-backend.txt
+npm install
 ```
 
-### Configure the Backend
-
-Create a `.env` file in the project root:
+### Configure environment
 
 ```bash
-# Server Configuration
-DEBUG=false
-HOST=0.0.0.0
-PORT=8000
-
-# Database
-DB_NAME=pyglider
-DB_PATH=./data/
-
-# Authentication (generate with: openssl rand -hex 32)
-COOKIE_KEY=your-secret-key-here
-
-# Token Expiration
-JWT_EXPIRY_HOURS=24
-
-# CORS Origins (comma-separated)
-CORS_ORIGINS=http://localhost:8501,http://localhost:3000
-
-# Logging
-LOG_LEVEL=INFO
+cp .env.example .env
 ```
 
-### Run the Backend
+Key variables:
+- `BACKEND_URL` (used by Streamlit client, default `http://localhost:8000`)
+- `COOKIE_KEY` (JWT signing key for backend auth)
+- `DB_NAME` / `DB_PATH` (DuckDB location)
 
+### Run backend and frontend
+
+Run services in two terminals:
+
+**Terminal 1 - Backend (FastAPI)**
 ```bash
-python backend/main.py
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-The API will be available at `http://localhost:8000`. Full API documentation is available in [API.md](./API.md).
+**Terminal 2 - Frontend (Streamlit)**
+```bash
+BACKEND_URL=http://localhost:8000 streamlit run streamlit_app.py
+```
+
+Endpoints:
+- Frontend: `http://localhost:8501`
+- Backend API: `http://localhost:8000`
+- Swagger UI: `http://localhost:8000/docs`
 
 ### Quick API Test
 
@@ -104,55 +90,23 @@ curl http://localhost:8000/api/gliders \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### Running Frontend and Backend Together
+For detailed endpoint documentation, see [API.md](./API.md).
 
-In separate terminals:
-
-**Terminal 1 - Backend:**
-```bash
-python backend/main.py
-```
-
-**Terminal 2 - Frontend:**
-```bash
-streamlit run streamlit_app.py
-```
-
-The frontend will be available at `http://localhost:8501` and will communicate with the backend at `http://localhost:8000`.
-
-For detailed API documentation including all endpoints, authentication details, data models, and code examples, see [API.md](./API.md).
-
-## How to run it locally using docker (build image)
+## Run with Docker
 
 ```bash
-# First build the image from dockerfile
-docker build --tag tfraudet/pyglidercg --file './Dockerfile' .
+# Development stack (frontend + backend + db init)
+docker compose up --build
 
-# Or pull the image from docker hub
-docker pull tfraudet/pyglidercg:latest
-
-# Then run the image inside a container, mapping the host’s port 8501 to the container’s port 8501
-docker run -d -p 8501:8501 --name glider-cg  -e APP_DEBUG_MODE='false' -e DB_NAME='./data/gliders.db' -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
-
-# or
-docker run -d -p 8501:8501 --name glider-cg  --env-file "$(pwd)"/.env  -v "$(pwd)"/data:/app/data tfraudet/pyglidercg:latest
+# Production stack
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ## Run the tests
 
-Launch the app locally and open a new terminal/command prompt in the same folder.
+Start backend and frontend first (see "Run backend and frontend"), then run tests in another terminal.
 
 ```bash
-streamlit run streamlit_app.py
-```
-
-### Run unit tests
-
-```bash
-# Install PyTest
-pip install pytest
-
-# Run the tests
 pytest
 ```
 
@@ -164,17 +118,14 @@ You can run the tests using [Playwright](https://playwright.dev/) framework. Mak
 # Install Playwright dependencies
 playwright install
 
-# Run the tests
-npx playwright test --headed --config=playwright.config.ts
+# Run all E2E tests
+npx playwright test --config=playwright.config.ts
 
 # Run the tests with a specific browser
-npx playwright test --headed --config=playwright.config.ts --project=chromium
+npx playwright test --config=playwright.config.ts --project=chromium
 
-# Run the tests with a specific browser and in sequential mode
-npx playwright test --headed --config=playwright.config.ts --project=chromium --workers=1
-
-# Run specifi test with a specific browser and in sequential mode
-npx playwrightc test e2e/glider-mngmt.spec.ts --headed --config=playwright.config.ts --project=chromium --workers=1
+# Run a specific test file with a specific browser
+npx playwright test e2e/glider-mngmt.spec.ts --config=playwright.config.ts --project=chromium
 
 # To open last HTML report run
 npx playwright show-report
