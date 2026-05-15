@@ -107,7 +107,14 @@ docker compose -f docker-compose.prod.yml up -d --build
 Start backend and frontend first (see "Run backend and frontend"), then run tests in another terminal.
 
 ```bash
-pytest
+# All tests
+pytest tests/ -v
+
+ # Glider only
+pytest tests/test_glider.py -v
+
+# Integration only
+pytest tests/test_integration.py -v  
 ```
 
 ### Run end to end tests
