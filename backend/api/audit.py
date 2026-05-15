@@ -22,6 +22,39 @@ router = APIRouter(prefix='/api/audit-logs', tags=['audit'])
 audit_queries = AuditQueries()
 
 
+@router.post('', response_model=AuditLogResponse, status_code=status.HTTP_201_CREATED)
+async def create_audit_log_event(
+	payload: AuditLogRequest,
+	current_user: User = Depends(get_current_user)
+) -> AuditLogResponse:
+	"""Create an audit log event for the authenticated user"""
+	try:
+		if payload.user_id != current_user.username:
+			raise HTTPException(
+				status_code=status.HTTP_403_FORBIDDEN,
+				detail='You can only create audit logs for your own user_id'
+			)
+
+		entry = audit_queries.create_event(
+			user_id=payload.user_id,
+			event=payload.event
+		)
+		if entry is None:
+			raise HTTPException(
+				status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+				detail='Error creating audit log entry'
+			)
+		return AuditLogResponse(**entry)
+	except HTTPException:
+		raise
+	except Exception as e:
+		logger.error(f'Error creating audit log event: {e}')
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail='Error creating audit log entry'
+		)
+
+
 @router.get('', response_model=AuditLogListResponse)
 async def list_audit_logs(
 	skip: int = Query(0, ge=0, description='Number of records to skip'),
@@ -82,7 +115,7 @@ async def list_audit_logs(
 		)
 		
 		items = [
-			AuditLogResponse(**entry).model_dump(include={'timestamp', 'user_id', 'event'})
+			AuditLogResponse(**entry)
 			for entry in result['items']
 		]
 		
@@ -162,7 +195,7 @@ async def get_resource_history(
 			return []
 		
 		return [
-			AuditLogResponse(**entry).model_dump(include={'timestamp', 'user_id', 'event'})
+			AuditLogResponse(**entry)
 			for entry in entries
 		]
 	except HTTPException:
@@ -225,7 +258,7 @@ async def get_user_actions(
 		)
 		
 		items = [
-			AuditLogResponse(**entry).model_dump(include={'timestamp', 'user_id', 'event'})
+			AuditLogResponse(**entry)
 			for entry in result['items']
 		]
 		

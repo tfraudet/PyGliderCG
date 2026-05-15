@@ -167,7 +167,6 @@ This test verifies:
 
 ## Files Not Modified (Still Compatible)
 
-- `users.py` - Still used by `pages/users_ui.py` for user management (CRUD operations)
 - `streamlit_app.py` - Can still use gliders and other functionality
 - Database initialization code - Unchanged
 

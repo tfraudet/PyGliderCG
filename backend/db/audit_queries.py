@@ -1,7 +1,6 @@
 """Database operations for audit logs in DuckDB"""
 
 import logging
-import json
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 from datetime import datetime, timezone
@@ -60,29 +59,19 @@ class AuditQueries:
 	def create_audit_entry(
 		self,
 		user_id: str,
-		action: str,
-		resource_type: str,
-		resource_id: str,
-		details: Optional[Dict[str, Any]] = None
-	) -> Optional[int]:
+		event: str,
+	) -> Optional[Dict[str, Any]]:
 		"""Insert an audit log entry
 		
 		Args:
 			user_id: User ID who performed the action
-			action: Action performed (CREATE, UPDATE, DELETE, READ, LOGIN, etc.)
-			resource_type: Type of resource acted upon (glider, user, weighing, etc.)
-			resource_id: ID of the resource being acted upon
-			details: Additional context as JSON dict
+			event: Audit event text
 			
 		Returns:
-			Audit entry ID if successful, None otherwise
+			Created audit entry data if successful, None otherwise
 		"""
 		conn = self._get_connection()
 		try:
-			details_json = json.dumps(details, ensure_ascii=False) if details else ''
-			event = f'{action} {resource_type}/{resource_id}'
-			if details_json:
-				event = f'{event} {details_json}'
 			timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
 			conn.execute(
 				'INSERT INTO AUDITLOG VALUES (?, ?, ?)',
@@ -91,12 +80,20 @@ class AuditQueries:
 			
 			conn.commit()
 			logger.info(f'Audit entry created: {user_id} {event}')
-			return int(timestamp.timestamp())
+			return {
+				'timestamp': timestamp,
+				'user_id': user_id,
+				'event': event,
+			}
 		except Exception as e:
 			logger.error(f'Error creating audit entry: {e}')
 			return None
 		finally:
 			conn.close()
+
+	def create_event(self, user_id: str, event: str) -> Optional[Dict[str, Any]]:
+		"""Insert a raw audit event in AUDITLOG table"""
+		return self.create_audit_entry(user_id=user_id, event=event)
 
 	def get_audit_logs(
 		self,

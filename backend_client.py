@@ -930,6 +930,33 @@ class BackendClient:
 			logger.error(f'Error fetching audit logs: {e}')
 			return None
 
+	def log_audit_event(self, event: str) -> bool:
+		"""Log a raw audit event for the current authenticated user."""
+		if not event or not event.strip():
+			return False
+		if not self.is_authenticated():
+			logger.debug('Skipping audit event: user not authenticated')
+			return False
+		current_user = st.session_state.get('current_user', {})
+		user_id = current_user.get('username')
+		if not user_id:
+			logger.debug('Skipping audit event: current_user.username missing')
+			return False
+		try:
+			status_code, _ = self._make_request(
+				'POST',
+				'/api/audit-logs',
+				data={'user_id': user_id, 'event': event.strip()},
+				retry=False,
+			)
+			if status_code in (200, 201):
+				self.clear_caches()
+				return True
+			return False
+		except BackendException as e:
+			logger.warning(f'Failed to log audit event: {e}')
+			return False
+
 	def delete_audit_logs(self) -> bool:
 		"""Delete all audit logs (admin only)."""
 		if not self.is_authenticated():

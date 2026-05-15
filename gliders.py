@@ -8,11 +8,17 @@ import duckdb
 import pandas as pd
 import streamlit as st
 
-from audit_log import AuditLogDuckDB
+from backend_client import BackendClient
 from config import get_database_name
 
 logger = logging.getLogger(__name__)
-audit = AuditLogDuckDB()
+audit_client = BackendClient()
+
+
+def _log_audit_event(event: str) -> None:
+	"""Log audit events through backend API when authenticated."""
+	if not audit_client.log_audit_event(event):
+		logger.debug(f'Audit event not sent: {event}')
 
 @st.cache_data
 def fetch_gliders(show_spinner = 'Loading gliders'):
@@ -103,7 +109,7 @@ class Weighing:
 		finally:
 			conn.close()
 		logger.debug('{} deleted from the database'.format(self))
-		audit.log(st.session_state.username, 'Weighing #{} from {} deleted'.format(self.id, self.date))
+		_log_audit_event('Weighing #{} from {} deleted'.format(self.id, self.date))
 
 	def mve(self) -> float:
 		'''
@@ -138,7 +144,7 @@ class Instrument:
 		finally:
 			conn.close()
 		logger.debug('{} deleted from the database'.format(self))
-		audit.log(st.session_state.username, 'Instruments {} deleted'.format(self.instrument))
+		_log_audit_event('Instruments {} deleted'.format(self.instrument))
 
 @dataclass
 class Glider:
@@ -223,7 +229,7 @@ class Glider:
 		finally:
 			conn.close()
 		logger.debug('{} datasheet saved in database'.format(self.registration))
-		audit.log(st.session_state.username, 'Datasheet for glider {} updated'.format(self.registration))
+		_log_audit_event('Datasheet for glider {} updated'.format(self.registration))
 
 	def save_weight_and_balance(self):
 		dbname = get_database_name()
@@ -247,7 +253,7 @@ class Glider:
 			logger.error(f'Error on database {dbname} when saving weight and balance limits: {e}')
 		finally:
 			conn.close()	
-		audit.log(st.session_state.username, 'Weight & balance {} for glider {} updated'.format(self.weight_and_balances, self.registration))
+		_log_audit_event('Weight & balance {} for glider {} updated'.format(self.weight_and_balances, self.registration))
 
 	def save_instruments(self):
 		dbname = get_database_name()
@@ -283,7 +289,7 @@ class Glider:
 		finally:
 			conn.close()
 		logger.debug('{} instruments saved in database'.format(self.registration))
-		audit.log(st.session_state.username, 'Instruments {} updated for glider {} '.format(self.instruments, self.registration))
+		_log_audit_event('Instruments {} updated for glider {} '.format(self.instruments, self.registration))
 
 	def save_weighings(self):
 		dbname = get_database_name()
@@ -322,7 +328,7 @@ class Glider:
 		finally:
 			conn.close()
 		logger.debug('{} weighings saved in database'.format(self.registration))
-		audit.log(st.session_state.username, 'Weighings {} updated for glider {} '.format(self.weighings, self.registration))
+		_log_audit_event('Weighings {} updated for glider {} '.format(self.weighings, self.registration))
 
 	def delete(self):
 		dbname = get_database_name()
@@ -348,7 +354,7 @@ class Glider:
 			logger.error(f'Error on database {dbname} when delete: {e}')		
 		finally:
 			conn.close()
-		audit.log(st.session_state.username, 'Glider {} deleted'.format(self.registration))
+		_log_audit_event('Glider {} deleted'.format(self.registration))
 
 	@classmethod
 	def from_database(cls, database_name: str) -> dict:
@@ -527,5 +533,4 @@ class Glider:
 			return glider_weight, moment_arm / glider_weight
 		else:
 			raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-
 

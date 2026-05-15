@@ -1,26 +1,20 @@
 """Pydantic schemas for audit log API requests and responses"""
 
 from pydantic import BaseModel, Field
-from typing import Optional, Any, List
+from typing import List
 from datetime import datetime
 
 
 class AuditLogRequest(BaseModel):
 	"""Request body for creating an audit log entry"""
 	user_id: str = Field(..., min_length=1, description='User ID who performed the action')
-	action: str = Field(..., min_length=1, description='Action performed (CREATE, UPDATE, DELETE, READ, LOGIN, etc.)')
-	resource_type: str = Field(..., min_length=1, description='Type of resource acted upon (glider, user, weighing, etc.)')
-	resource_id: str = Field(..., min_length=1, description='ID of the resource being acted upon')
-	details: Optional[dict[str, Any]] = Field(default=None, description='Additional context as JSON')
+	event: str = Field(..., min_length=1, description='Audit event text')
 
 	class Config:
 		json_schema_extra = {
 			'example': {
 				'user_id': 'admin',
-				'action': 'UPDATE',
-				'resource_type': 'glider',
-				'resource_id': 'N-12345',
-				'details': {'field': 'registration', 'old_value': 'N-12344', 'new_value': 'N-12345'}
+				'event': 'Calcul centrage planeur pour F-CCCP : 450 kg, 320 mm'
 			}
 		}
 

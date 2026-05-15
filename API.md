@@ -759,6 +759,40 @@ curl -X POST http://localhost:8000/api/gliders/g001/calculate \
 
 All audit endpoints are at `/api/audit-logs` prefix.
 
+#### Create Audit Event
+
+```
+POST /api/audit-logs
+```
+
+Create an audit event for the authenticated user.
+`user_id` is required and must match the authenticated username.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "user_id": "pilot1",
+  "event": "Calcul centrage planeur pour F-CCCP : 450 kg, 320 mm"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "timestamp": "2024-01-20T14:05:00Z",
+  "user_id": "pilot1",
+  "event": "Calcul centrage planeur pour F-CCCP : 450 kg, 320 mm"
+}
+```
+
+---
+
 #### List Audit Logs
 
 ```
@@ -883,7 +917,7 @@ Response items use the same simplified shape: `timestamp`, `user_id`, `event`.
 	{
 	  "timestamp": "2024-01-20T14:05:00Z",
 	  "user_id": "pilot1",
-	  "event": "LEGACY_EVENT Calcul centrage planeur pour F-CCCP : 450 kg, 320 mm"
+	  "event": "Calcul centrage planeur pour F-CCCP : 450 kg, 320 mm"
 	}
   ]
 }

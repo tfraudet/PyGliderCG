@@ -11,12 +11,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from gliders import fetch_gliders, get_datum_image_by_label, DATUMS
+from backend_client import BackendClient
 from config import FAVICON_WEB, get_database_name
 from init_db import initialize_database
 from pages.sidebar import sidebar_menu
 from config import is_debug_mode
 from weighing_sheet import display_detail_weighing
-from audit_log import AuditLogDuckDB
 from streamlit_theme import st_theme
 from shapely.geometry import Point, Polygon
 from dotenv import load_dotenv
@@ -47,7 +47,13 @@ logging.basicConfig(
 	format='%(asctime)s %(levelname) -7s %(name)s: %(message)s',
 	handlers=[logging.StreamHandler()   ]
 )
-audit = AuditLogDuckDB()
+audit_client = BackendClient()
+
+
+def _log_audit_event(event: str) -> None:
+	"""Log audit events through backend API when authenticated."""
+	if not audit_client.log_audit_event(event):
+		logger.debug(f'Audit event not sent: {event}')
 
 THEME_LIGHT = {
 	'template' : 'plotly',			# "plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white",
@@ -269,9 +275,8 @@ def weight_and_balance_calculator(current_glider):
 
 		display_plot(current_glider, total_weight, balance, total_weight_WB_empty, balance_WB_empty, weight_none_lift, balance_percent, balance_percent_wb_empty)
 
-		#log the calculation evebt
-		by_user = st.session_state.user if 'user' in st.session_state else 'unknown'
-		audit.log(by_user, f'Calcul centrage planeur pour {current_glider.registration} : {total_weight} kg, {round(balance,0)} mm')
+		#log the calculation event
+		_log_audit_event(f'Calcul centrage planeur pour {current_glider.registration} : {total_weight} kg, {round(balance,0)} mm')
 
 def data_sheet(glider):
 	st.subheader('Référence de pesée')
@@ -356,10 +361,6 @@ initialize_database(get_database_name())
 
 # load data
 gliders = fetch_gliders()
-
-# Initialize the audit logger
-audit = AuditLogDuckDB().set_database_name(get_database_name())
-logger.debug('Audit log: {}'.format(audit))
 
 # warning message
 st.warning('Attention : Ce logiciel est un outil d\'aide à la décision pour le calcul du centrage. La fiche de pesée est le document de référence, et la responsabilité finale du centrage incombe au commandant de bord.', icon=':material/warning:')
