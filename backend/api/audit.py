@@ -81,7 +81,10 @@ async def list_audit_logs(
 			end_date=end_dt
 		)
 		
-		items = [AuditLogResponse(**entry) for entry in result['items']]
+		items = [
+			AuditLogResponse(**entry).model_dump(include={'timestamp', 'user_id', 'event'})
+			for entry in result['items']
+		]
 		
 		return AuditLogListResponse(
 			total=result['total'],
@@ -96,6 +99,31 @@ async def list_audit_logs(
 		raise HTTPException(
 			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
 			detail='Error retrieving audit logs'
+		)
+
+
+@router.delete('', status_code=status.HTTP_200_OK)
+async def delete_all_audit_logs(current_user: User = Depends(require_admin_role)) -> dict:
+	"""Delete all audit logs (admin only)
+	
+	Deletes all entries from audit logs table.
+	Requires admin role.
+	
+	Returns:
+	- Dict with number of deleted entries
+	"""
+	try:
+		deleted_count = audit_queries.delete_all_audit_logs()
+		logger.info(f'Admin user {current_user.username} deleted all audit logs ({deleted_count})')
+		return {
+			'message': 'Audit logs deleted successfully',
+			'deleted_count': deleted_count,
+		}
+	except Exception as e:
+		logger.error(f'Error deleting audit logs: {e}')
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail='Error deleting audit logs'
 		)
 
 
@@ -133,7 +161,10 @@ async def get_resource_history(
 			logger.debug(f'No audit history found for {resource_type}/{resource_id}')
 			return []
 		
-		return [AuditLogResponse(**entry) for entry in entries]
+		return [
+			AuditLogResponse(**entry).model_dump(include={'timestamp', 'user_id', 'event'})
+			for entry in entries
+		]
 	except HTTPException:
 		raise
 	except Exception as e:
@@ -193,7 +224,10 @@ async def get_user_actions(
 			limit=limit
 		)
 		
-		items = [AuditLogResponse(**entry) for entry in result['items']]
+		items = [
+			AuditLogResponse(**entry).model_dump(include={'timestamp', 'user_id', 'event'})
+			for entry in result['items']
+		]
 		
 		return AuditLogListResponse(
 			total=result['total'],

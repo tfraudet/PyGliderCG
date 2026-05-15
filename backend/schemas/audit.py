@@ -27,24 +27,16 @@ class AuditLogRequest(BaseModel):
 
 class AuditLogResponse(BaseModel):
 	"""Response body for audit log data"""
-	id: int = Field(..., description='Audit log entry ID')
 	timestamp: datetime = Field(..., description='When the action was performed (ISO 8601 format)')
 	user_id: str = Field(..., description='User ID who performed the action')
-	action: str = Field(..., description='Action performed')
-	resource_type: str = Field(..., description='Type of resource acted upon')
-	resource_id: str = Field(..., description='ID of the resource being acted upon')
-	details: Optional[dict[str, Any]] = Field(default=None, description='Additional context')
+	event: str = Field(..., description='Audit event details')
 
 	class Config:
 		json_schema_extra = {
 			'example': {
-				'id': 1,
 				'timestamp': '2024-01-15T10:30:45.123456Z',
 				'user_id': 'admin',
-				'action': 'UPDATE',
-				'resource_type': 'glider',
-				'resource_id': 'N-12345',
-				'details': {'field': 'registration', 'old_value': 'N-12344', 'new_value': 'N-12345'}
+				'event': 'UPDATE glider/N-12345 {"field":"registration","old_value":"N-12344","new_value":"N-12345"}'
 			}
 		}
 
@@ -64,13 +56,9 @@ class AuditLogListResponse(BaseModel):
 				'limit': 10,
 				'items': [
 					{
-						'id': 1,
 						'timestamp': '2024-01-15T10:30:45.123456Z',
 						'user_id': 'admin',
-						'action': 'UPDATE',
-						'resource_type': 'glider',
-						'resource_id': 'N-12345',
-						'details': None
+						'event': 'UPDATE glider/N-12345'
 					}
 				]
 			}

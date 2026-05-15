@@ -930,6 +930,29 @@ class BackendClient:
 			logger.error(f'Error fetching audit logs: {e}')
 			return None
 
+	def delete_audit_logs(self) -> bool:
+		"""Delete all audit logs (admin only)."""
+		if not self.is_authenticated():
+			st.error('Not authenticated')
+			return False
+		try:
+			status_code, response = self._make_request(
+				'DELETE',
+				'/api/audit-logs',
+				retry=False,
+			)
+			if status_code == 200:
+				self.clear_caches()
+				return True
+			return False
+		except ForbiddenError:
+			st.error('You do not have permission to delete audit logs')
+			return False
+		except BackendException as e:
+			st.error(f'Failed to delete audit logs: {str(e)}')
+			logger.error(f'Error deleting audit logs: {e}')
+			return False
+
 	@staticmethod
 	def _get_audit_logs_by_resource_cached(
 		resource_type: str,

@@ -31,29 +31,29 @@ class AuditQueries:
 		"""Get a DuckDB connection"""
 		return duckdb.connect(self.db_path)
 
+	def _table_exists(self, conn, table_name: str) -> bool:
+		"""Check if a table exists in the current database"""
+		result = conn.execute(
+			'SELECT COUNT(*) FROM information_schema.tables WHERE upper(table_name) = upper(?)',
+			[table_name]
+		).fetchall()
+		return bool(result and result[0][0] > 0)
+
 	def _ensure_audit_table(self):
-		"""Ensure the AUDIT_LOGS table exists in the database"""
+		"""Ensure the AUDITLOG table exists in the database"""
 		conn = self._get_connection()
 		try:
-			# Create sequence first
-			conn.execute('CREATE SEQUENCE IF NOT EXISTS audit_log_seq START WITH 1 INCREMENT BY 1')
-			
-			# Then create table
 			conn.execute('''
-				CREATE TABLE IF NOT EXISTS AUDIT_LOGS (
-					id INTEGER PRIMARY KEY DEFAULT nextval('audit_log_seq'),
-					timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-					user_id VARCHAR NOT NULL,
-					action VARCHAR NOT NULL,
-					resource_type VARCHAR NOT NULL,
-					resource_id VARCHAR NOT NULL,
-					details VARCHAR
+				CREATE TABLE IF NOT EXISTS AUDITLOG (
+					timestamp TIMESTAMP PRIMARY KEY,
+					username VARCHAR,
+					event VARCHAR
 				)
 			''')
 			conn.commit()
-			logger.debug('AUDIT_LOGS table ensured in database')
+			logger.debug('AUDITLOG table ensured in database')
 		except Exception as e:
-			logger.error(f'Error ensuring AUDIT_LOGS table: {e}')
+			logger.error(f'Error ensuring AUDITLOG table: {e}')
 		finally:
 			conn.close()
 
@@ -79,24 +79,19 @@ class AuditQueries:
 		"""
 		conn = self._get_connection()
 		try:
-			details_json = json.dumps(details) if details else None
-			
-			result = conn.execute(
-				'''INSERT INTO AUDIT_LOGS (user_id, action, resource_type, resource_id, details)
-				   VALUES (?, ?, ?, ?, ?)
-				   RETURNING id''',
-				[user_id, action, resource_type, resource_id, details_json]
-			).fetchall()
+			details_json = json.dumps(details, ensure_ascii=False) if details else ''
+			event = f'{action} {resource_type}/{resource_id}'
+			if details_json:
+				event = f'{event} {details_json}'
+			timestamp = datetime.now(timezone.utc).replace(tzinfo=None)
+			conn.execute(
+				'INSERT INTO AUDITLOG VALUES (?, ?, ?)',
+				[timestamp, user_id, event]
+			)
 			
 			conn.commit()
-			
-			if result:
-				audit_id = result[0][0]
-				logger.info(f'Audit entry {audit_id} created: {user_id} {action} {resource_type}/{resource_id}')
-				return audit_id
-			
-			logger.warning(f'Failed to create audit entry: no ID returned')
-			return None
+			logger.info(f'Audit entry created: {user_id} {event}')
+			return int(timestamp.timestamp())
 		except Exception as e:
 			logger.error(f'Error creating audit entry: {e}')
 			return None
@@ -131,12 +126,12 @@ class AuditQueries:
 			params = []
 			
 			if user_id:
-				where_clauses.append('user_id = ?')
+				where_clauses.append('username = ?')
 				params.append(user_id)
 			
 			if resource_type:
-				where_clauses.append('resource_type = ?')
-				params.append(resource_type)
+				where_clauses.append('event ILIKE ?')
+				params.append(f'%{resource_type}%')
 			
 			if start_date:
 				where_clauses.append('timestamp >= ?')
@@ -149,40 +144,31 @@ class AuditQueries:
 			where_clause = 'WHERE ' + ' AND '.join(where_clauses) if where_clauses else ''
 			
 			total_result = conn.execute(
-				f'SELECT COUNT(*) FROM AUDIT_LOGS {where_clause}',
+				f'SELECT COUNT(*) FROM AUDITLOG {where_clause}',
 				params
 			).fetchall()
 			
 			total = total_result[0][0] if total_result else 0
 			
 			results = conn.execute(
-				f'''SELECT id, timestamp, user_id, action, resource_type, resource_id, details
-				   FROM AUDIT_LOGS {where_clause}
+				f'''SELECT timestamp, username, event
+				   FROM AUDITLOG {where_clause}
 				   ORDER BY timestamp DESC
 				   LIMIT ? OFFSET ?''',
 				params + [limit, skip]
 			).fetchall()
-			
+
 			entries = []
 			for row in results:
-				audit_id, timestamp, user_id, action, resource_type, resource_id, details_json = row
-				try:
-					details = json.loads(details_json) if details_json else None
-				except json.JSONDecodeError:
-					details = None
-				
+				timestamp, username, event = row
+
 				entries.append({
-					'id': audit_id,
 					'timestamp': timestamp,
-					'user_id': user_id,
-					'action': action,
-					'resource_type': resource_type,
-					'resource_id': resource_id,
-					'details': details
+					'user_id': username,
+					'event': event or ''
 				})
-			
-			logger.debug(f'Retrieved {len(entries)} audit entries (total: {total})')
-			
+
+			logger.debug(f'Retrieved {len(entries)} audit entries from AUDITLOG (total: {total})')
 			return {
 				'total': total,
 				'skip': skip,
@@ -217,29 +203,20 @@ class AuditQueries:
 		conn = self._get_connection()
 		try:
 			results = conn.execute(
-				'''SELECT id, timestamp, user_id, action, resource_type, resource_id, details
-				   FROM AUDIT_LOGS
-				   WHERE resource_type = ? AND resource_id = ?
+				'''SELECT timestamp, username, event
+				   FROM AUDITLOG
+				   WHERE event ILIKE ?
 				   ORDER BY timestamp DESC''',
-				[resource_type, resource_id]
+				[f'%{resource_type}/{resource_id}%']
 			).fetchall()
 			
 			entries = []
 			for row in results:
-				audit_id, timestamp, user_id, action, resource_type, resource_id, details_json = row
-				try:
-					details = json.loads(details_json) if details_json else None
-				except json.JSONDecodeError:
-					details = None
-				
+				timestamp, username, event = row
 				entries.append({
-					'id': audit_id,
 					'timestamp': timestamp,
-					'user_id': user_id,
-					'action': action,
-					'resource_type': resource_type,
-					'resource_id': resource_id,
-					'details': details
+					'user_id': username,
+					'event': event or ''
 				})
 			
 			logger.debug(f'Retrieved {len(entries)} audit entries for {resource_type}/{resource_id}')
@@ -269,16 +246,16 @@ class AuditQueries:
 		conn = self._get_connection()
 		try:
 			total_result = conn.execute(
-				'SELECT COUNT(*) FROM AUDIT_LOGS WHERE user_id = ?',
+				'SELECT COUNT(*) FROM AUDITLOG WHERE username = ?',
 				[user_id]
 			).fetchall()
 			
 			total = total_result[0][0] if total_result else 0
 			
 			results = conn.execute(
-				'''SELECT id, timestamp, user_id, action, resource_type, resource_id, details
-				   FROM AUDIT_LOGS
-				   WHERE user_id = ?
+				'''SELECT timestamp, username, event
+				   FROM AUDITLOG
+				   WHERE username = ?
 				   ORDER BY timestamp DESC
 				   LIMIT ? OFFSET ?''',
 				[user_id, limit, skip]
@@ -286,20 +263,11 @@ class AuditQueries:
 			
 			entries = []
 			for row in results:
-				audit_id, timestamp, user_id, action, resource_type, resource_id, details_json = row
-				try:
-					details = json.loads(details_json) if details_json else None
-				except json.JSONDecodeError:
-					details = None
-				
+				timestamp, username, event = row
 				entries.append({
-					'id': audit_id,
 					'timestamp': timestamp,
-					'user_id': user_id,
-					'action': action,
-					'resource_type': resource_type,
-					'resource_id': resource_id,
-					'details': details
+					'user_id': username,
+					'event': event or ''
 				})
 			
 			logger.debug(f'Retrieved {len(entries)} actions for user {user_id} (total: {total})')
@@ -333,7 +301,7 @@ class AuditQueries:
 		conn = self._get_connection()
 		try:
 			result = conn.execute(
-				'''DELETE FROM AUDIT_LOGS
+				'''DELETE FROM AUDITLOG
 				   WHERE timestamp < (CURRENT_TIMESTAMP - INTERVAL ? DAY)''',
 				[days]
 			)
@@ -345,6 +313,26 @@ class AuditQueries:
 			return deleted_count
 		except Exception as e:
 			logger.error(f'Error deleting old audit logs: {e}')
+			return 0
+		finally:
+			conn.close()
+
+	def delete_all_audit_logs(self) -> int:
+		"""Delete all audit log entries
+		
+		Returns:
+			Number of deleted entries
+		"""
+		conn = self._get_connection()
+		try:
+			before_result = conn.execute('SELECT COUNT(*) FROM AUDITLOG').fetchall()
+			before_count = before_result[0][0] if before_result else 0
+			conn.execute('DELETE FROM AUDITLOG')
+			conn.commit()
+			logger.info(f'Deleted all audit log entries ({before_count})')
+			return before_count
+		except Exception as e:
+			logger.error(f'Error deleting all audit logs: {e}')
 			return 0
 		finally:
 			conn.close()

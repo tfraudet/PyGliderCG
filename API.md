@@ -767,35 +767,64 @@ GET /api/audit-logs
 
 List audit logs. **Requires administrator role.**
 
+Each audit item is intentionally limited to: `timestamp`, `user_id`, and `event`.
+
 **Query Parameters:**
 - `skip` (optional, default: 0): Records to skip
 - `limit` (optional, default: 100): Maximum records
 - `user_id` (optional): Filter by user
-- `action_type` (optional): Filter by action (create, update, delete)
-- `date_from` (optional): Filter from date (ISO format)
-- `date_to` (optional): Filter to date (ISO format)
+- `resource_type` (optional): Filter by resource type (matching audit text)
+- `start_date` (optional): Filter from date (ISO 8601 format)
+- `end_date` (optional): Filter to date (ISO 8601 format)
 
 **Response (200 OK):**
 ```json
 {
-  "logs": [
+  "total": 245,
+  "skip": 0,
+  "limit": 100,
+  "items": [
 	{
-	  "log_id": "l001",
-	  "user_id": "u123",
-	  "username": "admin1",
-	  "action": "CREATE",
-	  "resource_type": "glider",
-	  "resource_id": "g001",
 	  "timestamp": "2024-01-15T10:30:00Z",
-	  "changes": {
-		"name": "ASW-28",
-		"wing_area": 10.4
-	  },
-	  "ip_address": "192.168.1.100"
+	  "user_id": "admin1",
+	  "event": "UPDATE glider/F-CCCP"
 	}
-  ],
-  "total": 245
+  ]
 }
+```
+
+---
+
+#### Delete All Audit Logs
+
+```
+DELETE /api/audit-logs
+```
+
+Delete all audit log entries. **Requires administrator role.**
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Audit logs deleted successfully",
+  "deleted_count": 245
+}
+```
+
+**Error Responses:**
+- `401 Unauthorized`: Missing or invalid token
+- `403 Forbidden`: User does not have administrator role
+- `500 Internal Server Error`: Error deleting audit logs
+
+**cURL Example:**
+```bash
+curl -X DELETE http://localhost:8000/api/audit-logs \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
@@ -808,37 +837,21 @@ GET /api/audit-logs/resource/{resource_type}/{resource_id}
 
 Get change history for a specific resource.
 
+Response items use the same simplified shape: `timestamp`, `user_id`, `event`.
+
 **Path Parameters:**
 - `resource_type`: Type of resource (glider, user, etc.)
 - `resource_id`: Resource identifier
 
 **Response (200 OK):**
 ```json
-{
-  "resource_id": "g001",
-  "resource_type": "glider",
-  "history": [
-	{
-	  "version": 1,
-	  "timestamp": "2024-01-10T08:00:00Z",
-	  "action": "CREATE",
-	  "user_id": "u001",
-	  "changes": {
-		"name": "ASW-28",
-		"wing_area": 10.4
-	  }
-	},
-	{
-	  "version": 2,
-	  "timestamp": "2024-01-15T10:30:00Z",
-	  "action": "UPDATE",
-	  "user_id": "u123",
-	  "changes": {
-		"cg_forward": 23.5
-	  }
-	}
-  ]
-}
+[
+  {
+	"timestamp": "2024-01-15T10:30:00Z",
+	"user_id": "admin1",
+	"event": "UPDATE glider/F-CCCP"
+  }
+]
 ```
 
 ---
@@ -851,6 +864,8 @@ GET /api/audit-logs/user/{user_id}
 
 Get all actions performed by a user. Users can view own actions; admins can view any user.
 
+Response items use the same simplified shape: `timestamp`, `user_id`, `event`.
+
 **Path Parameters:**
 - `user_id`: User identifier
 
@@ -861,18 +876,16 @@ Get all actions performed by a user. Users can view own actions; admins can view
 **Response (200 OK):**
 ```json
 {
-  "user_id": "u123",
-  "username": "pilot1",
-  "actions": [
+  "total": 127,
+  "skip": 0,
+  "limit": 100,
+  "items": [
 	{
-	  "log_id": "l042",
-	  "action": "READ",
-	  "resource_type": "glider",
-	  "resource_id": "g001",
-	  "timestamp": "2024-01-20T14:05:00Z"
+	  "timestamp": "2024-01-20T14:05:00Z",
+	  "user_id": "pilot1",
+	  "event": "LEGACY_EVENT Calcul centrage planeur pour F-CCCP : 450 kg, 320 mm"
 	}
-  ],
-  "total": 127
+  ]
 }
 ```
 
@@ -1035,15 +1048,9 @@ class WeightBalanceCalculation:
 
 ```python
 class AuditLog:
-	log_id: str
-	user_id: str
-	username: str
-	action: str                 # CREATE, READ, UPDATE, DELETE
-	resource_type: str          # glider, user, config
-	resource_id: str
 	timestamp: datetime
-	changes: dict               # Fields that changed
-	ip_address: str
+	user_id: str
+	event: str
 ```
 
 ---
@@ -1140,9 +1147,9 @@ curl -X POST http://localhost:8000/api/gliders \
 ### Example 3: View Audit Log (Admin Only)
 
 ```bash
-curl 'http://localhost:8000/api/audit-logs?limit=5&action_type=UPDATE' \
+curl 'http://localhost:8000/api/audit-logs?limit=5&resource_type=glider' \
   -H "Authorization: Bearer $TOKEN" \
-  | jq '.logs[] | {user: .username, action: .action, resource: .resource_id, time: .timestamp}'
+  | jq '.items[] | {user_id: .user_id, event: .event, time: .timestamp}'
 ```
 
 ---
