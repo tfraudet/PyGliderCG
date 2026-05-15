@@ -256,6 +256,109 @@ class BackendClient:
 		"""Check if user is authenticated"""
 		return 'auth_token' in st.session_state and bool(st.session_state.get('auth_token'))
 
+	# ===== User Methods =====
+
+	def get_users(self) -> List[Dict[str, Any]]:
+		"""Get all users (admin only)."""
+		if not self.is_authenticated():
+			return []
+		try:
+			status_code, response = self._make_request('GET', '/api/users')
+			if status_code == 200:
+				return response
+			return []
+		except ForbiddenError:
+			st.error('You do not have permission to view users')
+			return []
+		except BackendException as e:
+			logger.error(f'Error fetching users: {e}')
+			return []
+
+	def create_user(self, user_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+		"""Create a new user (admin only)."""
+		if not self.is_authenticated():
+			st.error('Not authenticated')
+			return None
+		try:
+			status_code, response = self._make_request(
+				'POST',
+				'/api/users',
+				data=user_data,
+				retry=False,
+			)
+			if status_code in (200, 201):
+				self.clear_caches()
+				return response
+			if status_code == 422:
+				error_detail = response.get('detail')[0]['msg']
+				logger.error(f'Validation failed for user {user_data['username']}: {error_detail}')
+				st.error(f'Validation failed: {error_detail}')
+			return None
+		except ForbiddenError:
+			st.error('You do not have permission to create users')
+			return None
+		except BackendException as e:
+			st.error(f'Failed to create user: {str(e)}')
+			logger.error(f'Error creating user: {e}')
+			return None
+
+	def update_user(self, username: str, user_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+		"""Update an existing user (admin only)."""
+		if not self.is_authenticated():
+			st.error('Not authenticated')
+			return None
+		try:
+			status_code, response = self._make_request(
+				'PUT',
+				f'/api/users/{username}',
+				data=user_data,
+				retry=False,
+			)
+			if status_code == 200:
+				self.clear_caches()
+				return response
+			if status_code == 422:
+				error_detail = response.get('detail')[0]['msg']
+				logger.error(f'Validation failed for user {user_data['username']}: {error_detail}')
+				st.error(f'Validation failed: {error_detail}')
+			return None
+		except NotFoundError:
+			st.error(f'User {username} not found')
+			return None
+		except ForbiddenError:
+			st.error('You do not have permission to update users')
+			return None
+		except BackendException as e:
+			st.error(f'Failed to update user: {str(e)}')
+			logger.error(f'Error updating user {username}: {e}')
+			return None
+
+	def delete_user(self, username: str) -> bool:
+		"""Delete a user (admin only)."""
+		if not self.is_authenticated():
+			st.error('Not authenticated')
+			return False
+		try:
+			status_code, response = self._make_request(
+				'DELETE',
+				f'/api/users/{username}',
+				retry=False,
+			)
+			if status_code == 204:
+				self.clear_caches()
+				return True
+			return False
+		except NotFoundError:
+			st.error(f'User {username} not found')
+			return False
+		except ForbiddenError:
+			st.error('You do not have permission to delete users')
+			return False
+		except BackendException as e:
+			st.error(f'Failed to delete user: {str(e)}')
+			logger.error(f'Error deleting user {username}: {e}')
+			return False
+
 	# ===== Glider Methods =====
 
 	@staticmethod

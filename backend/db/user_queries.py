@@ -1,7 +1,7 @@
 """Database operations for users in DuckDB"""
 
 import logging
-from typing import Optional, List
+from typing import Optional, List, Set
 from pathlib import Path
 
 import duckdb
@@ -25,6 +25,7 @@ class UserQueries:
 		self.db_path = db_path or settings.DB_NAME
 		if settings.DB_PATH:
 			self.db_path = str(Path(settings.DB_PATH) / self.db_path)
+		self._ensure_users_table()
 
 	def _get_connection(self):
 		"""Get a DuckDB connection"""
@@ -44,10 +45,22 @@ class UserQueries:
 					updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 				)
 			''')
+
+			columns = self._get_users_columns(conn)
+			if 'created_at' not in columns:
+				conn.execute('ALTER TABLE USERS ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+			if 'updated_at' not in columns:
+				conn.execute('ALTER TABLE USERS ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+
 			conn.commit()
 			logger.debug('USERS table ensured in database')
 		finally:
 			conn.close()
+
+	def _get_users_columns(self, conn) -> Set[str]:
+		"""Get USERS table column names"""
+		results = conn.execute("PRAGMA table_info('USERS')").fetchall()
+		return {row[1] for row in results}
 
 	def get_user_by_username(self, username: str) -> Optional[User]:
 		"""Get a user by username
@@ -151,6 +164,7 @@ class UserQueries:
 		try:
 			set_clauses = []
 			params = []
+			columns = self._get_users_columns(conn)
 			
 			for key, value in updates.items():
 				if key == 'password':
@@ -165,7 +179,8 @@ class UserQueries:
 				logger.warning(f'No valid fields to update for user {username}')
 				return False
 			
-			set_clauses.append('updated_at = CURRENT_TIMESTAMP')
+			if 'updated_at' in columns:
+				set_clauses.append('updated_at = CURRENT_TIMESTAMP')
 			params.append(username)
 			
 			sql = f"UPDATE USERS SET {', '.join(set_clauses)} WHERE username = ?"

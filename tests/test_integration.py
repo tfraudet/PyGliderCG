@@ -157,17 +157,18 @@ class TestAuthentication:
 		
 		assert response.status_code == 200
 
-	def test_unauthorized_access_without_token(self, backend_url, timeout):
-		"""Test unauthorized access without token"""
+	def test_gliders_accessible_without_token(self, backend_url, timeout):
+		"""Test that glider endpoints are accessible without authentication"""
 		response = requests.get(
 			f'{backend_url}/api/gliders',
 			timeout=timeout
 		)
 		
-		assert response.status_code == 403
+		# Gliders endpoint is now public, should return 200
+		assert response.status_code == 200
 
-	def test_invalid_token_rejection(self, backend_url, timeout):
-		"""Test invalid token rejection"""
+	def test_gliders_accessible_with_invalid_token(self, backend_url, timeout):
+		"""Test that gliders are accessible even with invalid token"""
 		headers = {'Authorization': 'Bearer invalid.token.here'}
 		response = requests.get(
 			f'{backend_url}/api/gliders',
@@ -175,18 +176,17 @@ class TestAuthentication:
 			timeout=timeout
 		)
 		
-		assert response.status_code == 401
+		# Gliders endpoint is public, should succeed even with invalid token
+		assert response.status_code == 200
 
 
 class TestGliderOperations:
 	"""Glider CRUD operations tests"""
 
-	def test_list_gliders(self, auth_token, timeout):
-		"""Test retrieving list of gliders"""
-		headers = {'Authorization': f'Bearer {auth_token}'}
+	def test_list_gliders(self, timeout):
+		"""Test retrieving list of gliders without authentication"""
 		response = requests.get(
 			f'{BACKEND_URL}/api/gliders',
-			headers=headers,
 			timeout=timeout
 		)
 		
@@ -194,12 +194,10 @@ class TestGliderOperations:
 		data = response.json()
 		assert isinstance(data, list)
 
-	def test_list_gliders_returns_valid_data(self, auth_token, timeout):
+	def test_list_gliders_returns_valid_data(self, timeout):
 		"""Test glider list contains valid data"""
-		headers = {'Authorization': f'Bearer {auth_token}'}
 		response = requests.get(
 			f'{BACKEND_URL}/api/gliders',
-			headers=headers,
 			timeout=timeout
 		)
 		
@@ -210,24 +208,20 @@ class TestGliderOperations:
 			glider = data[0]
 			assert 'model' in glider or 'id' in glider
 
-	def test_get_glider_nonexistent(self, auth_token, timeout):
+	def test_get_glider_nonexistent(self, timeout):
 		"""Test 404 for non-existent glider"""
-		headers = {'Authorization': f'Bearer {auth_token}'}
 		response = requests.get(
 			f'{BACKEND_URL}/api/gliders/nonexistent-glider-12345',
-			headers=headers,
 			timeout=timeout
 		)
 		
 		assert response.status_code == 404
 
 	@pytest.mark.parametrize('glider_id', ['test-1', 'test-2', 'invalid-id-xyz'])
-	def test_get_nonexistent_gliders(self, auth_token, timeout, glider_id):
+	def test_get_nonexistent_gliders(self, timeout, glider_id):
 		"""Test 404 for various non-existent glider IDs"""
-		headers = {'Authorization': f'Bearer {auth_token}'}
 		response = requests.get(
 			f'{BACKEND_URL}/api/gliders/{glider_id}',
-			headers=headers,
 			timeout=timeout
 		)
 		
@@ -257,14 +251,11 @@ class TestCORS:
 class TestDataConsistency:
 	"""Data consistency and reliability tests"""
 
-	def test_repeated_requests_return_identical_data(self, auth_token, timeout):
+	def test_repeated_requests_return_identical_data(self, timeout):
 		"""Test that repeated requests return identical data"""
-		headers = {'Authorization': f'Bearer {auth_token}'}
-		
 		# First request
 		response1 = requests.get(
 			f'{BACKEND_URL}/api/gliders',
-			headers=headers,
 			timeout=timeout
 		)
 		
@@ -274,7 +265,6 @@ class TestDataConsistency:
 		# Second request
 		response2 = requests.get(
 			f'{BACKEND_URL}/api/gliders',
-			headers=headers,
 			timeout=timeout
 		)
 		
@@ -298,14 +288,11 @@ class TestPerformance:
 		assert response.status_code == 200
 		assert elapsed_ms < 1000  # Should respond in less than 1 second
 
-	def test_gliders_endpoint_response_time(self, auth_token, timeout):
+	def test_gliders_endpoint_response_time(self, timeout):
 		"""Test gliders endpoint responds within acceptable time"""
-		headers = {'Authorization': f'Bearer {auth_token}'}
-		
 		start = time.time()
 		response = requests.get(
 			f'{BACKEND_URL}/api/gliders',
-			headers=headers,
 			timeout=timeout
 		)
 		elapsed_ms = (time.time() - start) * 1000
@@ -336,10 +323,8 @@ class TestErrorHandling:
 		with pytest.raises(requests.exceptions.RequestException):
 			requests.get('http://localhost:9999/health', timeout=0.001)
 
-	def test_malformed_json_request(self, auth_token, timeout):
+	def test_malformed_json_request(self, timeout):
 		"""Test handling of malformed JSON requests"""
-		headers = {'Authorization': f'Bearer {auth_token}'}
-		
 		# Send request with invalid JSON
 		response = requests.post(
 			f'{BACKEND_URL}/api/auth/login',

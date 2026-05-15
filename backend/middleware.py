@@ -27,7 +27,7 @@ def add_production_middleware(app: FastAPI, trusted_hosts: Optional[list[str]] =
 		trusted_hosts = [
 			"localhost",
 			"127.0.0.1",
-			"*.yourdomain.com",  # Update with your domain
+			"cg.acph.synology.me",
 		]
 
 	app.add_middleware(

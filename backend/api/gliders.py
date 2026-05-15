@@ -131,18 +131,17 @@ def _convert_request_to_glider(registration: str, request: GliderRequest) -> Gli
 @router.get('', response_model=List[GliderResponse])
 async def list_gliders(
 	skip: int = Query(0, ge=0, description='Number of gliders to skip'),
-	limit: int = Query(100, ge=1, le=1000, description='Maximum number of gliders to return'),
-	current_user = Depends(get_current_user)
+	limit: int = Query(100, ge=1, le=1000, description='Maximum number of gliders to return')
 ):
 	"""
-	List all gliders with pagination.
+	List all gliders with pagination (public endpoint).
 
 	- **skip**: Number of gliders to skip (default: 0)
 	- **limit**: Maximum number of gliders to return (default: 100, max: 1000)
 	- **Returns**: List of GliderResponse objects
 	"""
 	try:
-		logger.info(f'User {current_user.username} fetching gliders list (skip={skip}, limit={limit})')
+		logger.info(f'Fetching gliders list (skip={skip}, limit={limit})')
 
 		gliders_dict = get_all_gliders()
 		gliders_list = list(gliders_dict.values())
@@ -159,18 +158,15 @@ async def list_gliders(
 
 
 @router.get('/{glider_id}', response_model=GliderResponse)
-async def get_glider(
-	glider_id: str,
-	current_user = Depends(get_current_user)
-):
+async def get_glider(glider_id: str):
 	"""
-	Get a single glider by registration/ID.
+	Get a single glider by registration/ID (public endpoint).
 
 	- **glider_id**: Registration number of the glider
 	- **Returns**: GliderResponse object or 404 if not found
 	"""
 	try:
-		logger.info(f'User {current_user.username} fetching glider {glider_id}')
+		logger.info(f'Fetching glider {glider_id}')
 
 		glider = get_glider_by_id(glider_id)
 		if not glider:
@@ -415,18 +411,15 @@ async def update_weight_and_balances(
 
 
 @router.get('/{glider_id}/limits', response_model=GliderCalculationsResponse)
-async def get_glider_limits(
-	glider_id: str,
-	current_user = Depends(get_current_user)
-):
+async def get_glider_limits(glider_id: str):
 	"""
-	Get CG limits and calculation data for a glider.
+	Get CG limits and calculation data for a glider (public endpoint).
 
 	- **glider_id**: Registration number of the glider
 	- **Returns**: GliderCalculationsResponse with limits and calculations
 	"""
 	try:
-		logger.info(f'User {current_user.username} fetching limits for glider {glider_id}')
+		logger.info(f'Fetching limits for glider {glider_id}')
 
 		glider = get_glider_by_id(glider_id)
 		if not glider:
@@ -503,11 +496,10 @@ async def get_glider_limits(
 @router.post('/{glider_id}/calculate', response_model=WeightBalanceCalculationResponse)
 async def calculate_weight_and_balance(
 	glider_id: str,
-	request: WeightBalanceCalculationRequest,
-	current_user = Depends(get_current_user)
+	request: WeightBalanceCalculationRequest
 ):
 	"""
-	Calculate weight and balance for a glider with given loading.
+	Calculate weight and balance for a glider with given loading (public endpoint).
 
 	- **glider_id**: Registration number of the glider
 	- **request**: WeightBalanceCalculationRequest with weights for:
@@ -519,7 +511,7 @@ async def calculate_weight_and_balance(
 	- **Returns**: WeightBalanceCalculationResponse with total weight and CG
 	"""
 	try:
-		logger.info(f'User {current_user.username} calculating W&B for glider {glider_id}')
+		logger.info(f'Calculating W&B for glider {glider_id}')
 
 		glider = get_glider_by_id(glider_id)
 		if not glider:

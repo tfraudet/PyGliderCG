@@ -5,13 +5,18 @@ import logging
 
 from config import FAVICON_WEB, get_database_name
 from pages.sidebar import sidebar_menu
-from users import UsersDuckDB, User, fetch_users
+from backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
+client = BackendClient()
 
 import duckdb
 import zipfile
 import os
+
+@st.cache_data(show_spinner='Chargement des utilisateurs...')
+def fetch_users():
+	return client.get_users()
 
 def export_database(exported_directory='data/exported_db'):
 	@st.dialog('Exporter la base de données')
@@ -81,12 +86,18 @@ if ('authenticated' not in st.session_state) or (not st.session_state.authentica
 	st.switch_page('streamlit_app.py')
 else:
 	st.header(':material/account_circle: Liste des utilisateurs')
-	users = fetch_users()
 	sidebar_menu()
 
-	users_df = users.get_users()
+	users_list = fetch_users()
+	users_df = pd.DataFrame(users_list)
+	if users_df.empty:
+		users_df = pd.DataFrame(columns=['username', 'email', 'password', 'role'])
+	else:
+		users_df = users_df.reindex(columns=['username', 'email', 'password', 'role'])
+	users_df['password'] = users_df['password'].fillna('')
+
 	with st.form('users-form'):
-		edited_users_df = st.data_editor(users.get_users(), key="users_edit", width='stretch', num_rows='dynamic',
+		edited_users_df = st.data_editor(users_df, key='users_edit', width='stretch', num_rows='dynamic',
 				# disabled=True if st.session_state.get('FormSubmitter:users-form-Enregistrer') else False,
 				column_config={
 					"username": st.column_config.TextColumn(
@@ -114,14 +125,14 @@ else:
 						options=[
 							'administrator',
 							'editor',
-
+							'viewer',
 						],
-						default='editor',
+						default='viewer',
 					),
 
 				}
 			)
-		submitted = st.form_submit_button("Enregistrer",icon=':material/save:',disabled= True if st.session_state.get('FormSubmitter:users-form-Enregistrer') else False)
+		submitted = st.form_submit_button('Enregistrer',icon=':material/save:',disabled= True if st.session_state.get('FormSubmitter:users-form-Enregistrer') else False)
 	
 	# st.write(st.session_state)
 	if submitted:
@@ -129,31 +140,49 @@ else:
 		# user added
 		if len (st.session_state.users_edit['added_rows']) > 0:
 			for row in st.session_state.users_edit['added_rows']:
-				username = row['username']
-				if users.find_by_username(username) is None:
-					email = row['email'] if 'email' in row.keys() else ''
-					password = row['password'] if 'password' in row.keys() else ''
-					role = row['role'] if 'role' in row.keys() else ''
-					users.create(User(username, email, password,role))
-					cache_to_refresh = True
+				username = row['username'].strip() if row.get('username') else ''
+				email = row['email'] if 'email' in row.keys() else ''
+				password = row['password'] if 'password' in row.keys() else ''
+				role = row['role'] if 'role' in row.keys() else 'viewer'
+				if not username or not password:
+					st.error('Identifiant et mot de passe sont requis pour ajouter un utilisateur.', icon=':material/error:')
 				else:
-					st.error('L\'identifiant de l\'utilsateur ne peux pas être vide ou déja exister.', icon=':material/error:')
+					created = client.create_user({
+						'username': username,
+						'email': email,
+						'password': password,
+						'role': role,
+					})
+					if created:
+						cache_to_refresh = True
 			if cache_to_refresh: st.success('Utilisateur(s) ajouté(s) avec succès', icon=':material/check_circle:')
 
 		# user edited
 		if len (st.session_state.users_edit['edited_rows']) > 0:
 			for key, value in st.session_state.users_edit['edited_rows'].items():
 				row_to_update = edited_users_df.iloc[key]
-				users.update(User(row_to_update['username'], row_to_update['email'], row_to_update['password'],row_to_update['role']))
-				cache_to_refresh = True
+				username = users_df.iloc[key]['username']
+				if row_to_update['username'] != username:
+					st.error('Le changement d\'identifiant utilisateur n\'est pas autorisé.', icon=':material/error:')
+					continue
+				payload = {
+					'username': username,
+					'email': row_to_update['email'],
+					'role': row_to_update['role'],
+				}
+				if row_to_update['password']:
+					payload['password'] = row_to_update['password']
+				updated = client.update_user(username, payload)
+				if updated:
+					cache_to_refresh = True
 			if cache_to_refresh: st.success ('Données utilisateur(s) modifiées avec succès', icon=':material/check_circle:')
 
 		# user deleted
 		if len (st.session_state.users_edit['deleted_rows']) > 0:
 			for idx, value in enumerate(st.session_state.users_edit['deleted_rows']):
 				username_to_delete = users_df.iloc[value]['username']
-				users.delete(username_to_delete)
-				cache_to_refresh = True
+				if client.delete_user(username_to_delete):
+					cache_to_refresh = True
 			if cache_to_refresh: st.success ('Utilisateur(s) effacé(s) avec succès', icon=':material/check_circle:')
 
 		# refresh cache and rerun if the list of users have been updated
@@ -170,7 +199,6 @@ else:
 			st.button('Ok')
 			st.session_state.pop('FormSubmitter:users-form-Enregistrer')
 			st.session_state.pop('users_edit')
-
 	# Other admini function like import/export of the database
 	st.divider()
 	st.subheader(':material/settings: Administration')

@@ -157,7 +157,7 @@ async def get_current_user_info(current_user = Depends(get_current_user)) -> Use
 		current_user: Current authenticated user (dependency injection)
 		
 	Returns:
-		UserResponse with user data (id, username, email, role)
+		UserResponse with user data (username, email, role)
 		
 	Raises:
 		HTTPException: 401 if not authenticated
@@ -170,7 +170,6 @@ async def get_current_user_info(current_user = Depends(get_current_user)) -> Use
 	logger.debug(f'Retrieved user info for {current_user.username}')
 	
 	return UserResponse(
-		id=current_user.username,
 		username=current_user.username,
 		email=current_user.email,
 		role=current_user.role,

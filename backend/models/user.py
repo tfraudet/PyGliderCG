@@ -20,7 +20,6 @@ class User:
 	email: str
 	password: str
 	role: str
-	id: Optional[str] = None
 
 
 class PasswordHasher:

@@ -7,6 +7,7 @@
 3. [Authentication](#authentication)
 4. [API Endpoints](#api-endpoints)
    - [Authentication Routes](#authentication-routes)
+   - [Users Routes](#users-routes)
    - [Gliders Routes](#gliders-routes)
    - [Audit Routes](#audit-routes)
 5. [Error Handling](#error-handling)
@@ -52,10 +53,10 @@ The API is production-ready and designed for aviation professionals managing gli
 │  │  • Request/Response Logging                             │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                 │
-│  ┌──────────────┬──────────────┬───────────────┐               │
-│  │  Auth       │  Gliders     │  Audit Logs   │               │
-│  │  Router     │  Router      │  Router       │               │
-│  └──────────────┴──────────────┴───────────────┘               │
+│  ┌──────────────┬──────────────┬──────────────┬───────────────┐│
+│  │  Auth       │  Users       │  Gliders     │  Audit Logs   ││
+│  │  Router     │  Router      │  Router      │  Router       ││
+│  └──────────────┴──────────────┴──────────────┴───────────────┘│
 │                         │                                      │
 │                    (Business Logic)                            │
 │                                                                 │
@@ -130,7 +131,7 @@ Three roles control access levels:
 
 | Role | Permissions | Use Case |
 |------|-------------|----------|
-| **admin** | Full CRUD on all resources, audit log access, user management | System administrators |
+| **administrator** | Full CRUD on all resources, audit log access, user management | System administrators |
 | **editor** | Create/update/delete gliders, view audit logs | Flight test engineers, maintenance staff |
 | **viewer** | List gliders, view details, calculate W&B, view own audit entries | Pilots, flight instructors |
 
@@ -268,10 +269,9 @@ Authorization: Bearer {access_token}
 **Response (200 OK):**
 ```json
 {
-  "user_id": "u123",
   "username": "pilot1",
-  "role": "viewer",
-  "created_at": "2024-01-15T10:30:00Z"
+  "email": "pilot1@example.com",
+  "role": "viewer"
 }
 ```
 
@@ -283,17 +283,183 @@ curl http://localhost:8000/api/auth/me \
 
 ---
 
+### Users Routes
+
+All user endpoints are at `/api/users` prefix.
+
+**Access Control:**
+- **Administrator only:** List, create, update, delete users
+
+#### List Users
+
+```
+GET /api/users
+```
+
+List all users. **Requires administrator role.**
+
+⚠️ This route returns `password` as stored in database (bcrypt hash), not the clear-text password.
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200 OK):**
+```json
+[
+  {
+	"username": "admin",
+	"email": "admin@example.com",
+	"password": "$2b$12$...",
+	"role": "administrator"
+  },
+  {
+	"username": "pilot1",
+	"email": "pilot1@example.com",
+	"password": "$2b$12$...",
+	"role": "viewer"
+  }
+]
+```
+
+**Error Responses:**
+- `401 Unauthorized`: Missing or invalid token
+- `403 Forbidden`: User does not have administrator role
+
+---
+
+#### Create User
+
+```
+POST /api/users
+```
+
+Create a new user. **Requires administrator role.**
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "username": "new_user",
+  "email": "new_user@example.com",
+  "password": "secure_password",
+  "role": "viewer"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "username": "new_user",
+  "email": "new_user@example.com",
+  "password": "$2b$12$...",
+  "role": "viewer"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: User already exists, username change attempted, or missing password
+- `401 Unauthorized`: Missing or invalid token
+- `403 Forbidden`: User does not have administrator role
+- `422 Unprocessable Entity`: Validation error (e.g. invalid email)
+
+---
+
+#### Update User
+
+```
+PUT /api/users/{username}
+```
+
+Update an existing user. **Requires administrator role.**
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Path Parameters:**
+- `username`: Username of the user to update (cannot be changed)
+
+**Request Body:**
+```json
+{
+  "username": "pilot1",
+  "email": "pilot1.updated@example.com",
+  "password": "optional_new_password",
+  "role": "editor"
+}
+```
+
+`password` is optional for updates. When omitted or empty, existing password is preserved.
+
+**Response (200 OK):**
+```json
+{
+  "username": "pilot1",
+  "email": "pilot1.updated@example.com",
+  "password": "$2b$12$...",
+  "role": "editor"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Username cannot be changed
+- `401 Unauthorized`: Missing or invalid token
+- `403 Forbidden`: User does not have administrator role
+- `404 Not Found`: User not found
+- `422 Unprocessable Entity`: Validation error
+
+---
+
+#### Delete User
+
+```
+DELETE /api/users/{username}
+```
+
+Delete a user. **Requires administrator role.**
+
+**Headers:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters:**
+- `username`: Username of the user to delete
+
+**Response (204 No Content):**
+No response body.
+
+**Error Responses:**
+- `401 Unauthorized`: Missing or invalid token
+- `403 Forbidden`: User does not have administrator role
+- `404 Not Found`: User not found
+
+---
+
 ### Gliders Routes
 
-All glider endpoints are at `/api/gliders` prefix. Requires authentication.
+All glider endpoints are at `/api/gliders` prefix.
 
-#### List Gliders
+**Access Control:**
+- **Public (no authentication required):** List, Get, Get Limits, Calculate
+- **Admin only:** Create, Update, Delete, Manage Instruments/Weighings
+
+#### List Gliders (Public)
 
 ```
 GET /api/gliders
 ```
 
-List all gliders with pagination support.
+List all gliders with pagination support. **No authentication required.**
 
 **Query Parameters:**
 - `skip` (optional, default: 0): Number of records to skip
@@ -325,19 +491,18 @@ List all gliders with pagination support.
 
 **cURL Example:**
 ```bash
-curl 'http://localhost:8000/api/gliders?skip=0&limit=10' \
-  -H "Authorization: Bearer $TOKEN"
+curl 'http://localhost:8000/api/gliders?skip=0&limit=10'
 ```
 
 ---
 
-#### Get Single Glider
+#### Get Single Glider (Public)
 
 ```
 GET /api/gliders/{glider_id}
 ```
 
-Retrieve details for a specific glider.
+Retrieve details for a specific glider. **No authentication required.**
 
 **Path Parameters:**
 - `glider_id`: Unique glider identifier
@@ -364,8 +529,7 @@ Retrieve details for a specific glider.
 
 **cURL Example:**
 ```bash
-curl http://localhost:8000/api/gliders/g001 \
-  -H "Authorization: Bearer $TOKEN"
+curl http://localhost:8000/api/gliders/g001
 ```
 
 ---
@@ -376,7 +540,7 @@ curl http://localhost:8000/api/gliders/g001 \
 POST /api/gliders
 ```
 
-Create a new glider record. **Requires admin role.**
+Create a new glider record. **Requires administrator role.**
 
 **Request Body:**
 ```json
@@ -411,7 +575,7 @@ Create a new glider record. **Requires admin role.**
 
 **Error Responses:**
 - `401 Unauthorized`: Missing or invalid token
-- `403 Forbidden`: User does not have admin role
+- `403 Forbidden`: User does not have administrator role
 - `422 Unprocessable Entity`: Invalid request data
 
 **cURL Example:**
@@ -439,7 +603,7 @@ curl -X POST http://localhost:8000/api/gliders \
 PUT /api/gliders/{glider_id}
 ```
 
-Update glider information. **Requires admin role.**
+Update glider information. **Requires administrator role.**
 
 **Path Parameters:**
 - `glider_id`: Glider to update
@@ -483,7 +647,7 @@ Update glider information. **Requires admin role.**
 DELETE /api/gliders/{glider_id}
 ```
 
-Delete a glider record. **Requires admin role.**
+Delete a glider record. **Requires administrator role.**
 
 **Path Parameters:**
 - `glider_id`: Glider to delete
@@ -501,13 +665,13 @@ Delete a glider record. **Requires admin role.**
 
 ---
 
-#### Get CG Limits
+#### Get CG Limits (Public)
 
 ```
 GET /api/gliders/{glider_id}/limits
 ```
 
-Retrieve center of gravity envelope and limits. Requires authentication.
+Retrieve center of gravity envelope and limits. **No authentication required.**
 
 **Path Parameters:**
 - `glider_id`: Glider identifier
@@ -527,15 +691,20 @@ Retrieve center of gravity envelope and limits. Requires authentication.
 }
 ```
 
+**cURL Example:**
+```bash
+curl http://localhost:8000/api/gliders/g001/limits
+```
+
 ---
 
-#### Calculate Weight & Balance
+#### Calculate Weight & Balance (Public)
 
 ```
 POST /api/gliders/{glider_id}/calculate
 ```
 
-Calculate weight and balance for given glider configuration. Requires authentication.
+Calculate weight and balance for given glider configuration. **No authentication required.**
 
 **Path Parameters:**
 - `glider_id`: Glider identifier
@@ -571,6 +740,19 @@ Calculate weight and balance for given glider configuration. Requires authentica
 - `400 Bad Request`: Invalid mass values
 - `422 Unprocessable Entity`: Calculation error
 
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8000/api/gliders/g001/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+	"pilot_mass": 75,
+	"ballast_mass": 20,
+	"fuel_mass": 0,
+	"equipment_mass": 5,
+	"configuration": "cruise"
+  }'
+```
+
 ---
 
 ### Audit Routes
@@ -583,7 +765,7 @@ All audit endpoints are at `/api/audit-logs` prefix.
 GET /api/audit-logs
 ```
 
-List audit logs. **Requires admin role.**
+List audit logs. **Requires administrator role.**
 
 **Query Parameters:**
 - `skip` (optional, default: 0): Records to skip
@@ -759,12 +941,10 @@ Status: `422 Unprocessable Entity`
 
 ```python
 class User:
-	user_id: str
 	username: str
-	password_hash: str  # Never returned in API responses
-	role: Literal["admin", "editor", "viewer"]
-	created_at: datetime
-	is_active: bool
+	email: str
+	password: str       # Stored hashed in database
+	role: Literal["administrator", "editor", "viewer"]
 ```
 
 ### LoginRequest
@@ -775,14 +955,24 @@ class LoginRequest:
 	password: str  # Required, 8+ characters
 ```
 
+### UserRequest
+
+```python
+class UserRequest:
+	username: str
+	email: EmailStr
+	password: Optional[str]  # Required for create, optional for update
+	role: str                # Defaults to "viewer"
+```
+
 ### UserResponse
 
 ```python
 class UserResponse:
-	user_id: str
 	username: str
+	email: str
+	password: Optional[str]  # Bcrypt hash when returned by /api/users
 	role: str
-	created_at: datetime
 ```
 
 ### TokenResponse

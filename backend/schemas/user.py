@@ -29,18 +29,18 @@ class UserRequest(BaseModel):
 
 
 class UserResponse(BaseModel):
-	"""Response body for user data (no password included)"""
-	id: Optional[str] = Field(None, description='User ID')
+	"""Response body for user data"""
 	username: str = Field(..., description='Username')
 	email: str = Field(..., description='User email address')
+	password: Optional[str] = Field(None, description='User password hash')
 	role: str = Field(..., description='User role')
 
 	class Config:
 		json_schema_extra = {
 			'example': {
-				'id': '123',
 				'username': 'john_doe',
 				'email': 'john@example.com',
+				'password': '$2b$12$...',
 				'role': 'viewer'
 			}
 		}

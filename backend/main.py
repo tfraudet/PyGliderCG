@@ -11,6 +11,7 @@ from backend.config import get_settings
 from backend.api.auth import router as auth_router
 from backend.api.gliders import router as gliders_router
 from backend.api.audit import router as audit_router
+from backend.api.users import router as users_router
 from backend.db.audit_queries import AuditQueries
 
 # Configure logging
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(gliders_router)
     app.include_router(audit_router)
+    app.include_router(users_router)
 
     logger.info("✅ FastAPI application created successfully")
     return app
