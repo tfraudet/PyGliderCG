@@ -300,16 +300,15 @@ class AuditQueries:
 		"""
 		conn = self._get_connection()
 		try:
-			result = conn.execute(
+			conn.execute(
 				'''DELETE FROM AUDITLOG
 				   WHERE timestamp < (CURRENT_TIMESTAMP - INTERVAL ? DAY)''',
 				[days]
 			)
 			conn.commit()
-			
-			deleted_count = result.rows_affected if hasattr(result, 'rows_affected') else 0
+			changes_result = conn.execute('SELECT changes()').fetchone()
+			deleted_count = int(changes_result[0]) if changes_result else 0
 			logger.info(f'Deleted {deleted_count} audit log entries older than {days} days')
-			
 			return deleted_count
 		except Exception as e:
 			logger.error(f'Error deleting old audit logs: {e}')

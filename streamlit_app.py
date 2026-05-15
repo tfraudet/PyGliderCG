@@ -82,8 +82,19 @@ def is_light_mode():
 	# return theme is not None and theme['backgroundColor'] == '#ffffff'
 	return True if st.get_option("theme.base")=='light' else False
 
-def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, balance_empty_wb = None, weight_none_lift = None, balance_percent = None, balance_percent_wb_empty= None):
+def display_plot(
+	current_glider,
+	total_weight,
+	balance,
+	weight_empty_wb: float | None = None,
+	balance_empty_wb: float | None = None,
+	weight_none_lift: float | None = None,
+	balance_percent: float | None = None,
+	balance_percent_wb_empty: float | None = None,
+):
 	# Plot
+	weight_none_lift = float(weight_none_lift) if weight_none_lift is not None else 0.0
+	balance_percent = float(balance_percent) if balance_percent is not None else 0.0
 	df_limits = current_glider.limits_to_pandas()
 		
 	# Create a scatter plot with the limit points and lines connecting them
@@ -167,7 +178,11 @@ def display_plot(current_glider, total_weight, balance, weight_empty_wb = None, 
 	)
 
 	# Add the compute weight & Balance when water-ballast are empty	
-	if (balance_empty_wb is not None and weight_empty_wb is not None):
+	if (
+		balance_empty_wb is not None
+		and weight_empty_wb is not None
+		and balance_percent_wb_empty is not None
+	):
 		fig.add_trace(
 			go.Scatter(x=[balance_empty_wb], y=[weight_empty_wb], mode='markers', name='Centrage Water-Ballast vide', marker_symbol = 'diamond',marker=dict(color=active_theme['cgCalcLineWB'], size=10),
 				hovertemplate='<extra></extra>Centrage Water-Ballast vide: %{x:.0f} mm<br>Mass totale: %{y:.0f} kg', hoverinfo='x+y'
@@ -367,8 +382,10 @@ if (current_glider is not None):
 	st.subheader('{} {} '.format( 'Monoplace' if current_glider.single_seat else 'Biplace', current_glider.registration))
 	st.write('planeur {} de marque {}'.format(current_glider.model, current_glider.brand ))
 
-	if is_debug_mode():
-		tab1, tab2, tab3, tab4= st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée", "Debug"])
+	debug_mode = is_debug_mode()
+	tab4 = None
+	if debug_mode:
+		tab1, tab2, tab3, tab4 = st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée", "Debug"])
 	else:
 		tab1, tab2, tab3 = st.tabs(["Calculateur centrage pilote", "Fiche planeur", "Pesée"])
 
@@ -387,7 +404,8 @@ if (current_glider is not None):
 		else:
 			st.warning('Aucune pesée trouvée pour ce planeur', icon=':material/warning:')
 
-	if is_debug_mode():
+	if debug_mode:
+		assert tab4 is not None
 		with tab4:
 			st.write(current_glider)
 else:

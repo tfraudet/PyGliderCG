@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, Union
 from datetime import datetime
 
 import requests
@@ -79,7 +79,7 @@ class BackendClient:
 		self,
 		method: str,
 		endpoint: str,
-		data: Optional[Dict[str, Any]] = None,
+		data: Optional[Union[Dict[str, Any], List[Any]]] = None,
 		params: Optional[Dict[str, Any]] = None,
 		retry: bool = True,
 	) -> Tuple[int, Any]:
