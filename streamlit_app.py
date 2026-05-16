@@ -11,9 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from gliders import fetch_gliders, get_datum_image_by_label, DATUMS
-from backend_client import BackendClient
-from config import FAVICON_WEB, get_database_name
-from init_db import initialize_database
+from config import FAVICON_WEB
 from pages.sidebar import sidebar_menu
 from config import is_debug_mode
 from weighing_sheet import display_detail_weighing
@@ -47,13 +45,6 @@ logging.basicConfig(
 	format='%(asctime)s %(levelname) -7s %(name)s: %(message)s',
 	handlers=[logging.StreamHandler()   ]
 )
-audit_client = BackendClient()
-
-
-def _log_audit_event(event: str) -> None:
-	"""Log audit events through backend API when authenticated."""
-	if not audit_client.log_audit_event(event):
-		logger.debug(f'Audit event not sent: {event}')
 
 THEME_LIGHT = {
 	'template' : 'plotly',			# "plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white",
@@ -275,9 +266,6 @@ def weight_and_balance_calculator(current_glider):
 
 		display_plot(current_glider, total_weight, balance, total_weight_WB_empty, balance_WB_empty, weight_none_lift, balance_percent, balance_percent_wb_empty)
 
-		#log the calculation event
-		_log_audit_event(f'Calcul centrage planeur pour {current_glider.registration} : {total_weight} kg, {round(balance,0)} mm')
-
 def data_sheet(glider):
 	st.subheader('Référence de pesée')
 	datum_labels = [datum['label'] for datum in DATUMS.values()]
@@ -357,8 +345,6 @@ st.set_page_config(
 
 active_theme = THEME_LIGHT if is_light_mode() else THEME_DARK
 st.header('✈️ Calculateur Centrage Planeur')
-initialize_database(get_database_name())
-
 # load data
 gliders = fetch_gliders()
 

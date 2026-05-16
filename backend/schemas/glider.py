@@ -62,7 +62,7 @@ class InstrumentSchema(BaseModel):
 	brand: str
 	type: str
 	number: str
-	date: date
+	date: Optional[date] = None
 	seat: str
 
 	class Config:

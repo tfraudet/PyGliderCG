@@ -57,7 +57,18 @@ def get_all_gliders() -> Dict[str, Glider]:
 			]
 
 			equipments = conn.execute("SELECT * from INVENTORY WHERE registration='{}'".format(registration)).fetchall()
-			aGlider.instruments = [Instrument(item[0], *item[2:9]) for item in equipments]
+			aGlider.instruments = [
+				Instrument(
+					id=item[0],
+					on_board=item[2],
+					instrument=item[3],
+					brand=item[4],
+					type=item[5],
+					number=item[6],
+					seat=item[8] if item[8] is not None else '',
+					date=item[7],
+				) for item in equipments
+			]
 
 			return aGlider
 
@@ -111,7 +122,18 @@ def get_glider_by_id(registration: str) -> Optional[Glider]:
 			]
 
 			equipments = conn.execute("SELECT * from INVENTORY WHERE registration='{}'".format(reg)).fetchall()
-			aGlider.instruments = [Instrument(item[0], *item[2:9]) for item in equipments]
+			aGlider.instruments = [
+				Instrument(
+					id=item[0],
+					on_board=item[2],
+					instrument=item[3],
+					brand=item[4],
+					type=item[5],
+					number=item[6],
+					seat=item[8] if item[8] is not None else '',
+					date=item[7],
+				) for item in equipments
+			]
 
 			return aGlider
 
@@ -165,7 +187,18 @@ def get_glider_by_model(model: str) -> Optional[Glider]:
 			]
 
 			equipments = conn.execute("SELECT * from INVENTORY WHERE registration='{}'".format(reg)).fetchall()
-			aGlider.instruments = [Instrument(item[0], *item[2:9]) for item in equipments]
+			aGlider.instruments = [
+				Instrument(
+					id=item[0],
+					on_board=item[2],
+					instrument=item[3],
+					brand=item[4],
+					type=item[5],
+					number=item[6],
+					seat=item[8] if item[8] is not None else '',
+					date=item[7],
+				) for item in equipments
+			]
 
 			return aGlider
 
@@ -386,4 +419,54 @@ def save_instruments(registration: str, instruments: List[Instrument]) -> bool:
 		return True
 	except Exception as e:
 		logger.error(f'Error saving instruments for {registration}: {e}')
+		raise
+
+
+def delete_instrument(registration: str, instrument_id: int) -> bool:
+	"""Delete a single instrument for a glider
+	Returns True if instrument existed and was deleted"""
+	try:
+		conn = _get_database_connection()
+		exists = conn.execute(
+			'SELECT 1 FROM INVENTORY WHERE registration = ? AND id = ? LIMIT 1',
+			[registration, instrument_id],
+		).fetchone()
+		if not exists:
+			conn.close()
+			return False
+
+		conn.execute(
+			'DELETE FROM INVENTORY WHERE registration = ? AND id = ?',
+			[registration, instrument_id],
+		)
+		conn.close()
+		logger.debug(f'Instrument {instrument_id} for glider {registration} deleted')
+		return True
+	except Exception as e:
+		logger.error(f'Error deleting instrument {instrument_id} for {registration}: {e}')
+		raise
+
+
+def delete_weighing(registration: str, weighing_id: int) -> bool:
+	"""Delete a single weighing for a glider
+	Returns True if weighing existed and was deleted"""
+	try:
+		conn = _get_database_connection()
+		exists = conn.execute(
+			'SELECT 1 FROM WEIGHING WHERE registration = ? AND id = ? LIMIT 1',
+			[registration, weighing_id],
+		).fetchone()
+		if not exists:
+			conn.close()
+			return False
+
+		conn.execute(
+			'DELETE FROM WEIGHING WHERE registration = ? AND id = ?',
+			[registration, weighing_id],
+		)
+		conn.close()
+		logger.debug(f'Weighing {weighing_id} for glider {registration} deleted')
+		return True
+	except Exception as e:
+		logger.error(f'Error deleting weighing {weighing_id} for {registration}: {e}')
 		raise

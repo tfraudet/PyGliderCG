@@ -12,7 +12,7 @@ from backend.api.auth import router as auth_router
 from backend.api.gliders import router as gliders_router
 from backend.api.audit import router as audit_router
 from backend.api.users import router as users_router
-from backend.db.audit_queries import AuditQueries
+from backend.init_db import initialize_database
 
 # Configure logging
 logging.basicConfig(
@@ -30,10 +30,11 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting PyGliderCG backend")
     logger.info(f"Debug mode: {get_settings().DEBUG}")
 
-    # Ensure audit log table exists
-    audit_queries = AuditQueries()
-    audit_queries._ensure_audit_table()
-    logger.info("✅ Audit log table initialized")
+    db_name = get_settings().DB_NAME
+    if get_settings().DB_PATH:
+        db_name = f'{get_settings().DB_PATH}/{db_name}'
+    initialize_database(db_name)
+    logger.info("✅ Database initialized")
 
     yield
 

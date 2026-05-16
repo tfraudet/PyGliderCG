@@ -42,8 +42,9 @@ def _glider_to_dict(glider) -> dict:
 		arms_dict = {}
 	datum_val = glider.datum.value if hasattr(glider.datum, 'value') else int(glider.datum)
 	instruments = glider.instruments if hasattr(glider, 'instruments') else []
-	if hasattr(instruments, 'to_dict'):
-		instruments = instruments.to_dict('records')
+	to_dict_method = getattr(instruments, 'to_dict', None)
+	if callable(to_dict_method):
+		instruments = to_dict_method('records')
 	return {
 		'single_seat': glider.single_seat,
 		'datum': datum_val,
@@ -537,8 +538,9 @@ def display_detail_weighing(weighing, current_glider, print=False):
 		
 		if isinstance(weighing_date, str):
 			weighing_date = datetime.fromisoformat(weighing_date).date()
-		
-		st.subheader('Détails de la pesée #{} du {}'.format(weighing_id, weighing_date.strftime('%d/%m/%Y')))
+
+		weighing_date_label = weighing_date.strftime('%d/%m/%Y') if weighing_date is not None else 'date inconnue'
+		st.subheader('Détails de la pesée #{} du {}'.format(weighing_id, weighing_date_label))
 		weighing_sheet(weighing)
 
 		limits = current_glider.get('limits', {})

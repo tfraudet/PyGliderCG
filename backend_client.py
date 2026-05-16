@@ -366,8 +366,6 @@ class BackendClient:
 		"""Cached version of get_gliders"""
 		try:
 			client = BackendClient()
-			if not client.is_authenticated():
-				return None
 
 			status_code, response = client._make_request('GET', '/api/gliders')
 			if status_code == 200:
@@ -388,9 +386,6 @@ class BackendClient:
 		Returns:
 			List of glider dicts
 		"""
-		if not self.is_authenticated():
-			return []
-
 		try:
 			status_code, response = self._make_request(
 				'GET',
@@ -411,8 +406,6 @@ class BackendClient:
 		"""Cached version of get_glider"""
 		try:
 			client = BackendClient()
-			if not client.is_authenticated():
-				return None
 
 			status_code, response = client._make_request('GET', f'/api/gliders/{glider_id}')
 			if status_code == 200:
@@ -431,9 +424,6 @@ class BackendClient:
 		Returns:
 			Glider dict or None if not found
 		"""
-		if not self.is_authenticated():
-			return None
-
 		try:
 			status_code, response = self._make_request('GET', f'/api/gliders/{glider_id}')
 
@@ -694,6 +684,42 @@ class BackendClient:
 			return False
 		except BackendException as e:
 			st.error(f'Failed to save weighings: {str(e)}')
+			return False
+
+	def delete_weighing(self, glider_id: str, weighing_id: int) -> bool:
+		"""Delete one weighing from a glider."""
+		if not self.is_authenticated():
+			st.error('Not authenticated')
+			return False
+
+		try:
+			status_code, response = self._make_request(
+				'DELETE',
+				f'/api/gliders/{glider_id}/weighings/{weighing_id}',
+				retry=False,
+			)
+
+			if status_code == 204:
+				self.clear_caches()
+				logger.info(f'Weighing {weighing_id} deleted successfully')
+				return True
+
+			if status_code == 404:
+				st.error('Weighing not found')
+			elif status_code == 403:
+				st.error('You do not have permission to delete weighings')
+
+			return False
+
+		except NotFoundError:
+			st.error('Weighing not found')
+			return False
+		except ForbiddenError:
+			st.error('You do not have permission to delete weighings')
+			return False
+		except BackendException as e:
+			st.error(f'Failed to delete weighing: {str(e)}')
+			logger.error(f'Error deleting weighing: {e}')
 			return False
 
 	def update_glider_weight_and_balances(self, glider_id: str, weight_and_balances: List) -> Optional[Dict[str, Any]]:

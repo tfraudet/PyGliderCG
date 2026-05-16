@@ -5,13 +5,14 @@ import logging
 
 from config import FAVICON_WEB
 from pages.sidebar import sidebar_menu
-from backend_client import BackendClient, ForbiddenError, NotFoundError, BackendException
+from backend_client import BackendClient, NotFoundError, BackendException
 from weighing_sheet import display_detail_weighing
 
 logger = logging.getLogger(__name__)
 client = BackendClient()
 
 def handle_button_state(action):
+	_ = action
 	pass
 
 logger.debug('START weighing_ui.py')
@@ -131,7 +132,7 @@ else:
 							'fuselage_weight': float(row.get('fuselage_weight', 0.0)),
 							'fix_ballast_weight': float(row.get('fix_ballast_weight', 0.0)),
 						})
-					if client.save_weighings(selected_registration, weighings_to_save):
+					if selected_registration and client.save_weighings(selected_registration, weighings_to_save):
 						st.success('Pesée(s) ajoutée(s) avec succès', icon=':material/check_circle:')
 				else:
 					st.info('Aucune nouvelle pesée à sauvegarder', icon=':material/info:')

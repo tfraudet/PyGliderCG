@@ -5,6 +5,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from backend.db.audit_queries import AuditQueries
 from backend.db.user_queries import UserQueries
 from backend.middleware.auth import require_admin_role
 from backend.models.user import User
@@ -13,6 +14,7 @@ from backend.schemas.user import UserRequest, UserResponse
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/api/users', tags=['users'])
+audit_queries = AuditQueries()
 
 
 def _to_user_response(user: User) -> UserResponse:
@@ -74,6 +76,10 @@ async def create_user(
 		if not created_user:
 			raise ValueError('Failed to fetch created user')
 
+		event = f'User {request.username} created'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create audit event for user creation: {request.username}')
+
 		return _to_user_response(created_user)
 	except HTTPException:
 		raise
@@ -123,6 +129,10 @@ async def update_user(
 		if not updated_user:
 			raise ValueError('Failed to fetch updated user')
 
+		event = f'User {username} updated'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create audit event for user update: {username}')
+
 		return _to_user_response(updated_user)
 	except HTTPException:
 		raise
@@ -153,6 +163,10 @@ async def delete_user(
 		deleted = user_queries.delete_user(username)
 		if not deleted:
 			raise ValueError('Failed to delete user')
+
+		event = f'User {username} deleted'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create audit event for user deletion: {username}')
 
 	except HTTPException:
 		raise

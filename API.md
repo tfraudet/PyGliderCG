@@ -133,7 +133,7 @@ Three roles control access levels:
 |------|-------------|----------|
 | **administrator** | Full CRUD on all resources, audit log access, user management | System administrators |
 | **editor** | Create/update/delete gliders, view audit logs | Flight test engineers, maintenance staff |
-| **viewer** | List gliders, view details, calculate W&B, view own audit entries | Pilots, flight instructors |
+| **viewer** | View protected resources requiring read access (public glider list/details/limits/calculate are accessible without authentication), view own audit entries | Pilots, flight instructors |
 
 ---
 
@@ -451,7 +451,7 @@ All glider endpoints are at `/api/gliders` prefix.
 
 **Access Control:**
 - **Public (no authentication required):** List, Get, Get Limits, Calculate
-- **Admin only:** Create, Update, Delete, Manage Instruments/Weighings
+- **Admin only:** Create, Update, Delete, Manage Instruments/Weighings/Weight&Balances
 
 #### List Gliders (Public)
 
@@ -467,26 +467,66 @@ List all gliders with pagination support. **No authentication required.**
 
 **Response (200 OK):**
 ```json
-{
-  "gliders": [
+[
 	{
-	  "glider_id": "g001",
-	  "name": "ASW-28",
-	  "type": "Single-seat",
-	  "manufacturer": "Alexander Schleicher",
-	  "wing_area": 10.4,
-	  "mass_empty": 230,
-	  "max_mass": 525,
-	  "cg_forward": 23.5,
-	  "cg_aft": 26.2,
-	  "created_at": "2024-01-10T08:00:00Z",
-	  "updated_at": "2024-01-10T08:00:00Z"
+		"model": "LS4",
+		"registration": "F-ABCD",
+		"brand": "Rolladen-Schneider",
+		"serial_number": 1234,
+		"single_seat": true,
+		"datum": 4,
+		"pilot_position": 2,
+		"datum_label": "Bord d'attaque",
+		"wedge": "45/1000",
+		"wedge_position": "Dessus du fuselage",
+		"limits": {
+			"mmwp": 525.0,
+			"mmwv": 500.0,
+			"mmenp": 270.0,
+			"mm_harnais": 120.0,
+			"weight_min_pilot": 70.0,
+			"front_centering": 260.0,
+			"rear_centering": 380.0
+		},
+		"arms": {
+			"arm_front_pilot": 250.0,
+			"arm_rear_pilot": 390.0,
+			"arm_waterballast": 330.0,
+			"arm_front_ballast": 180.0,
+			"arm_rear_watterballast_or_ballast": 430.0,
+			"arm_gas_tank": 0.0,
+			"arm_instruments_panel": 210.0
+		},
+		"weighings": [
+			{
+				"id": 1,
+				"date": "2025-01-10",
+				"p1": 102.3,
+				"p2": 126.4,
+				"right_wing_weight": 50.0,
+				"left_wing_weight": 49.5,
+				"tail_weight": 17.0,
+				"fuselage_weight": 110.0,
+				"fix_ballast_weight": 0.0,
+				"A": 120,
+				"D": 450
+			}
+		],
+		"weight_and_balances": [[300, 380.0], [340, 450.0], [370, 525.0]],
+		"instruments": [
+			{
+				"id": 10,
+				"on_board": true,
+				"instrument": "Altimètre",
+				"brand": "Winter",
+				"type": "43mm",
+				"number": "A-123",
+				"date": "2024-02-14",
+				"seat": "AV"
+			}
+		]
 	}
-  ],
-  "total": 42,
-  "skip": 0,
-  "limit": 100
-}
+]
 ```
 
 **cURL Example:**
@@ -510,17 +550,21 @@ Retrieve details for a specific glider. **No authentication required.**
 **Response (200 OK):**
 ```json
 {
-  "glider_id": "g001",
-  "name": "ASW-28",
-  "type": "Single-seat",
-  "manufacturer": "Alexander Schleicher",
-  "wing_area": 10.4,
-  "mass_empty": 230,
-  "max_mass": 525,
-  "cg_forward": 23.5,
-  "cg_aft": 26.2,
-  "created_at": "2024-01-10T08:00:00Z",
-  "updated_at": "2024-01-10T08:00:00Z"
+	"model": "LS4",
+	"registration": "F-ABCD",
+	"brand": "Rolladen-Schneider",
+	"serial_number": 1234,
+	"single_seat": true,
+	"datum": 4,
+	"pilot_position": 2,
+	"datum_label": "Bord d'attaque",
+	"wedge": "45/1000",
+	"wedge_position": "Dessus du fuselage",
+	"limits": {...},
+	"arms": {...},
+	"weighings": [...],
+	"weight_and_balances": [...],
+	"instruments": [...]
 }
 ```
 
@@ -545,33 +589,39 @@ Create a new glider record. **Requires administrator role.**
 **Request Body:**
 ```json
 {
-  "name": "ASW-27",
-  "type": "Single-seat",
-  "manufacturer": "Alexander Schleicher",
-  "wing_area": 10.3,
-  "mass_empty": 245,
-  "max_mass": 525,
-  "cg_forward": 24.0,
-  "cg_aft": 26.5
+	"model": "LS4",
+	"registration": "F-ABCD",
+	"brand": "Rolladen-Schneider",
+	"serial_number": 1234,
+	"single_seat": true,
+	"datum": 4,
+	"pilot_position": 2,
+	"datum_label": "Bord d'attaque",
+	"wedge": "45/1000",
+	"wedge_position": "Dessus du fuselage",
+	"limits": {
+		"mmwp": 525.0,
+		"mmwv": 500.0,
+		"mmenp": 270.0,
+		"mm_harnais": 120.0,
+		"weight_min_pilot": 70.0,
+		"front_centering": 260.0,
+		"rear_centering": 380.0
+	},
+	"arms": {
+		"arm_front_pilot": 250.0,
+		"arm_rear_pilot": 390.0,
+		"arm_waterballast": 330.0,
+		"arm_front_ballast": 180.0,
+		"arm_rear_watterballast_or_ballast": 430.0,
+		"arm_gas_tank": 0.0,
+		"arm_instruments_panel": 210.0
+	}
 }
 ```
 
 **Response (201 Created):**
-```json
-{
-  "glider_id": "g042",
-  "name": "ASW-27",
-  "type": "Single-seat",
-  "manufacturer": "Alexander Schleicher",
-  "wing_area": 10.3,
-  "mass_empty": 245,
-  "max_mass": 525,
-  "cg_forward": 24.0,
-  "cg_aft": 26.5,
-  "created_at": "2024-01-20T14:00:00Z",
-  "updated_at": "2024-01-20T14:00:00Z"
-}
-```
+Returns a complete `GliderResponse` (same structure as `GET /api/gliders/{glider_id}`).
 
 **Error Responses:**
 - `401 Unauthorized`: Missing or invalid token
@@ -584,14 +634,16 @@ curl -X POST http://localhost:8000/api/gliders \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-	"name": "ASW-27",
-	"type": "Single-seat",
-	"manufacturer": "Alexander Schleicher",
-	"wing_area": 10.3,
-	"mass_empty": 245,
-	"max_mass": 525,
-	"cg_forward": 24.0,
-	"cg_aft": 26.5
+	"model": "LS4",
+	"registration": "F-ABCD",
+	"brand": "Rolladen-Schneider",
+	"serial_number": 1234,
+	"single_seat": true,
+	"datum": 4,
+	"pilot_position": 2,
+	"datum_label": "Bord d'\''attaque",
+	"wedge": "45/1000",
+	"wedge_position": "Dessus du fuselage"
   }'
 ```
 
@@ -611,28 +663,23 @@ Update glider information. **Requires administrator role.**
 **Request Body:**
 ```json
 {
-  "name": "ASW-27-B",
-  "cg_forward": 24.2,
-  "cg_aft": 26.8
+	"model": "LS4 Club",
+	"registration": "F-ABCD",
+	"brand": "Rolladen-Schneider",
+	"serial_number": 1234,
+	"single_seat": true,
+	"datum": 4,
+	"pilot_position": 2,
+	"datum_label": "Bord d'attaque",
+	"wedge": "45/1000",
+	"wedge_position": "Dessus du fuselage",
+	"limits": {...},
+	"arms": {...}
 }
 ```
 
 **Response (200 OK):**
-```json
-{
-  "glider_id": "g001",
-  "name": "ASW-27-B",
-  "type": "Single-seat",
-  "manufacturer": "Alexander Schleicher",
-  "wing_area": 10.3,
-  "mass_empty": 245,
-  "max_mass": 525,
-  "cg_forward": 24.2,
-  "cg_aft": 26.8,
-  "created_at": "2024-01-10T08:00:00Z",
-  "updated_at": "2024-01-20T14:05:00Z"
-}
-```
+Returns a complete `GliderResponse`.
 
 **Error Responses:**
 - `403 Forbidden`: Insufficient permissions
@@ -652,16 +699,122 @@ Delete a glider record. **Requires administrator role.**
 **Path Parameters:**
 - `glider_id`: Glider to delete
 
+**Response (204 No Content):**
+No response body.
+
+**Error Responses:**
+- `401 Unauthorized`: Missing or invalid token
+- `403 Forbidden`: Insufficient permissions
+- `404 Not Found`: Glider does not exist
+
+---
+
+#### Replace Instruments (Admin)
+
+```
+PUT /api/gliders/{glider_id}/instruments
+```
+
+Replace all instruments for a glider.
+
+**Request Body:**
+```json
+[
+	{
+		"id": 10,
+		"on_board": true,
+		"instrument": "Altimètre",
+		"brand": "Winter",
+		"type": "43mm",
+		"number": "A-123",
+		"date": "2024-02-14",
+		"seat": "AV"
+	}
+]
+```
+
 **Response (200 OK):**
 ```json
 {
-  "message": "Glider deleted successfully"
+	"registration": "F-ABCD",
+	"instruments_count": 1
 }
 ```
 
-**Error Responses:**
-- `403 Forbidden`: Insufficient permissions
-- `404 Not Found`: Glider does not exist
+#### Delete Instrument (Admin)
+
+```
+DELETE /api/gliders/{glider_id}/instruments/{instrument_id}
+```
+
+**Response (204 No Content):**
+No response body.
+
+#### Add Weighings (Admin)
+
+```
+POST /api/gliders/{glider_id}/weighings
+```
+
+Add weighing rows to a glider.
+
+**Request Body:**
+```json
+[
+	{
+		"date": "2025-01-10",
+		"p1": 102.3,
+		"p2": 126.4,
+		"A": 120,
+		"D": 450,
+		"right_wing_weight": 50.0,
+		"left_wing_weight": 49.5,
+		"tail_weight": 17.0,
+		"fuselage_weight": 110.0,
+		"fix_ballast_weight": 0.0
+	}
+]
+```
+
+**Response (201 Created):**
+```json
+{
+	"registration": "F-ABCD",
+	"weighings_added": 1
+}
+```
+
+#### Delete Weighing (Admin)
+
+```
+DELETE /api/gliders/{glider_id}/weighings/{weighing_id}
+```
+
+**Response (204 No Content):**
+No response body.
+
+#### Replace Weight & Balance Points (Admin)
+
+```
+PUT /api/gliders/{glider_id}/weight-and-balances
+```
+
+Replace all W&B envelope points.
+
+**Request Body:**
+```json
+{
+	"weight_and_balances": [[300, 380.0], [340, 450.0], [370, 525.0]]
+}
+```
+
+**Response (200 OK):**
+```json
+{
+	"registration": "F-ABCD",
+	"points_count": 3
+}
+```
 
 ---
 
@@ -679,15 +832,16 @@ Retrieve center of gravity envelope and limits. **No authentication required.**
 **Response (200 OK):**
 ```json
 {
-  "glider_id": "g001",
-  "glider_name": "ASW-28",
-  "cg_forward": 23.5,
-  "cg_aft": 26.2,
-  "cg_range": 2.7,
-  "forward_limit_datum": 0.235,
-  "aft_limit_datum": 0.262,
-  "envelope_type": "linear",
-  "notes": "Certified per FAI standards"
+	"registration": "F-ABCD",
+	"model": "LS4",
+	"empty_weight": 226.5,
+	"cv_max": 273.5,
+	"cu_max": 160.0,
+	"cu": 160.0,
+	"pilot_av_mini": 68.2,
+	"pilot_av_mini_duo": null,
+	"pilot_av_maxi": 108.4,
+	"empty_arm": 332.0
 }
 ```
 
@@ -705,6 +859,7 @@ POST /api/gliders/{glider_id}/calculate
 ```
 
 Calculate weight and balance for given glider configuration. **No authentication required.**
+Any `Authorization` header is ignored by this endpoint.
 
 **Path Parameters:**
 - `glider_id`: Glider identifier
@@ -712,44 +867,36 @@ Calculate weight and balance for given glider configuration. **No authentication
 **Request Body:**
 ```json
 {
-  "pilot_mass": 75,
-  "ballast_mass": 20,
-  "fuel_mass": 0,
-  "equipment_mass": 5,
-  "configuration": "cruise"
+	"front_pilot_weight": 80.0,
+	"rear_pilot_weight": 0.0,
+	"front_ballast_weight": 0.0,
+	"rear_ballast_weight": 0.0,
+	"wing_water_ballast_weight": 0.0
 }
 ```
 
 **Response (200 OK):**
 ```json
 {
-  "glider_id": "g001",
-  "total_mass": 530,
-  "calculated_cg": 24.8,
-  "cg_percent_mac": 45.5,
-  "within_envelope": true,
-  "margin_forward": 1.3,
-  "margin_aft": 1.4,
-  "moment": 13104,
-  "status": "SAFE",
-  "warnings": []
+	"total_weight": 306.5,
+	"center_of_gravity": 338.1
 }
 ```
 
 **Error Responses:**
 - `400 Bad Request`: Invalid mass values
-- `422 Unprocessable Entity`: Calculation error
+- `404 Not Found`: Glider does not exist
 
 **cURL Example:**
 ```bash
 curl -X POST http://localhost:8000/api/gliders/g001/calculate \
   -H "Content-Type: application/json" \
   -d '{
-	"pilot_mass": 75,
-	"ballast_mass": 20,
-	"fuel_mass": 0,
-	"equipment_mass": 5,
-	"configuration": "cruise"
+	"front_pilot_weight": 80.0,
+	"rear_pilot_weight": 0.0,
+	"front_ballast_weight": 0.0,
+	"rear_ballast_weight": 0.0,
+	"wing_water_ballast_weight": 0.0
   }'
 ```
 
@@ -971,9 +1118,9 @@ Status: `403 Forbidden`
 {
   "detail": [
 	{
-	  "loc": ["body", "wing_area"],
-	  "msg": "ensure this value is greater than 0",
-	  "type": "value_error.number.not_gt"
+	  "loc": ["body", "model"],
+	  "msg": "Field required",
+	  "type": "missing"
 	}
   ]
 }
@@ -1035,47 +1182,131 @@ class TokenResponse:
 
 ```python
 class GliderRequest:
-	name: str              # Aircraft model name
-	type: str              # "Single-seat", "Two-seat", etc.
-	manufacturer: str      # Aircraft manufacturer
-	wing_area: float       # m² (must be > 0)
-	mass_empty: float      # kg
-	max_mass: float        # kg
-	cg_forward: float      # % MAC (must be < cg_aft)
-	cg_aft: float          # % MAC (must be > cg_forward)
+	model: str
+	registration: str
+	brand: str
+	serial_number: Optional[int]
+	single_seat: bool
+	datum: int
+	pilot_position: int
+	datum_label: str
+	wedge: str
+	wedge_position: str
+	limits: Optional[LimitsSchema]
+	arms: Optional[ArmsSchema]
 ```
 
 ### GliderResponse
 
 ```python
 class GliderResponse:
-	glider_id: str
-	name: str
-	type: str
-	manufacturer: str
-	wing_area: float
-	mass_empty: float
-	max_mass: float
-	cg_forward: float
-	cg_aft: float
-	created_at: datetime
-	updated_at: datetime
+	model: str
+	registration: str
+	brand: str
+	serial_number: Optional[int]
+	single_seat: bool
+	datum: int
+	pilot_position: int
+	datum_label: str
+	wedge: str
+	wedge_position: str
+	limits: Optional[LimitsSchema]
+	arms: Optional[ArmsSchema]
+	weighings: List[WeighingSchema]
+	weight_and_balances: List[Tuple[int, float]]
+	instruments: List[InstrumentSchema]
 ```
 
-### WeightBalanceCalculation
+### LimitsSchema
 
 ```python
-class WeightBalanceCalculation:
-	glider_id: str
-	total_mass: float           # kg
-	calculated_cg: float        # % MAC
-	cg_percent_mac: float       # Position as percentage
-	within_envelope: bool       # True if CG is within limits
-	margin_forward: float       # Distance to forward limit
-	margin_aft: float           # Distance to aft limit
-	moment: float               # Total moment
-	status: str                 # "SAFE", "CAUTION", "OUT_OF_LIMITS"
-	warnings: List[str]         # Safety warnings
+class LimitsSchema:
+	mmwp: float
+	mmwv: float
+	mmenp: float
+	mm_harnais: float
+	weight_min_pilot: float
+	front_centering: float
+	rear_centering: float
+```
+
+### ArmsSchema
+
+```python
+class ArmsSchema:
+	arm_front_pilot: float
+	arm_rear_pilot: float
+	arm_waterballast: float
+	arm_front_ballast: float
+	arm_rear_watterballast_or_ballast: float
+	arm_gas_tank: float
+	arm_instruments_panel: float
+```
+
+### WeighingSchema
+
+```python
+class WeighingSchema:
+	id: int
+	date: date
+	p1: float
+	p2: float
+	right_wing_weight: float
+	left_wing_weight: float
+	tail_weight: float
+	fuselage_weight: float
+	fix_ballast_weight: float
+	A: int
+	D: int
+```
+
+### InstrumentSchema
+
+```python
+class InstrumentSchema:
+	id: int
+	on_board: bool
+	instrument: str
+	brand: str
+	type: str
+	number: str
+	date: date
+	seat: str
+```
+
+### WeightBalanceCalculationRequest
+
+```python
+class WeightBalanceCalculationRequest:
+	front_pilot_weight: float
+	rear_pilot_weight: float
+	front_ballast_weight: float
+	rear_ballast_weight: float
+	wing_water_ballast_weight: float
+```
+
+### WeightBalanceCalculationResponse
+
+```python
+class WeightBalanceCalculationResponse:
+	total_weight: float
+	center_of_gravity: float
+```
+
+### GliderCalculationsResponse
+
+```python
+class GliderCalculationsResponse:
+	registration: str
+	model: str
+	empty_weight: Optional[float]
+	cv_max: Optional[float]
+	cu_max: Optional[float]
+	cu: Optional[float]
+	pilot_av_mini: Optional[float]
+	pilot_av_mini_duo: Optional[float]
+	pilot_av_maxi: Optional[float]
+	empty_arm: Optional[float]
 ```
 
 ### AuditLog
@@ -1120,36 +1351,32 @@ headers = {'Authorization': f'Bearer {token}'}
 # Step 2: List gliders
 gliders_response = requests.get(
 	f'{BASE_URL}/gliders?limit=10',
-	headers=headers
 )
 
-print(f'Found {gliders_response.json()["total"]} gliders')
-for glider in gliders_response.json()['gliders']:
-	print(f"  - {glider['name']} ({glider['glider_id']})")
+gliders = gliders_response.json()
+print(f'Found {len(gliders)} gliders')
+for glider in gliders:
+	print(f"  - {glider['registration']} ({glider['model']})")
 
 # Step 3: Calculate W&B for first glider
-if gliders_response.json()['gliders']:
-	glider_id = gliders_response.json()['gliders'][0]['glider_id']
+if gliders:
+	glider_id = gliders[0]['registration']
 	
 	calc_response = requests.post(
 		f'{BASE_URL}/gliders/{glider_id}/calculate',
-		headers=headers,
 		json={
-			'pilot_mass': 75,
-			'ballast_mass': 10,
-			'fuel_mass': 0,
-			'equipment_mass': 5,
-			'configuration': 'cruise'
+			'front_pilot_weight': 75.0,
+			'rear_pilot_weight': 0.0,
+			'front_ballast_weight': 10.0,
+			'rear_ballast_weight': 0.0,
+			'wing_water_ballast_weight': 0.0
 		}
 	)
 	
 	result = calc_response.json()
 	print(f"\nW&B Calculation Result:")
-	print(f"  Total Mass: {result['total_mass']} kg")
-	print(f"  CG Position: {result['calculated_cg']}% MAC")
-	print(f"  Status: {result['status']}")
-	if not result['within_envelope']:
-		print(f"  WARNING: CG outside envelope!")
+	print(f"  Total Weight: {result['total_weight']} kg")
+	print(f"  CG Position: {result['center_of_gravity']} mm")
 
 # Step 4: Logout
 requests.post(f'{BASE_URL}/auth/logout', headers=headers)
@@ -1166,14 +1393,16 @@ curl -X POST http://localhost:8000/api/gliders \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-	"name": "DG-100G",
-	"type": "Single-seat",
-	"manufacturer": "Deutschman",
-	"wing_area": 9.3,
-	"mass_empty": 240,
-	"max_mass": 525,
-	"cg_forward": 23.8,
-	"cg_aft": 27.5
+	"model": "DG-100G",
+	"registration": "D-1234",
+	"brand": "DG Flugzeugbau",
+	"serial_number": 100,
+	"single_seat": true,
+	"datum": 4,
+	"pilot_position": 2,
+	"datum_label": "Bord d'\''attaque",
+	"wedge": "45/1000",
+	"wedge_position": "Dessus du fuselage"
   }' \
   | jq .
 ```

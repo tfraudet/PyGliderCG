@@ -71,7 +71,7 @@ class Arms:
 @dataclass
 class Weighing:
 	"""Empty weight weighing data for a glider"""
-	id: int
+	id: Optional[int]
 	date: date
 	p1: float
 	p2: float
@@ -95,14 +95,14 @@ class Weighing:
 @dataclass
 class Instrument:
 	"""Aircraft instrument or equipment inventory item"""
-	id: int
+	id: Optional[int]
 	on_board: bool
 	instrument: str
 	brand: str
 	type: str
 	number: str
-	date: date
 	seat: str
+	date: Optional[date] = None
 
 
 @dataclass

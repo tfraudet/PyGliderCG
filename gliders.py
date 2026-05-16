@@ -1,15 +1,13 @@
-from dataclasses import dataclass, field, fields
-from datetime import date
+from dataclasses import dataclass, field
+from datetime import date, datetime
 from enum import Enum
 import logging
 from typing import List, Tuple, Optional
 
-import duckdb
 import pandas as pd
 import streamlit as st
 
 from backend_client import BackendClient
-from config import get_database_name
 
 logger = logging.getLogger(__name__)
 audit_client = BackendClient()
@@ -22,8 +20,8 @@ def _log_audit_event(event: str) -> None:
 
 @st.cache_data
 def fetch_gliders(show_spinner = 'Loading gliders'):
-	logger.info('Loading gliders from database...')
-	return Glider.from_database(get_database_name())
+	logger.info('Loading gliders from backend API...')
+	return Glider.from_backend()
 
 class DatumWeighingPoints(Enum):
 	DATUM_WING_2POINTS_AFT_OF_DATUM = 1
@@ -98,18 +96,17 @@ class Weighing:
 	fix_ballast_weight: float = 0.0
 	A: int = 0
 	D: int = 0
+	registration: Optional[str] = None
 
 	def delete(self):
-		dbname = get_database_name()
-		try:
-			conn = duckdb.connect(dbname)
-			conn.execute('DELETE FROM WEIGHING WHERE id={}'.format(self.id))
-		except Exception as e:	
-			logger.error(f'Error on database {dbname} when deleting weighing: {e}')
-		finally:
-			conn.close()
-		logger.debug('{} deleted from the database'.format(self))
-		_log_audit_event('Weighing #{} from {} deleted'.format(self.id, self.date))
+		if self.registration is None:
+			logger.error(f'Unable to delete weighing #{self.id}: registration is missing')
+			return
+		if BackendClient().delete_weighing(self.registration, self.id):
+			logger.debug('Weighing #{} deleted via backend API'.format(self.id))
+			_log_audit_event('Weighing #{} from {} deleted'.format(self.id, self.date))
+		else:
+			logger.error(f'Failed to delete weighing #{self.id} for {self.registration}')
 
 	def mve(self) -> float:
 		'''
@@ -131,27 +128,26 @@ class Instrument:
 	brand: str
 	type: str
 	number: str
-	date: date
 	seat: str
+	date: Optional[date]
+	registration: Optional[str] = None
 
 	def delete(self):
-		dbname = get_database_name()
-		try:
-			conn = duckdb.connect(dbname)
-			conn.execute('DELETE FROM INVENTORY WHERE id={}'.format(self.id))
-		except Exception as e:	
-			logger.error(f'Error on database {dbname} when deleting instrument: {e}')
-		finally:
-			conn.close()
-		logger.debug('{} deleted from the database'.format(self))
-		_log_audit_event('Instruments {} deleted'.format(self.instrument))
+		if self.registration is None:
+			logger.error(f'Unable to delete instrument #{self.id}: registration is missing')
+			return
+		if BackendClient().delete_instrument(self.registration, self.id):
+			logger.debug('Instrument #{} deleted via backend API'.format(self.id))
+			_log_audit_event('Instruments {} deleted'.format(self.instrument))
+		else:
+			logger.error(f'Failed to delete instrument #{self.id} for {self.registration}')
 
 @dataclass
 class Glider:
 	model : str
 	registration : str
 	brand : str
-	serial_number : int
+	serial_number : Optional[int]
 	single_seat : bool
 	datum : int
 	pilot_position : int 
@@ -186,209 +182,218 @@ class Glider:
 		return pd.DataFrame(self.weighings, columns=columns)
 
 	def save(self):
-		logger.debug('save {} in database'.format(self))
-		dbname = get_database_name()
-		try:
-			conn = duckdb.connect(get_database_name())
-
-			# save the glider datasheet
-			conn.execute('INSERT OR REPLACE INTO GLIDER VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',[
-				self.model,
-				self.registration,
-				self.brand,
-				self.serial_number,
-				self.single_seat,
-				
-				# Datum for weighings
-				self.datum,
-				self.pilot_position,
-				self.datum_label,
-				self.wedge,
-				self.wedge_position,
-
-				# Limits
-				self.limits.mmwp if self.limits else None,
-				self.limits.mmwv if self.limits else None,
-				self.limits.mmenp if self.limits else None,
-				self.limits.mm_harnais if self.limits else None,
-				self.limits.weight_min_pilot if self.limits else None,
-				self.limits.front_centering if self.limits else None,
-				self.limits.rear_centering if self.limits else None,
-
-				# Arms
-				self.arms.arm_front_pilot if self.arms else None,
-				self.arms.arm_rear_pilot if self.arms else None,
-				self.arms.arm_waterballast if self.arms else None,
-				self.arms.arm_front_ballast if self.arms else None,
-				self.arms.arm_rear_watterballast_or_ballast if self.arms else None,
-				self.arms.arm_gas_tank if self.arms else None,
-				self.arms.arm_instruments_panel if self.arms else None
-			])
-		except Exception as e:	
-			logger.error(f'Error on database {dbname} when saving glider: {e}')
-		finally:
-			conn.close()
-		logger.debug('{} datasheet saved in database'.format(self.registration))
-		_log_audit_event('Datasheet for glider {} updated'.format(self.registration))
+		logger.debug('Saving {} via backend API'.format(self.registration))
+		client = BackendClient()
+		payload = self._to_glider_payload()
+		existing = client.get_glider(self.registration)
+		result = client.update_glider(self.registration, payload) if existing else client.create_glider(payload)
+		if result:
+			logger.debug('{} datasheet saved via backend API'.format(self.registration))
+			_log_audit_event('Datasheet for glider {} updated'.format(self.registration))
+		else:
+			logger.error(f'Failed to save glider {self.registration} via backend API')
 
 	def save_weight_and_balance(self):
-		dbname = get_database_name()
-		try:
-			conn = duckdb.connect(dbname)
-	
-			#  Delete all points
-			conn.execute('DELETE FROM WB_LIMIT WHERE registration=\'{}\''.format(self.registration))
-
-			# store the new points
-			for idx, point in enumerate(self.weight_and_balances):
-				conn.execute('INSERT INTO WB_LIMIT VALUES (?, ?, ?, ?)',[
-					self.registration,
-					idx,
-					point[0],
-					point[1]
-				])
-
-			logger.debug('Weight & balance for glider {} updated'.format(self.registration))
-		except Exception as e:	
-			logger.error(f'Error on database {dbname} when saving weight and balance limits: {e}')
-		finally:
-			conn.close()	
-		_log_audit_event('Weight & balance {} for glider {} updated'.format(self.weight_and_balances, self.registration))
+		result = BackendClient().update_glider_weight_and_balances(self.registration, self.weight_and_balances)
+		if result:
+			logger.debug('Weight & balance for glider {} updated via backend API'.format(self.registration))
+			_log_audit_event('Weight & balance {} for glider {} updated'.format(self.weight_and_balances, self.registration))
+		else:
+			logger.error(f'Failed to save weight and balance for glider {self.registration}')
 
 	def save_instruments(self):
-		dbname = get_database_name()
-		try:
-			conn = duckdb.connect(dbname)
-			for instrument in self.instruments:
-				if instrument.id is None:
-					result = conn.execute('SELECT nextval(\'inventory_id_seq\')').fetchone()
-					if result is not None:
-						instrument.id = result[0]
-						logger.debug('Next instrument id is {} '.format(instrument.id))
-					else:
-						logger.error('Failed to get next instrument id from inventory_id_seq')
-						raise ValueError('Could not retrieve next instrument id')
-
-				conn.execute('''
-						INSERT OR REPLACE INTO INVENTORY (id, registration, on_board, instrument, brand, type, number, date, seat)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-					''', [
-						instrument.id,
-						self.registration,
-						instrument.on_board,
-						instrument.instrument,
-						instrument.brand,
-						instrument.type,
-						instrument.number,
-						instrument.date,
-						instrument.seat
-					])
-				logger.debug('{} instrument saved in database'.format(instrument))
-		except Exception as e:	
-			logger.error(f'Error on database {dbname} when saving instruments: {e}')
-		finally:
-			conn.close()
-		logger.debug('{} instruments saved in database'.format(self.registration))
-		_log_audit_event('Instruments {} updated for glider {} '.format(self.instruments, self.registration))
+		payload = [self._instrument_to_payload(instrument) for instrument in self.instruments]
+		result = BackendClient().update_glider_inventory(self.registration, payload)
+		if result:
+			logger.debug('{} instruments saved via backend API'.format(self.registration))
+			_log_audit_event('Instruments {} updated for glider {} '.format(self.instruments, self.registration))
+		else:
+			logger.error(f'Failed to save instruments for glider {self.registration}')
 
 	def save_weighings(self):
-		dbname = get_database_name()
-		try:
-			conn = duckdb.connect(dbname)
-			for weighing in self.weighings:
-				if weighing.id is None:
-					result = conn.execute('SELECT nextval(\'auto_increment\')').fetchone()
-					if result is not None:
-						weighing.id = result[0]
-						logger.debug('Next weighing id is {} '.format(weighing.id))
-					else:
-						logger.error('Failed to get next weighing id from auto_increment')
-						raise ValueError('Could not retrieve next weighing id')
-
-				conn.execute('''
-						INSERT OR REPLACE INTO WEIGHING (id, date, registration, p1, p2, right_wing_weight, left_wing_weight, tail_weight, fuselage_weight, fix_ballast_weight, A, D)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-					''', [
-						weighing.id,
-						weighing.date,
-						self.registration,
-						weighing.p1,
-						weighing.p2,
-						weighing.right_wing_weight,
-						weighing.left_wing_weight,
-						weighing.tail_weight,
-						weighing.fuselage_weight,
-						weighing.fix_ballast_weight,
-						weighing.A,
-						weighing.D
-					])
-				logger.debug('{} instrument saved in database'.format(weighing))
-		except Exception as e:	
-			logger.error(f'Error on database {dbname} when saving weighings: {e}')
-		finally:
-			conn.close()
-		logger.debug('{} weighings saved in database'.format(self.registration))
-		_log_audit_event('Weighings {} updated for glider {} '.format(self.weighings, self.registration))
+		payload = [self._weighing_to_payload(weighing) for weighing in self.weighings]
+		if BackendClient().save_weighings(self.registration, payload):
+			logger.debug('{} weighings saved via backend API'.format(self.registration))
+			_log_audit_event('Weighings {} updated for glider {} '.format(self.weighings, self.registration))
+		else:
+			logger.error(f'Failed to save weighings for glider {self.registration}')
 
 	def delete(self):
-		dbname = get_database_name()
-		try:
-			conn = duckdb.connect(dbname)
-			# conn.begin()
-
-			#  Delete all weihings 
-			conn.execute('DELETE FROM WEIGHING WHERE registration=\'{}\''.format(self.registration))
-
-			#  Delete all center of gravity and weight points
-			conn.execute('DELETE FROM WB_LIMIT WHERE registration=\'{}\''.format(self.registration))
-				
-			#  Delete related entries in the INVENTORY table
-			conn.execute('DELETE FROM INVENTORY WHERE registration=\'{}\''.format(self.registration))
-
-			#  Delete the entry in the GLIDER table
-			conn.execute('DELETE FROM GLIDER WHERE registration=\'{}\''.format(self.registration))
-
-			# conn.commit()
-			logger.debug('{} deleted from the database'.format(self.registration))
-		except Exception as e:	
-			logger.error(f'Error on database {dbname} when delete: {e}')		
-		finally:
-			conn.close()
-		_log_audit_event('Glider {} deleted'.format(self.registration))
+		if BackendClient().delete_glider(self.registration):
+			logger.debug('{} deleted via backend API'.format(self.registration))
+			_log_audit_event('Glider {} deleted'.format(self.registration))
+		else:
+			logger.error(f'Failed to delete glider {self.registration}')
 
 	@classmethod
-	def from_database(cls, database_name: str) -> dict:
-		conn = duckdb.connect(database_name, config = {'access_mode': 'READ_ONLY'})
-		results  = conn.execute('SELECT * from GLIDER').fetchall()
+	def from_database(cls, _database_name: str) -> dict:
+		_ = _database_name
+		return cls.from_backend()
 
-		def construct_row(values) -> Glider:
-			main_values = values[:10]
-			limits_value = values[10:17]
-			arm_values = values[17:25]
+	@staticmethod
+	def _parse_date(value):
+		if value is None or value == '':
+			return None
+		if isinstance(value, date):
+			return value
+		if isinstance(value, datetime):
+			return value.date()
+		if isinstance(value, str):
+			return datetime.fromisoformat(value).date()
+		return value
 
-			aGlider = Glider(*main_values)
-			aGlider.limits = Limits(*limits_value)
-			aGlider.arms = Arms(*arm_values)
+	@staticmethod
+	def _instrument_to_payload(instrument: Instrument) -> dict:
+		return {
+			'id': instrument.id,
+			'on_board': instrument.on_board,
+			'instrument': instrument.instrument,
+			'brand': instrument.brand,
+			'type': instrument.type,
+			'number': instrument.number,
+			'date': instrument.date.isoformat() if isinstance(instrument.date, date) else instrument.date,
+			'seat': instrument.seat,
+		}
 
-			# load weight & balanace limit points for this glider
-			points = conn.execute("SELECT * from WB_LIMIT WHERE registration='{}'".format(values[1])).fetchall()
-			aGlider.weight_and_balances = [(p[2], p[3]) for p in points]
+	@staticmethod
+	def _weighing_to_payload(weighing: Weighing) -> dict:
+		return {
+			'date': weighing.date.isoformat() if isinstance(weighing.date, date) else weighing.date,
+			'p1': weighing.p1,
+			'p2': weighing.p2,
+			'right_wing_weight': weighing.right_wing_weight,
+			'left_wing_weight': weighing.left_wing_weight,
+			'tail_weight': weighing.tail_weight,
+			'fuselage_weight': weighing.fuselage_weight,
+			'fix_ballast_weight': weighing.fix_ballast_weight,
+			'A': weighing.A,
+			'D': weighing.D,
+		}
 
-			# load weighings for this glider
-			weighings = conn.execute("SELECT * from WEIGHING WHERE registration='{}'".format(values[1])).fetchall()
-			# aGlider.weighings = [ Weighing(item[0], item[1], *item[3:]) for item in weighings]
-			aGlider.weighings = [ Weighing(
-				item[0], item[1], float(item[3]), float(item[4]), float(item[5]), float(item[6]), float(item[7]), float(item[8]), float(item[9]), item[10], item[11]
-			) for item in weighings]
+	def _to_glider_payload(self) -> dict:
+		return {
+			'model': self.model,
+			'registration': self.registration,
+			'brand': self.brand,
+			'serial_number': self.serial_number,
+			'single_seat': self.single_seat,
+			'datum': self.datum,
+			'pilot_position': self.pilot_position,
+			'datum_label': self.datum_label,
+			'wedge': self.wedge,
+			'wedge_position': self.wedge_position,
+			'limits': {
+				'mmwp': self.limits.mmwp if self.limits else None,
+				'mmwv': self.limits.mmwv if self.limits else None,
+				'mmenp': self.limits.mmenp if self.limits else None,
+				'mm_harnais': self.limits.mm_harnais if self.limits else None,
+				'weight_min_pilot': self.limits.weight_min_pilot if self.limits else None,
+				'front_centering': self.limits.front_centering if self.limits else None,
+				'rear_centering': self.limits.rear_centering if self.limits else None,
+			},
+			'arms': {
+				'arm_front_pilot': self.arms.arm_front_pilot if self.arms else None,
+				'arm_rear_pilot': self.arms.arm_rear_pilot if self.arms else None,
+				'arm_waterballast': self.arms.arm_waterballast if self.arms else None,
+				'arm_front_ballast': self.arms.arm_front_ballast if self.arms else None,
+				'arm_rear_watterballast_or_ballast': self.arms.arm_rear_watterballast_or_ballast if self.arms else None,
+				'arm_gas_tank': self.arms.arm_gas_tank if self.arms else None,
+				'arm_instruments_panel': self.arms.arm_instruments_panel if self.arms else None,
+			},
+		}
 
-			# load equipements for this glider
-			equipments = conn.execute("SELECT * from INVENTORY WHERE registration='{}'".format(values[1])).fetchall()
-			aGlider.instruments = [ Instrument(item[0], *item[2:9]) for item in equipments]
+	@classmethod
+	def from_backend(cls) -> dict:
+		client = BackendClient()
+		rows = {}
 
-			return aGlider
-		
-		rows = { x[1]: construct_row(x) for x in results}
-		conn.close()
+		def _required_date(value: Optional[date], field_name: str, registration: str) -> date:
+			if value is None:
+				raise ValueError(f'Missing {field_name} for {registration}')
+			return value
+
+		for glider in client.get_gliders(skip=0, limit=1000):
+			registration = glider.get('registration')
+			if not registration:
+				continue
+
+			glider_data = client.get_glider(registration) or glider
+			serial_number = glider_data.get('serial_number')
+			if isinstance(serial_number, str) and serial_number.strip() == '':
+				serial_number = None
+			elif isinstance(serial_number, str):
+				try:
+					serial_number = int(serial_number)
+				except ValueError:
+					serial_number = None
+
+			limits_data = glider_data.get('limits')
+			arms_data = glider_data.get('arms')
+			parsed = Glider(
+				glider_data.get('model', ''),
+				registration,
+				glider_data.get('brand', ''),
+				serial_number,
+				glider_data.get('single_seat', False),
+				glider_data.get('datum', 1),
+				glider_data.get('pilot_position', 1),
+				glider_data.get('datum_label', ''),
+				glider_data.get('wedge', ''),
+				glider_data.get('wedge_position', ''),
+			)
+			if limits_data:
+				parsed.limits = Limits(
+					limits_data.get('mmwp'),
+					limits_data.get('mmwv'),
+					limits_data.get('mmenp'),
+					limits_data.get('mm_harnais'),
+					limits_data.get('weight_min_pilot'),
+					limits_data.get('front_centering'),
+					limits_data.get('rear_centering'),
+				)
+			if arms_data:
+				parsed.arms = Arms(
+					arms_data.get('arm_front_pilot'),
+					arms_data.get('arm_rear_pilot'),
+					arms_data.get('arm_waterballast'),
+					arms_data.get('arm_front_ballast'),
+					arms_data.get('arm_rear_watterballast_or_ballast'),
+					arms_data.get('arm_gas_tank', 0.0),
+					arms_data.get('arm_instruments_panel'),
+				)
+
+			parsed.weight_and_balances = [tuple(item) for item in glider_data.get('weight_and_balances', [])]
+			parsed.weighings = [
+				Weighing(
+					item.get('id'),
+					_required_date(cls._parse_date(item.get('date')), 'weighing date', registration),
+					float(item.get('p1', 0.0)),
+					float(item.get('p2', 0.0)),
+					float(item.get('right_wing_weight', 0.0)),
+					float(item.get('left_wing_weight', 0.0)),
+					float(item.get('tail_weight', 0.0)),
+					float(item.get('fuselage_weight', 0.0)),
+					float(item.get('fix_ballast_weight', 0.0)),
+					int(item.get('A', 0)),
+					int(item.get('D', 0)),
+					registration,
+				) for item in glider_data.get('weighings', [])
+			]
+			parsed.instruments = [
+				Instrument(
+					item.get('id'),
+					bool(item.get('on_board', False)),
+					item.get('instrument', ''),
+					item.get('brand', ''),
+					item.get('type', ''),
+					item.get('number', ''),
+					item.get('seat', ''),
+					cls._parse_date(item.get('date')),
+					registration,
+				) for item in glider_data.get('instruments', [])
+			]
+			rows[registration] = parsed
+
 		return rows
 	
 	def last_weighing(self) -> Optional[Weighing]:
@@ -533,4 +538,3 @@ class Glider:
 			return glider_weight, moment_arm / glider_weight
 		else:
 			raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-

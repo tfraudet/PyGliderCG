@@ -1,16 +1,13 @@
 import duckdb
 import bcrypt
 import logging
-import pandas as pd
-from  config import is_debug_mode
 
 logger = logging.getLogger(__name__)
+
 
 def init_audit_log_table(conn):
 	logger.debug('START init_audit_log_table()')
 
-	# Create table user
-	# conn.execute('DROP TABLE IF EXISTS USERS')
 	sql = '''
 			CREATE TABLE IF NOT EXISTS AUDITLOG (
 				timestamp TIMESTAMP PRIMARY KEY,
@@ -25,8 +22,6 @@ def init_audit_log_table(conn):
 def init_users_table(conn):
 	logger.debug('START init_users_table()')
 
-	# Create table user
-	# conn.execute('DROP TABLE IF EXISTS USERS')
 	sql = '''
 			CREATE TABLE IF NOT EXISTS USERS (
 				username VARCHAR PRIMARY KEY,
@@ -37,42 +32,31 @@ def init_users_table(conn):
 	'''
 	conn.execute(sql)
 
-	# if no user exists, create a dummy admin
 	number_of_rows = conn.execute('SELECT count(*) FROM USERS').fetchone()[0]
-	if (number_of_rows == 0):
-		logging.debug("No users in table USERS, insert a dummy user.")
-
-		# Insert data in GLIDER table
+	if number_of_rows == 0:
+		logging.debug('No users in table USERS, insert a dummy user.')
 		try:
-			conn.execute('INSERT INTO USERS VALUES (?, ?, ?, ?)',[
+			conn.execute('INSERT INTO USERS VALUES (?, ?, ?, ?)', [
 				'admin',
 				'admin@gmail.com',
 				bcrypt.hashpw('admin'.encode('utf-8'), bcrypt.gensalt()),
-				'administrator'
+				'administrator',
 			])
 		except duckdb.ConstraintException as e:
-			# see https://duckdb.org/docs/sql/indexes for why this exception is raised
 			logger.error(e)
 
 	logger.debug('END init_users_table()')
 
+
 def init_gliders_tables(conn):
 	logger.debug('START init_gliders_tables()')
 
-	# Drop tables if exists
-	# conn.execute('DROP TABLE IF EXISTS WB_LIMIT')		
-	# conn.execute('DROP TABLE IF EXISTS WEIGHING')		
-	# conn.execute('DROP TABLE IF EXISTS INVENTORY')		
-	# conn.execute('DROP TABLE IF EXISTS GLIDER')			
-	# conn.execute('DROP SEQUENCE IF EXISTS auto_increment')			
-
-	# Create tables
 	sql = '''
 			CREATE TABLE IF NOT EXISTS GLIDER (
 				model VARCHAR,
 				registration VARCHAR PRIMARY KEY,
 				brand VARCHAR,
-				serial_number VARCHAR, 
+				serial_number VARCHAR,
 				single_seat BOOLEAN,
 				datum INTEGER,
 				pilot_position INTEGER,
@@ -147,29 +131,10 @@ def init_gliders_tables(conn):
 	logger.debug('END init_gliders_tables()')
 
 
-def display_information(dbname):
-	conn = duckdb.connect(dbname)
-	print('Database informations')
-	# print(conn.query('PRAGMA show_databases'))
-	print(conn.query('PRAGMA database_size'))
-
-	print('List of tables')
-	print(conn.query('PRAGMA show_tables'))
-	# print(conn.query('PRAGMA show_tables_expanded'))
-
-	print('Table USERS info')
-	print(conn.query('PRAGMA table_info("USERS")'))
-	print(conn.query('PRAGMA storage_info("USERS")'))
-
-	conn.close()
-
 def initialize_database(dbname):
+	conn = None
 	try:
 		logger.debug('initialise Database...')
-
-		# The DuckDBPyConnection object is not thread-safe. If you would like to write to the same database from multiple threads,
-		# create a cursor for each thread 
-		# https://duckdb.org/docs/stable/clients/python/overview.html#using-connections-in-parallel-python-programs
 		conn = duckdb.connect(dbname).cursor()
 		init_users_table(conn)
 		init_gliders_tables(conn)
@@ -177,8 +142,6 @@ def initialize_database(dbname):
 	except Exception as e:
 		logger.error(f'Error on database {dbname}: {e}')
 	finally:
-		conn.close()
-		logger.debug('Database connection closed	')
-
-	# if is_debug_mode():
-	# 	display_information(dbname)
+		if conn is not None:
+			conn.close()
+			logger.debug('Database connection closed')

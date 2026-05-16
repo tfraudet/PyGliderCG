@@ -1,11 +1,12 @@
 """FastAPI routes for Glider CRUD operations and CG calculations"""
 
 import logging
-from typing import List, Optional
+from datetime import date, datetime
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 
-from backend.middleware.auth import require_admin_role, get_current_user
+from backend.middleware.auth import require_admin_role
 from backend.schemas.glider import (
 	GliderResponse,
 	GliderRequest,
@@ -16,7 +17,9 @@ from backend.schemas.glider import (
 	LimitsSchema,
 	ArmsSchema,
 	InstrumentRequest,
+	InstrumentSchema,
 	WeighingRequest,
+	WeighingSchema,
 )
 from backend.db.glider_queries import (
 	get_all_gliders,
@@ -27,13 +30,39 @@ from backend.db.glider_queries import (
 	save_instruments,
 	save_weighings,
 	save_weight_and_balance,
+	delete_instrument,
+	delete_weighing,
 	_get_database_connection,
 )
+from backend.db.audit_queries import AuditQueries
 from backend.models.glider import Glider, Limits, Arms, Instrument, Weighing
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/api/gliders', tags=['gliders'])
+audit_queries = AuditQueries()
+
+
+def _parse_request_date(value: str, field_name: str) -> date:
+	"""Parse request date supporting ISO and day-first formats."""
+	raw = value.strip()
+	if not raw:
+		raise ValueError(f'{field_name} is required')
+
+	try:
+		return datetime.fromisoformat(raw).date()
+	except ValueError:
+		pass
+
+	for fmt in ('%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d'):
+		try:
+			return datetime.strptime(raw, fmt).date()
+		except ValueError:
+			continue
+
+	raise ValueError(
+		f'Invalid {field_name} format: "{value}". Expected YYYY-MM-DD or DD/MM/YYYY.'
+	)
 
 
 def _convert_glider_to_response(glider: Glider) -> GliderResponse:
@@ -67,6 +96,41 @@ def _convert_glider_to_response(glider: Glider) -> GliderResponse:
 	if isinstance(serial_number, str) and serial_number.strip() == '':
 		serial_number = None
 
+	def _required_id(value: int | None, kind: str) -> int:
+		if value is None:
+			raise ValueError(f'Missing {kind} id for glider {glider.registration}')
+		return value
+
+	weighings_schema = [
+		WeighingSchema(
+			id=_required_id(w.id, 'weighing'),
+			date=w.date,
+			p1=w.p1,
+			p2=w.p2,
+			right_wing_weight=w.right_wing_weight,
+			left_wing_weight=w.left_wing_weight,
+			tail_weight=w.tail_weight,
+			fuselage_weight=w.fuselage_weight,
+			fix_ballast_weight=w.fix_ballast_weight,
+			A=w.A,
+			D=w.D,
+		)
+		for w in glider.weighings
+	]
+	instruments_schema = [
+		InstrumentSchema(
+			id=_required_id(i.id, 'instrument'),
+			on_board=i.on_board,
+			instrument=i.instrument,
+			brand=i.brand,
+			type=i.type,
+			number=i.number,
+			date=i.date,
+			seat=i.seat,
+		)
+		for i in glider.instruments
+	]
+
 	return GliderResponse(
 		model=glider.model,
 		registration=glider.registration,
@@ -80,9 +144,9 @@ def _convert_glider_to_response(glider: Glider) -> GliderResponse:
 		wedge_position=glider.wedge_position,
 		limits=limits_schema,
 		arms=arms_schema,
-		weighings=[],
+		weighings=weighings_schema,
 		weight_and_balances=glider.weight_and_balances,
-		instruments=[],
+		instruments=instruments_schema,
 	)
 
 
@@ -312,10 +376,11 @@ async def delete_glider_endpoint(
 async def update_glider_instruments(
 	glider_id: str,
 	instruments: List[InstrumentRequest],
-	admin_user = Depends(require_admin_role)
+	_admin_user = Depends(require_admin_role)
 ):
 	"""Replace all instruments for a glider (admin only)."""
 	try:
+		_ = _admin_user
 		glider = get_glider_by_id(glider_id)
 		if not glider:
 			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
@@ -324,19 +389,30 @@ async def update_glider_instruments(
 		conn.execute(f"DELETE FROM INVENTORY WHERE registration='{glider_id}'")
 		conn.close()
 
-		instrument_objects = [
-			Instrument(
-				id=inst.id,
-				on_board=inst.on_board,
-				instrument=inst.instrument,
-				brand=inst.brand,
-				type=inst.type,
-				number=inst.number,
-				date=inst.date,
-				seat=inst.seat,
+		instrument_objects = []
+		for inst in instruments:
+			parsed_date = None
+			if isinstance(inst.date, str) and inst.date:
+				try:
+					parsed_date = _parse_request_date(inst.date, 'instrument date')
+				except ValueError as e:
+					raise HTTPException(status_code=400, detail=str(e))
+			elif isinstance(inst.date, date):
+				parsed_date = inst.date
+
+			instrument_objects.append(
+				Instrument(
+					id=inst.id,
+					on_board=inst.on_board,
+					instrument=inst.instrument,
+					brand=inst.brand,
+					type=inst.type,
+					number=inst.number,
+					date=parsed_date,
+					seat=inst.seat,
+				)
 			)
-			for inst in instruments
-		]
+		
 
 		if instrument_objects:
 			save_instruments(glider_id, instrument_objects)
@@ -347,6 +423,28 @@ async def update_glider_instruments(
 	except Exception as e:
 		logger.error(f'Error updating instruments for {glider_id}: {e}', exc_info=True)
 		raise HTTPException(status_code=500, detail='Failed to update instruments')
+
+
+@router.delete('/{glider_id}/instruments/{instrument_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_glider_instrument(
+	glider_id: str,
+	instrument_id: int,
+	_admin_user = Depends(require_admin_role),
+):
+	"""Delete one instrument for a glider (admin only)."""
+	try:
+		_ = _admin_user
+		glider = get_glider_by_id(glider_id)
+		if not glider:
+			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
+
+		if not delete_instrument(glider_id, instrument_id):
+			raise HTTPException(status_code=404, detail=f'Instrument {instrument_id} not found')
+	except HTTPException:
+		raise
+	except Exception as e:
+		logger.error(f'Error deleting instrument {instrument_id} for {glider_id}: {e}', exc_info=True)
+		raise HTTPException(status_code=500, detail='Failed to delete instrument')
 
 
 @router.post('/{glider_id}/weighings', status_code=status.HTTP_201_CREATED)
@@ -361,14 +459,16 @@ async def add_weighings(
 		if not glider:
 			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
 
-		from datetime import datetime as dt
-
 		weighing_objects = []
 		for w in weighings:
-			date = dt.fromisoformat(w.date).date() if isinstance(w.date, str) else w.date
+			try:
+				parsed_date = _parse_request_date(w.date, 'weighing date') if isinstance(w.date, str) else w.date
+			except ValueError as e:
+				raise HTTPException(status_code=400, detail=str(e))
+
 			weighing_objects.append(Weighing(
 				id=None,
-				date=date,
+				date=parsed_date,
 				p1=w.p1,
 				p2=w.p2,
 				right_wing_weight=w.right_wing_weight,
@@ -381,6 +481,11 @@ async def add_weighings(
 			))
 
 		save_weighings(glider_id, weighing_objects)
+
+		event = f'Weighings {weighing_objects} updated for glider {glider_id}'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create weighing audit event for {glider_id}')
+
 		return {'registration': glider_id, 'weighings_added': len(weighing_objects)}
 	except HTTPException:
 		raise
@@ -389,14 +494,37 @@ async def add_weighings(
 		raise HTTPException(status_code=500, detail='Failed to add weighings')
 
 
+@router.delete('/{glider_id}/weighings/{weighing_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_glider_weighing(
+	glider_id: str,
+	weighing_id: int,
+	_admin_user = Depends(require_admin_role),
+):
+	"""Delete one weighing for a glider (admin only)."""
+	try:
+		_ = _admin_user
+		glider = get_glider_by_id(glider_id)
+		if not glider:
+			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
+
+		if not delete_weighing(glider_id, weighing_id):
+			raise HTTPException(status_code=404, detail=f'Weighing {weighing_id} not found')
+	except HTTPException:
+		raise
+	except Exception as e:
+		logger.error(f'Error deleting weighing {weighing_id} for {glider_id}: {e}', exc_info=True)
+		raise HTTPException(status_code=500, detail='Failed to delete weighing')
+
+
 @router.put('/{glider_id}/weight-and-balances', status_code=status.HTTP_200_OK)
 async def update_weight_and_balances(
 	glider_id: str,
 	payload: WeightAndBalancesRequest,
-	admin_user = Depends(require_admin_role)
+	_admin_user = Depends(require_admin_role)
 ):
 	"""Replace all weight & balance limit points for a glider (admin only)."""
 	try:
+		_ = _admin_user
 		glider = get_glider_by_id(glider_id)
 		if not glider:
 			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
@@ -496,7 +624,7 @@ async def get_glider_limits(glider_id: str):
 @router.post('/{glider_id}/calculate', response_model=WeightBalanceCalculationResponse)
 async def calculate_weight_and_balance(
 	glider_id: str,
-	request: WeightBalanceCalculationRequest
+	request: WeightBalanceCalculationRequest,
 ):
 	"""
 	Calculate weight and balance for a glider with given loading (public endpoint).
@@ -550,6 +678,12 @@ async def calculate_weight_and_balance(
 			)
 
 		logger.info(f'W&B calculation complete: weight={total_weight}kg, cg={cg}mm')
+		audit_user_id = 'unknown'
+
+		event = f'Calcul centrage planeur pour {glider.registration} : {total_weight} kg, {round(cg,0)} mm'
+		if audit_queries.create_audit_entry(user_id=audit_user_id, event=event) is None:
+			logger.warning(f'Failed to create calculation audit event for glider {glider.registration}')
+
 		return WeightBalanceCalculationResponse(
 			total_weight=round(total_weight, 2),
 			center_of_gravity=round(cg, 2),
