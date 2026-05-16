@@ -7,7 +7,7 @@ import io
 import base64
 from xhtml2pdf import pisa
 
-from gliders import DATUMS
+from frontend.gliders import DATUMS
 
 logger = logging.getLogger(__name__)
 

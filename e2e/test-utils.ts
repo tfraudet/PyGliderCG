@@ -16,7 +16,7 @@ export const TYPING_SPEED_MS = 20;
 export const KEY_PRESS_DELAY_MS = 100;
 
 // Base URL constant
-export const BASE_URL = 'http://localhost:8501/';
+export const BASE_URL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8901/';
 
 /**
  * Common login function for admin user

@@ -7,7 +7,7 @@ from typing import List, Tuple, Optional
 import pandas as pd
 import streamlit as st
 
-from backend_client import BackendClient
+from frontend.backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
 

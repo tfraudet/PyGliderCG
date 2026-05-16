@@ -4,17 +4,23 @@ import streamlit as st
 import yaml
 import os
 import logging
+import sys
+from pathlib import Path
 
 from datetime import datetime, timedelta
 
 import plotly.express as px
 import plotly.graph_objects as go
 
-from gliders import fetch_gliders, get_datum_image_by_label, DATUMS
-from config import FAVICON_WEB, get_python_logger_level
-from pages.sidebar import sidebar_menu
-from config import is_debug_mode
-from weighing_sheet import display_detail_weighing
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+	sys.path.insert(0, str(PROJECT_ROOT))
+
+from frontend.gliders import fetch_gliders, get_datum_image_by_label, DATUMS
+from frontend.config import FAVICON_WEB, get_python_logger_level
+from frontend.pages.sidebar import sidebar_menu
+from frontend.config import is_debug_mode
+from frontend.weighing_sheet import display_detail_weighing
 from streamlit_theme import st_theme
 from shapely.geometry import Point, Polygon
 from dotenv import load_dotenv

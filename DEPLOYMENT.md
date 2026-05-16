@@ -1,5 +1,8 @@
 # PyGliderCG Production Deployment Guide
 
+> **Important:** the current runtime model is a **single Docker container** running both FastAPI and Streamlit.  
+> Commands below in the "Quick Start with Docker Compose" section reflect this unified setup.
+
 ## Overview
 
 This guide covers deploying the PyGliderCG application (FastAPI backend + Streamlit frontend) to production. The application uses Docker and Docker Compose for containerization and orchestration.
@@ -49,7 +52,7 @@ Before deploying to production:
 - [ ] Generate new `COOKIE_KEY` (see [Security Configuration](#security-configuration))
 - [ ] Set all environment variables in `.env` or deployment platform
 - [ ] Verify database backup strategy
-- [ ] Test application locally with `docker-compose up`
+- [ ] Test application locally with `docker compose up`
 - [ ] Review CORS origins in `backend/config.py` for your domain
 - [ ] Configure reverse proxy (Nginx/HAProxy)
 - [ ] Set up SSL/TLS certificates
@@ -64,7 +67,7 @@ Before deploying to production:
 
 ## Local Development Setup
 
-### Quick Start with Docker Compose
+### Quick Start with Docker Compose (Unified App Container)
 
 ```bash
 # 1. Clone the repository
@@ -75,11 +78,11 @@ cd PyGliderCG
 cp .env.example .env
 # Edit .env and set required values, especially COOKIE_KEY
 
-# 3. Start services (frontend, backend, and db-init)
-docker-compose up -d
+# 3. Start application service (frontend + backend)
+docker compose up -d --build
 
-# 4. Verify services are running
-docker-compose ps
+# 4. Verify service is running
+docker compose ps
 
 # 5. Access services:
 # - Frontend: http://localhost:8501
@@ -90,36 +93,31 @@ docker-compose ps
 ### View Service Logs
 
 ```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f backend
-docker-compose logs -f frontend
+# App service logs
+docker compose logs -f app
 
 # Last 100 lines
-docker-compose logs --tail=100 backend
+docker compose logs --tail=100 app
 ```
 
 ### Stop Services
 
 ```bash
 # Stop all services (data persists)
-docker-compose down
+docker compose down
 
 # Remove all containers and volumes (data lost!)
-docker-compose down -v
+docker compose down -v
 ```
 
 ### Development with Hot Reload
 
-The docker-compose setup includes volume mounts for development:
+The docker compose setup includes volume mounts for development:
 
 ```yaml
 volumes:
   - ./backend:/app/backend        # Backend auto-reload
-  - ./pages:/app/pages            # Frontend pages reload
-  - ./streamlit_app.py:/app/streamlit_app.py
+  - ./frontend:/app/frontend      # Frontend auto-reload
   - ./data:/app/data              # Shared database
 ```
 
@@ -171,20 +169,21 @@ docker run -d \
 curl http://localhost:8000/health
 ```
 
-#### Frontend Container
+#### Unified Application Container
 
 ```bash
-# Run frontend standalone (requires backend)
+# Run unified app (FastAPI + Streamlit in one container)
 docker run -d \
-  --name pyglider-frontend \
+  --name pyglider-app \
+  -p 8000:8000 \
   -p 8501:8501 \
   -e DEBUG=false \
-  -e BACKEND_URL=http://backend:8000 \
+  -e BACKEND_URL=http://127.0.0.1:8000 \
   -v $(pwd)/data:/app/data \
-  --network pyglider-network \
-  pyglider-frontend:latest
+  pyglider-app:latest
 
 # Health check
+curl http://localhost:8000/health
 curl http://localhost:8501/_stcore/health
 ```
 

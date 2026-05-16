@@ -1,7 +1,7 @@
 import streamlit as st
 import logging
-from backend_client import BackendClient, BackendException
-from config import is_debug_mode, __version__
+from frontend.backend_client import BackendClient, BackendException
+from frontend.config import is_debug_mode, __version__
 
 logger = logging.getLogger(__name__)
 

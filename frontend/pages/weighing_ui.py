@@ -3,10 +3,10 @@ import streamlit as st
 import pandas as pd
 import logging
 
-from config import FAVICON_WEB
-from pages.sidebar import sidebar_menu
-from backend_client import BackendClient, NotFoundError, BackendException
-from weighing_sheet import display_detail_weighing
+from frontend.config import FAVICON_WEB
+from frontend.pages.sidebar import sidebar_menu
+from frontend.backend_client import BackendClient, NotFoundError, BackendException
+from frontend.weighing_sheet import display_detail_weighing
 
 logger = logging.getLogger(__name__)
 client = BackendClient()

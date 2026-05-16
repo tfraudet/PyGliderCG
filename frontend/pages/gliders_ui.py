@@ -4,13 +4,13 @@ import logging
 import re
 from typing import Any, Dict, Mapping
 
-from config import FAVICON_WEB
-from pages.sidebar import sidebar_menu
-from backend_client import BackendClient, ForbiddenError, NotFoundError, BackendException
+from frontend.config import FAVICON_WEB
+from frontend.pages.sidebar import sidebar_menu
+from frontend.backend_client import BackendClient, ForbiddenError, NotFoundError, BackendException
 from enum import Enum
-from gliders import get_datum_image_by_label, DATUMS
+from frontend.gliders import get_datum_image_by_label, DATUMS
 
-from gliders import DatumPilotPosition as Dpp
+from frontend.gliders import DatumPilotPosition as Dpp
 
 logger = logging.getLogger(__name__)
 

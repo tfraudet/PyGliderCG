@@ -1,4 +1,3 @@
-# FROM python:3.12.11-slim
 FROM python:3.12.13-alpine3.23
 
 WORKDIR /app
@@ -16,8 +15,9 @@ RUN apk add --no-cache --virtual .build-deps \
 	python3-dev \
 	&& apk add --no-cache cairo
 
-# install python dependencies
-RUN pip3 install --no-cache-dir -r requirements.txt
+# install python dependencies for frontend and backend
+RUN pip3 install --no-cache-dir -r requirements.txt && \
+	pip3 install --no-cache-dir -r requirements-backend.txt
 
 # Clean up build tools to save space
 RUN apk del .build-deps
@@ -25,7 +25,9 @@ RUN apk del .build-deps
 # Update repositories and install curl
 RUN apk add --no-cache curl
 
-EXPOSE 8501
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+RUN chmod +x /app/start.sh
 
-ENTRYPOINT ["streamlit", "run", "streamlit_app.py"]
+EXPOSE 8000 8501
+HEALTHCHECK CMD curl --fail http://localhost:8000/health && curl --fail http://localhost:8501/_stcore/health
+
+ENTRYPOINT ["/app/start.sh"]

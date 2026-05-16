@@ -8,7 +8,18 @@ PyGliderCG is now a two-tier application:
 - **Frontend:** Streamlit UI (pilot and admin workflows)
 - **Backend:** FastAPI service (business logic, auth, database access)
 
-This architecture keeps UI and API concerns separated while preserving the existing Streamlit experience.
+Frontend code now lives under `frontend/` and can run either:
+- locally with two processes (one for FastAPI, one for Streamlit), or
+- in Docker with a **single container** that starts both services.
+
+There are no Streamlit entrypoint/module wrappers at repository root anymore.
+
+## Repository layout (relevant folders)
+
+- `frontend/`: Streamlit application (`streamlit_app.py`, pages, frontend modules)
+- `backend/`: FastAPI API service
+- `tests/`: pytest suite
+- `e2e/`: Playwright E2E tests
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://glider-cg.streamlit.app/)
 
@@ -69,7 +80,7 @@ python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 **Terminal 2 - Frontend (Streamlit)**
 ```bash
-BACKEND_URL=http://localhost:8000 streamlit run streamlit_app.py
+BACKEND_URL=http://localhost:8000 streamlit run frontend/streamlit_app.py
 ```
 
 Endpoints:
@@ -95,10 +106,10 @@ For detailed endpoint documentation, see [API.md](./API.md).
 ## Run with Docker
 
 ```bash
-# Development stack (frontend + backend + db init)
+# Unified app container (frontend + backend in one service)
 docker compose up --build
 
-# Production stack
+# Production stack (same unified app model)
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
@@ -119,7 +130,7 @@ pytest tests/test_integration.py -v
 
 ### Run end to end tests
 
-You can run the tests using [Playwright](https://playwright.dev/) framework. Make sure you have installed the requirements and Playwright dependencies.
+You can run the tests using [Playwright](https://playwright.dev/) framework. Make sure backend and Streamlit (`frontend/streamlit_app.py`) are already running.
 
 ```bash
 # Install Playwright dependencies

@@ -1,5 +1,8 @@
 # PyGliderCG Production Deployment - Summary
 
+> **Update:** runtime architecture has changed to a unified single container (`pyglider-app`) that runs both FastAPI and Streamlit together.  
+> This file contains historical notes from the previous split frontend/backend container setup.
+
 **Date**: 2024
 **Status**: ✅ Complete
 **Python Version**: 3.10+

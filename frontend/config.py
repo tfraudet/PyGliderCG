@@ -21,6 +21,9 @@ def is_debug_mode() -> bool:
 @st.cache_data()
 def get_database_name() -> str:
 	dbanme = os.environ.get('DB_NAME', DEFAULT_DB_NAME)
+	db_path = os.environ.get('DB_PATH', '')
+	if db_path and not os.path.isabs(dbanme) and not dbanme.startswith('./'):
+		dbanme = os.path.join(db_path, dbanme)
 	if 'DB_NAME' not in os.environ:
 		logging.getLogger(__name__).warning('DB_NAME environment variable not defined, defaulting to DEFAULT_DB_NAME')
 

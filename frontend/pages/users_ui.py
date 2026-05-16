@@ -3,9 +3,9 @@ import streamlit as st
 import pandas as pd
 import logging
 
-from config import FAVICON_WEB, get_database_name
-from pages.sidebar import sidebar_menu
-from backend_client import BackendClient
+from frontend.config import FAVICON_WEB, get_database_name
+from frontend.pages.sidebar import sidebar_menu
+from frontend.backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
 client = BackendClient()

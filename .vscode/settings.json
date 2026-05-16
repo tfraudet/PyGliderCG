@@ -17,5 +17,13 @@
 		"tests"
 	],
 	"python.testing.unittestEnabled": false,
-	"python.testing.pytestEnabled": true
+	"python.testing.pytestEnabled": true,
+	"chat.tools.terminal.autoApprove": {
+		"/^node -p \"JSON\\.stringify\\(require\\('\\./node_modules/@playwright/test/package\\.json'\\), null, 2\\)\" \\| sed -n '1,120p' && echo '---' && node -p \"JSON\\.stringify\\(require\\('\\./node_modules/playwright/package\\.json'\\), null, 2\\)\" \\| sed -n '1,120p'$/": {
+			"approve": true,
+			"matchCommandLine": true
+		},
+		"npm install": true,
+		"npx tsc": true
+	}
 }
