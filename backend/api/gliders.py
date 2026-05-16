@@ -540,16 +540,21 @@ async def delete_glider_weighing(
 async def update_weight_and_balances(
 	glider_id: str,
 	payload: WeightAndBalancesRequest,
-	_admin_user = Depends(require_admin_role)
+	admin_user = Depends(require_admin_role)
 ):
 	"""Replace all weight & balance limit points for a glider (admin only)."""
 	try:
-		_ = _admin_user
 		glider = get_glider_by_id(glider_id)
 		if not glider:
 			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
 
-		save_weight_and_balance(glider_id, payload.weight_and_balances)
+		if not save_weight_and_balance(glider_id, payload.weight_and_balances):
+			raise ValueError('Failed to save weight and balances')
+
+		event = f'Weight & balance {payload.weight_and_balances} for glidder {glider_id} updated'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create weight and balance audit event for {glider_id}')
+
 		return {'registration': glider_id, 'points_count': len(payload.weight_and_balances)}
 	except HTTPException:
 		raise
