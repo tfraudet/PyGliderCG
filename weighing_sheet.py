@@ -7,7 +7,7 @@ import io
 import base64
 from xhtml2pdf import pisa
 
-from gliders import DATUMS, get_datum_image_by_label
+from gliders import DATUMS
 
 logger = logging.getLogger(__name__)
 
@@ -321,9 +321,7 @@ def weighing_sheet(weighing):
 
 @st.dialog("Imprimer la fiche de pesée")
 def handle_print_weighing_sheet(weighing, current_glider):
-	from backend_client import BackendClient
 	current_glider = _glider_to_dict(current_glider)
-	client = BackendClient()
 
 	def inventory_as_html(glider_dict):
 		instruments = glider_dict.get('instruments', [])
@@ -462,7 +460,7 @@ def max_with_index(*args):
 
 MAX_LIMITS_BY=['Manuel de vol','Calculé']
 
-def weighing_sheet_footer_single_seat(weighing, current_glider):
+def weighing_sheet_footer_single_seat(current_glider):
 	current_glider = _glider_to_dict(current_glider)
 	limits = current_glider.get('limits', {})
 	
@@ -489,7 +487,7 @@ def weighing_sheet_footer_single_seat(weighing, current_glider):
 			st.info('Charge utile de :green[{}] kg dans le respect des limitations de masse de centrage et de siège à :green[{}] kg'
 				.format(cu, mm_harnais), icon=':material/info:')
 
-def weighing_sheet_footer_double_seat(weighing, current_glider):
+def weighing_sheet_footer_double_seat(current_glider):
 	current_glider = _glider_to_dict(current_glider)
 	limits = current_glider.get('limits', {})
 	
@@ -569,9 +567,9 @@ def display_detail_weighing(weighing, current_glider, print=False):
 
 		single_seat = current_glider.get('single_seat', True)
 		if single_seat:
-			weighing_sheet_footer_single_seat(weighing, current_glider)
+			weighing_sheet_footer_single_seat(current_glider)
 		else:
-			weighing_sheet_footer_double_seat(weighing, current_glider)
+			weighing_sheet_footer_double_seat(current_glider)
 
 		if print and st.button('Imprime la fiche de pesée', type='primary', icon=':material/print:'):
 			handle_print_weighing_sheet(weighing, current_glider)
