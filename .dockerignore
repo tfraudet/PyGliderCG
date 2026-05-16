@@ -10,10 +10,9 @@
 
 data
 **/doc
-**/HFDA64Portable
+
 **/logo
 
-**/PP2
 **/spike
 
 **.dockerignore
@@ -36,5 +35,3 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /tests-examples/
-
-
