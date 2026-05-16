@@ -10,13 +10,6 @@ import streamlit as st
 from backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
-audit_client = BackendClient()
-
-
-def _log_audit_event(event: str) -> None:
-	"""Log audit events through backend API when authenticated."""
-	if not audit_client.log_audit_event(event):
-		logger.debug(f'Audit event not sent: {event}')
 
 @st.cache_data
 def fetch_gliders(show_spinner = 'Loading gliders'):
@@ -98,16 +91,6 @@ class Weighing:
 	D: int = 0
 	registration: Optional[str] = None
 
-	def delete(self):
-		if self.registration is None:
-			logger.error(f'Unable to delete weighing #{self.id}: registration is missing')
-			return
-		if BackendClient().delete_weighing(self.registration, self.id):
-			logger.debug('Weighing #{} deleted via backend API'.format(self.id))
-			_log_audit_event('Weighing #{} from {} deleted'.format(self.id, self.date))
-		else:
-			logger.error(f'Failed to delete weighing #{self.id} for {self.registration}')
-
 	def mve(self) -> float:
 		'''
 		Retourne la masse a vide équipée (MVE) en Kg
@@ -132,16 +115,6 @@ class Instrument:
 	date: Optional[date]
 	registration: Optional[str] = None
 
-	def delete(self):
-		if self.registration is None:
-			logger.error(f'Unable to delete instrument #{self.id}: registration is missing')
-			return
-		if BackendClient().delete_instrument(self.registration, self.id):
-			logger.debug('Instrument #{} deleted via backend API'.format(self.id))
-			_log_audit_event('Instruments {} deleted'.format(self.instrument))
-		else:
-			logger.error(f'Failed to delete instrument #{self.id} for {self.registration}')
-
 @dataclass
 class Glider:
 	model : str
@@ -163,72 +136,6 @@ class Glider:
 
 	def limits_to_pandas(self) -> pd.DataFrame:
 		return pd.DataFrame(self.weight_and_balances, columns=['centering', 'mass'])
-	
-	def get_instrument_by_id(self, id : int) -> Optional[Instrument]:
-		return next((instrument for instrument in self.instruments if instrument.id == id), None)
-	
-	def get_weighing_by_id(self, id : int) -> Optional[Weighing]:
-		return next((weighing for weighing in self.weighings if weighing.id == id), None)
-	
-	def instruments_to_pandas(self) -> pd.DataFrame:
-		return pd.DataFrame(self.instruments, columns=['id', 'on_board', 'instrument', 'brand', 'type', 'number', 'date', 'seat'])
-
-	def weight_and_balances_to_pandas(self) -> pd.DataFrame:
-		return pd.DataFrame(self.weight_and_balances, columns=['balance', 'weight'])
-	
-	def wheighings_to_pandas(self) -> pd.DataFrame:
-		columns = ['id', 'date', 'p1', 'p2', 'right_wing_weight', 'left_wing_weight', 'tail_weight', 'fuselage_weight', 'fix_ballast_weight', 'A', 'D']
-		# as_dicts = [dict(zip(columns, [weighing[0]] + [getattr(weighing[1], field.name) for field in fields(weighing[1])])) for weighing in self.weighings]
-		return pd.DataFrame(self.weighings, columns=columns)
-
-	def save(self):
-		logger.debug('Saving {} via backend API'.format(self.registration))
-		client = BackendClient()
-		payload = self._to_glider_payload()
-		existing = client.get_glider(self.registration)
-		result = client.update_glider(self.registration, payload) if existing else client.create_glider(payload)
-		if result:
-			logger.debug('{} datasheet saved via backend API'.format(self.registration))
-			_log_audit_event('Datasheet for glider {} updated'.format(self.registration))
-		else:
-			logger.error(f'Failed to save glider {self.registration} via backend API')
-
-	def save_weight_and_balance(self):
-		result = BackendClient().update_glider_weight_and_balances(self.registration, self.weight_and_balances)
-		if result:
-			logger.debug('Weight & balance for glider {} updated via backend API'.format(self.registration))
-			_log_audit_event('Weight & balance {} for glider {} updated'.format(self.weight_and_balances, self.registration))
-		else:
-			logger.error(f'Failed to save weight and balance for glider {self.registration}')
-
-	def save_instruments(self):
-		payload = [self._instrument_to_payload(instrument) for instrument in self.instruments]
-		result = BackendClient().update_glider_inventory(self.registration, payload)
-		if result:
-			logger.debug('{} instruments saved via backend API'.format(self.registration))
-			_log_audit_event('Instruments {} updated for glider {} '.format(self.instruments, self.registration))
-		else:
-			logger.error(f'Failed to save instruments for glider {self.registration}')
-
-	def save_weighings(self):
-		payload = [self._weighing_to_payload(weighing) for weighing in self.weighings]
-		if BackendClient().save_weighings(self.registration, payload):
-			logger.debug('{} weighings saved via backend API'.format(self.registration))
-			_log_audit_event('Weighings {} updated for glider {} '.format(self.weighings, self.registration))
-		else:
-			logger.error(f'Failed to save weighings for glider {self.registration}')
-
-	def delete(self):
-		if BackendClient().delete_glider(self.registration):
-			logger.debug('{} deleted via backend API'.format(self.registration))
-			_log_audit_event('Glider {} deleted'.format(self.registration))
-		else:
-			logger.error(f'Failed to delete glider {self.registration}')
-
-	@classmethod
-	def from_database(cls, _database_name: str) -> dict:
-		_ = _database_name
-		return cls.from_backend()
 
 	@staticmethod
 	def _parse_date(value):
@@ -242,66 +149,6 @@ class Glider:
 			return datetime.fromisoformat(value).date()
 		return value
 
-	@staticmethod
-	def _instrument_to_payload(instrument: Instrument) -> dict:
-		return {
-			'id': instrument.id,
-			'on_board': instrument.on_board,
-			'instrument': instrument.instrument,
-			'brand': instrument.brand,
-			'type': instrument.type,
-			'number': instrument.number,
-			'date': instrument.date.isoformat() if isinstance(instrument.date, date) else instrument.date,
-			'seat': instrument.seat,
-		}
-
-	@staticmethod
-	def _weighing_to_payload(weighing: Weighing) -> dict:
-		return {
-			'date': weighing.date.isoformat() if isinstance(weighing.date, date) else weighing.date,
-			'p1': weighing.p1,
-			'p2': weighing.p2,
-			'right_wing_weight': weighing.right_wing_weight,
-			'left_wing_weight': weighing.left_wing_weight,
-			'tail_weight': weighing.tail_weight,
-			'fuselage_weight': weighing.fuselage_weight,
-			'fix_ballast_weight': weighing.fix_ballast_weight,
-			'A': weighing.A,
-			'D': weighing.D,
-		}
-
-	def _to_glider_payload(self) -> dict:
-		return {
-			'model': self.model,
-			'registration': self.registration,
-			'brand': self.brand,
-			'serial_number': self.serial_number,
-			'single_seat': self.single_seat,
-			'datum': self.datum,
-			'pilot_position': self.pilot_position,
-			'datum_label': self.datum_label,
-			'wedge': self.wedge,
-			'wedge_position': self.wedge_position,
-			'limits': {
-				'mmwp': self.limits.mmwp if self.limits else None,
-				'mmwv': self.limits.mmwv if self.limits else None,
-				'mmenp': self.limits.mmenp if self.limits else None,
-				'mm_harnais': self.limits.mm_harnais if self.limits else None,
-				'weight_min_pilot': self.limits.weight_min_pilot if self.limits else None,
-				'front_centering': self.limits.front_centering if self.limits else None,
-				'rear_centering': self.limits.rear_centering if self.limits else None,
-			},
-			'arms': {
-				'arm_front_pilot': self.arms.arm_front_pilot if self.arms else None,
-				'arm_rear_pilot': self.arms.arm_rear_pilot if self.arms else None,
-				'arm_waterballast': self.arms.arm_waterballast if self.arms else None,
-				'arm_front_ballast': self.arms.arm_front_ballast if self.arms else None,
-				'arm_rear_watterballast_or_ballast': self.arms.arm_rear_watterballast_or_ballast if self.arms else None,
-				'arm_gas_tank': self.arms.arm_gas_tank if self.arms else None,
-				'arm_instruments_panel': self.arms.arm_instruments_panel if self.arms else None,
-			},
-		}
-
 	@classmethod
 	def from_backend(cls) -> dict:
 		client = BackendClient()
@@ -312,12 +159,11 @@ class Glider:
 				raise ValueError(f'Missing {field_name} for {registration}')
 			return value
 
-		for glider in client.get_gliders(skip=0, limit=1000):
-			registration = glider.get('registration')
+		for glider_data in client.get_gliders(skip=0, limit=1000):
+			registration = glider_data.get('registration')
 			if not registration:
 				continue
 
-			glider_data = client.get_glider(registration) or glider
 			serial_number = glider_data.get('serial_number')
 			if isinstance(serial_number, str) and serial_number.strip() == '':
 				serial_number = None

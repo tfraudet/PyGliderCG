@@ -70,7 +70,7 @@ else:
 					})
 				
 				weighings_df = pd.DataFrame(weighings_data)
-				st.dataframe(weighings_df, use_container_width=True, hide_index=True)
+				st.dataframe(weighings_df, width='stretch', hide_index=True)
 			else:
 				st.info('Aucune pesée enregistrée pour ce planeur', icon=':material/info:')
 
@@ -109,7 +109,7 @@ else:
 					empty_weighing_df,
 					key='weighing_edit',
 					num_rows='dynamic',
-					use_container_width=True,
+					width='stretch',
 				)
 				submitted = st.form_submit_button('Enregistrer', icon=':material/save:')
 

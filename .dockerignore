@@ -26,7 +26,6 @@ data
 Dockerfile
 *.md
 **.DS_Store
-.streamlit/secrets.toml
 
 # Playwright
 node_modules/

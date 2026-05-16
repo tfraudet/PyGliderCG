@@ -2,71 +2,46 @@ import streamlit as st
 import logging
 import os
 
-__version__ = "1.1.0"
+__version__ = "2.0.0"
 DEFAULT_DB_NAME = './data/gliders.db'
 DEFAULT_COOKIE_KEY = 'glider-cg-acph'
+DEFAULT_LOG_LEVEL = 'INFO'
 
 FAVICON_WEB = './img/icon/web/icon-512.png'
 
 @st.cache_data()
 def is_debug_mode() -> bool:
-	# try first to get value from environment variables
-	try:
-		debug = os.environ['APP_DEBUG_MODE'].lower() in ('true', '1', 't')
-	except KeyError as ke:
-		logging.getLogger(__name__).warning('APP_DEBUG_MODE environment variable not defined' )
-
-		# if not found in environment variables look in secrets.toml file 
-		try:
-			debug = st.secrets.get('APP_DEBUG_MODE', False)
-		except KeyError as ke:
-			logging.getLogger(__name__).warning('APP_DEBUG_MODE not found in secrets.toml file, defaulting to False')
-			debug = False
-		except Exception as e:
-			logging.getLogger(__name__).warning(f'secrets.toml file not found, defaulting to False: error is: {e} ')
-			debug = False
+	debug = os.environ.get('APP_DEBUG_MODE', '').lower() in ('true', '1', 't')
+	if 'APP_DEBUG_MODE' not in os.environ:
+		logging.getLogger(__name__).warning('APP_DEBUG_MODE environment variable not defined, defaulting to False')
 
 	logging.getLogger(__name__).info(f'APP_DEBUG_MODE is: {debug} ')
 	return debug
 
 @st.cache_data()
 def get_database_name() -> str:
-	# try first to get value from environment variables
-	try:
-		dbanme = os.environ['DB_NAME']
-	except KeyError as ke:
-		logging.getLogger(__name__).warning('DB_NAME environment variable not defined' )
-
-		# if not found in environment variables look in secrets.toml file 
-		try:
-			dbanme = st.secrets.get('DB_NAME', DEFAULT_DB_NAME)
-		except KeyError as ke:
-			logging.getLogger(__name__).warning('DB_NAME not found in secrets.toml file, defaulting to DEFAULT_DB_NAME')
-			dbanme = DEFAULT_DB_NAME
-		except Exception as e:
-			logging.getLogger(__name__).warning(f'secrets.toml file not found, defaulting to DEFAULT_DB_NAME: error is: {e} ')
-			dbanme = DEFAULT_DB_NAME
+	dbanme = os.environ.get('DB_NAME', DEFAULT_DB_NAME)
+	if 'DB_NAME' not in os.environ:
+		logging.getLogger(__name__).warning('DB_NAME environment variable not defined, defaulting to DEFAULT_DB_NAME')
 
 	logging.getLogger(__name__).info(f'DB_NAME is: {dbanme} ')
 	return dbanme
 
 @st.cache_data()
 def get_cookie_key() -> str:
-	# try first to get value from environment variables
-	try:
-		cookie_key = os.environ['COOKIE_KEY']
-	except KeyError as ke:
-		logging.getLogger(__name__).warning('COOKIE_KEY environment variable not defined' )
-
-		# if not found in environment variables look in secrets.toml file 
-		try:
-			cookie_key = st.secrets['COOKIE_KEY']
-		except KeyError as ke:
-			logging.getLogger(__name__).warning('COOKIE_KEY not found in secrets.toml file, defaulting to DEFAULT_COOKIE_KEY')
-			cookie_key = DEFAULT_COOKIE_KEY
-		except Exception as e:
-			logging.getLogger(__name__).warning(f'secrets.toml file not found, defaulting to DEFAULT_COOKIE_KEY: error is: {e} ')
-			cookie_key = DEFAULT_COOKIE_KEY
+	cookie_key = os.environ.get('COOKIE_KEY', DEFAULT_COOKIE_KEY)
+	if 'COOKIE_KEY' not in os.environ:
+		logging.getLogger(__name__).warning('COOKIE_KEY environment variable not defined, defaulting to DEFAULT_COOKIE_KEY')
 
 	logging.getLogger(__name__).info(f'COOKIE_KEY is: {cookie_key} ')
 	return cookie_key
+
+@st.cache_data()
+def get_python_logger_level() -> int:
+	log_level_name = os.environ.get('LOG_LEVEL', DEFAULT_LOG_LEVEL).upper()
+	level = getattr(logging, log_level_name, logging.INFO)
+	if 'LOG_LEVEL' not in os.environ:
+		logging.getLogger(__name__).warning('LOG_LEVEL environment variable not defined, defaulting to INFO')
+
+	logging.getLogger(__name__).info(f'LOG_LEVEL is: {log_level_name} ')
+	return level

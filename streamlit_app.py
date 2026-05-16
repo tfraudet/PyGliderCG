@@ -11,7 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from gliders import fetch_gliders, get_datum_image_by_label, DATUMS
-from config import FAVICON_WEB
+from config import FAVICON_WEB, get_python_logger_level
 from pages.sidebar import sidebar_menu
 from config import is_debug_mode
 from weighing_sheet import display_detail_weighing
@@ -23,27 +23,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize the logger
-# Based on streamlit logging level defined in config.toml, define the logging level for the python logger
 logger = logging.getLogger(__name__)
-if st.get_option("logger.level").lower() == 'debug':
-	level_logging=logging.DEBUG
-elif st.get_option("logger.level").lower() == 'info':
-	level_logging=logging.INFO
-elif st.get_option("logger.level").lower() == 'warning':
-	level_logging=logging.WARNING
-elif st.get_option("logger.level").lower() == 'error':
-	level_logging=logging.ERROR
-elif st.get_option("logger.level").lower() == 'critical':
-	level_logging=logging.CRITICAL
-else:
-	level_logging=logging.INFO
-
 logging.basicConfig(
-	level=level_logging,
-	# level=logging.DEBUG,
-	# format='%(asctime)s - %(levelname)s - %(message)s',
+	level=get_python_logger_level(),
 	format='%(asctime)s %(levelname) -7s %(name)s: %(message)s',
-	handlers=[logging.StreamHandler()   ]
+	handlers=[logging.StreamHandler()]
 )
 
 THEME_LIGHT = {
