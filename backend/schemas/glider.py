@@ -1,6 +1,6 @@
 """Pydantic schemas for Glider API endpoints"""
 
-from datetime import date
+from datetime import date as DateType
 from typing import List, Tuple, Optional
 
 from pydantic import BaseModel, Field
@@ -39,7 +39,7 @@ class ArmsSchema(BaseModel):
 class WeighingSchema(BaseModel):
 	"""Weighing data schema"""
 	id: int
-	date: date
+	date: DateType
 	p1: float = Field(..., description='Front scale reading (kg)')
 	p2: float = Field(..., description='Rear scale reading (kg)')
 	right_wing_weight: float
@@ -62,7 +62,7 @@ class InstrumentSchema(BaseModel):
 	brand: str
 	type: str
 	number: str
-	date: Optional[date] = None
+	date: Optional[DateType] = None
 	seat: str
 
 	class Config:

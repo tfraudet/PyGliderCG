@@ -389,11 +389,10 @@ async def delete_glider_endpoint(
 async def update_glider_instruments(
 	glider_id: str,
 	instruments: List[InstrumentRequest],
-	_admin_user = Depends(require_admin_role)
+	admin_user = Depends(require_admin_role)
 ):
 	"""Replace all instruments for a glider (admin only)."""
 	try:
-		_ = _admin_user
 		glider = get_glider_by_id(glider_id)
 		if not glider:
 			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
@@ -428,7 +427,12 @@ async def update_glider_instruments(
 		
 
 		if instrument_objects:
-			save_instruments(glider_id, instrument_objects)
+			if not save_instruments(glider_id, instrument_objects):
+				raise ValueError('Failed to save instruments')
+
+		event = f'Instruments {instrument_objects} updated for glider {glider_id}'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create instrument audit event for {glider_id}')
 
 		return {'registration': glider_id, 'instruments_count': len(instrument_objects)}
 	except HTTPException:
@@ -442,17 +446,20 @@ async def update_glider_instruments(
 async def delete_glider_instrument(
 	glider_id: str,
 	instrument_id: int,
-	_admin_user = Depends(require_admin_role),
+	admin_user = Depends(require_admin_role),
 ):
 	"""Delete one instrument for a glider (admin only)."""
 	try:
-		_ = _admin_user
 		glider = get_glider_by_id(glider_id)
 		if not glider:
 			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
 
 		if not delete_instrument(glider_id, instrument_id):
 			raise HTTPException(status_code=404, detail=f'Instrument {instrument_id} not found')
+
+		event = f'Instrument {instrument_id} deleted for gldier {glider_id}'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create instrument deletion audit event for {glider_id}/{instrument_id}')
 	except HTTPException:
 		raise
 	except Exception as e:

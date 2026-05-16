@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 import logging
 import re
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 from config import FAVICON_WEB
 from pages.sidebar import sidebar_menu
@@ -16,6 +16,19 @@ logger = logging.getLogger(__name__)
 
 submitted = False
 client = BackendClient()
+
+def _serialize_inventory_value(value):
+	if pd.isna(value):
+		return None
+	if isinstance(value, pd.Timestamp):
+		return value.strftime('%Y-%m-%d')
+	if hasattr(value, 'item') and not isinstance(value, (str, bytes)):
+		return value.item()
+	return value
+
+
+def _serialize_inventory_record(record: Mapping[Any, Any]) -> Dict[str, Any]:
+	return {str(k): _serialize_inventory_value(v) for k, v in record.items()}
 
 class ModeEdition(Enum):
 	EDIT = 1
@@ -153,6 +166,10 @@ def edit_glider_inventory(glider_data: dict, mode = ModeEdition.EDIT):
 	
 	instruments = glider_data.get('instruments', [])
 	inventory_df = pd.DataFrame(instruments) if instruments else pd.DataFrame(columns=['id', 'on_board', 'instrument', 'brand', 'type', 'number', 'date', 'seat'])
+	if not inventory_df.empty:
+		inventory_df['date'] = pd.to_datetime(inventory_df['date'], errors='coerce')
+	else:
+		inventory_df['date'] = pd.Series(dtype='datetime64[ns]')
 	
 	with st.form(form_name, border=False):
 		edited_inventory_df = st.data_editor(inventory_df, width='stretch', key="inventory_edit", hide_index=True, num_rows='dynamic',
@@ -190,31 +207,32 @@ def edit_glider_inventory(glider_data: dict, mode = ModeEdition.EDIT):
 				brand = row.get('brand', '')
 				type_val = row.get('type', '')
 				number = row.get('number', '')
-				date = row.get('date', None)
+				date = _serialize_inventory_value(row.get('date', None))
 				seat = row.get('seat', '')
 				equipment_to_save.append({
-					'on_board': on_board,
+					'on_board': _serialize_inventory_value(on_board),
 					'instrument': instrument,
 					'brand': brand,
 					'type': type_val,
 					'number': number,
-					'date': str(date) if date else None,
-					'seat': seat
+					'date': date,
+					'seat': seat,
 				})
 
 		if len (st.session_state.inventory_edit['edited_rows']) > 0:
 			st.info ('Sauvegarde des données équipements modifiés', icon=':material/info:')
-			for key, _value in st.session_state.inventory_edit['edited_rows'].items():
+			for key, _ in st.session_state.inventory_edit['edited_rows'].items():
 				row_to_update = edited_inventory_df.iloc[key]
+				date_value = _serialize_inventory_value(row_to_update['date'])
 				equipment_to_save.append({
-					'id': row_to_update.get('id'),
-					'on_board': row_to_update['on_board'],
+					'id': _serialize_inventory_value(row_to_update.get('id')),
+					'on_board': _serialize_inventory_value(row_to_update['on_board']),
 					'instrument': row_to_update['instrument'],
 					'brand': row_to_update['brand'],
 					'type': row_to_update['type'],
 					'number': row_to_update['number'],
-					'date': str(row_to_update['date']) if row_to_update.get('date') else None,
-					'seat': row_to_update['seat']
+					'date': date_value,
+					'seat': row_to_update['seat'],
 				})
 
 		if len (st.session_state.inventory_edit['deleted_rows']) > 0:
@@ -223,9 +241,9 @@ def edit_glider_inventory(glider_data: dict, mode = ModeEdition.EDIT):
 		if equipment_to_save or len(st.session_state.inventory_edit['deleted_rows']) > 0:
 			try:
 				remaining_equipment: list[Dict[str, Any]] = [
-					{str(k): v for k, v in e.items()} for i, e in enumerate(inventory_df.to_dict('records'))
+					_serialize_inventory_record(e) for i, e in enumerate(inventory_df.to_dict('records'))
 					if i not in st.session_state.inventory_edit['deleted_rows']]
-				remaining_equipment.extend(equipment_to_save)
+				remaining_equipment.extend(_serialize_inventory_record(e) for e in equipment_to_save)
 				result = client.update_glider_inventory(glider_data['registration'], remaining_equipment)
 				if result:
 					logger.debug('update glider {} inventory on backend'.format(glider_data['registration']))
@@ -269,7 +287,7 @@ def edit_glider_weight_and_balance(glider_data: dict):
 
 		if len (st.session_state.wandb_edit['edited_rows']) > 0:
 			st.info ('Sauvegarde des points modifiés', icon=':material/info:')
-			for key, _value in st.session_state.wandb_edit['edited_rows'].items():
+			for key, _ in st.session_state.wandb_edit['edited_rows'].items():
 				row_to_update = edited_w_and_b.iloc[key]
 				updated_w_and_b.append([row_to_update['balance'], row_to_update['weight']])
 
