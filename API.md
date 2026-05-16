@@ -620,6 +620,8 @@ Create a new glider record. **Requires administrator role.**
 }
 ```
 
+`arms.arm_gas_tank` is optional; if omitted, the API defaults it to `0.0`.
+
 **Response (201 Created):**
 Returns a complete `GliderResponse` (same structure as `GET /api/gliders/{glider_id}`).
 
@@ -1239,7 +1241,7 @@ class ArmsSchema:
 	arm_waterballast: float
 	arm_front_ballast: float
 	arm_rear_watterballast_or_ballast: float
-	arm_gas_tank: float
+	arm_gas_tank: Optional[float] = 0.0
 	arm_instruments_panel: float
 ```
 

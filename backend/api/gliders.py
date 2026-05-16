@@ -172,7 +172,7 @@ def _convert_request_to_glider(registration: str, request: GliderRequest) -> Gli
 			arm_waterballast=request.arms.arm_waterballast,
 			arm_front_ballast=request.arms.arm_front_ballast,
 			arm_rear_watterballast_or_ballast=request.arms.arm_rear_watterballast_or_ballast,
-			arm_gas_tank=request.arms.arm_gas_tank,
+			arm_gas_tank=0.0 if request.arms.arm_gas_tank is None else request.arms.arm_gas_tank,
 			arm_instruments_panel=request.arms.arm_instruments_panel,
 		)
 
@@ -281,6 +281,10 @@ async def create_new_glider(
 		if not created_glider:
 			raise ValueError('Failed to retrieve created glider')
 
+		event = f'Glider {request.registration} created'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create glider audit event for {request.registration}')
+
 		logger.info(f'Glider {request.registration} created successfully')
 		return _convert_glider_to_response(created_glider)
 	except HTTPException:
@@ -325,6 +329,10 @@ async def update_glider_endpoint(
 		if not updated_glider:
 			raise ValueError('Failed to retrieve updated glider')
 
+		event = f'Glider {glider_id} updated'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create glider audit event for {glider_id}')
+
 		logger.info(f'Glider {glider_id} updated successfully')
 		return _convert_glider_to_response(updated_glider)
 	except HTTPException:
@@ -361,6 +369,11 @@ async def delete_glider_endpoint(
 			)
 
 		delete_glider(glider_id)
+
+		event = f'Glider {glider_id} deleted'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create glider audit event for {glider_id}')
+
 		logger.info(f'Glider {glider_id} deleted successfully')
 	except HTTPException:
 		raise

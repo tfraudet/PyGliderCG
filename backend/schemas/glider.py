@@ -29,7 +29,7 @@ class ArmsSchema(BaseModel):
 	arm_waterballast: float = Field(..., description='Water ballast arm')
 	arm_front_ballast: float = Field(..., description='Front ballast arm')
 	arm_rear_watterballast_or_ballast: float = Field(..., description='Rear water ballast or ballast arm')
-	arm_gas_tank: float = Field(..., description='Gas tank arm')
+	arm_gas_tank: Optional[float] = Field(0.0, description='Gas tank arm')
 	arm_instruments_panel: float = Field(..., description='Instruments panel arm')
 
 	class Config:

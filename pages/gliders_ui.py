@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 import logging
 import re
+from typing import Any, Dict
 
 from config import FAVICON_WEB
 from pages.sidebar import sidebar_menu
@@ -9,7 +10,6 @@ from backend_client import BackendClient, ForbiddenError, NotFoundError, Backend
 from enum import Enum
 from gliders import get_datum_image_by_label, DATUMS
 
-from gliders import DatumWeighingPoints as Dwp
 from gliders import DatumPilotPosition as Dpp
 
 logger = logging.getLogger(__name__)
@@ -49,7 +49,9 @@ def edit_glider_datasheet(glider_data: dict, mode = ModeEdition.EDIT):
 	datum_and_weighing_points_position = st.selectbox('Plan de référence et type d\'appui',datum_labels, index=current_datum-1)
 	col1, col2 = st.columns(2)
 	with col1:
-		st.image(get_datum_image_by_label(datum_and_weighing_points_position), width='stretch')
+		image_path = get_datum_image_by_label(datum_and_weighing_points_position)
+		if image_path:
+			st.image(image_path, width='stretch')
 		pilot_position_text = 'En avant de la référence' if glider_data.get('pilot_position', 1) == 1 else 'En arrière de la référence'
 		pilote_position = st.radio('Position du pilote', options=['En avant de la référence', 'En arrière de la référence'], index=0 if pilot_position_text == 'En avant de la référence' else 1)
 
@@ -91,7 +93,11 @@ def edit_glider_datasheet(glider_data: dict, mode = ModeEdition.EDIT):
 	st.divider()
 	save_glider_datasheet = st.button('Enregistrer', icon=':material/save:')
 	if save_glider_datasheet:
-		datum_value = next(filter(lambda item: item[1]['label'] == datum_and_weighing_points_position, DATUMS.items()), None)[0].value
+		selected_datum = next(filter(lambda item: item[1]['label'] == datum_and_weighing_points_position, DATUMS.items()), None)
+		if selected_datum is None:
+			st.error('Référence de pesée invalide', icon=':material/error:')
+			return
+		datum_value = selected_datum[0].value
 		pilot_position_value = Dpp.PILOT_FORWARD_OF_DATUM.value if pilote_position == 'En avant de la référence' else Dpp.PILOT_AFT_OF_DATUM.value		
 
 		glider_update = {
@@ -198,7 +204,7 @@ def edit_glider_inventory(glider_data: dict, mode = ModeEdition.EDIT):
 
 		if len (st.session_state.inventory_edit['edited_rows']) > 0:
 			st.info ('Sauvegarde des données équipements modifiés', icon=':material/info:')
-			for key, value in st.session_state.inventory_edit['edited_rows'].items():
+			for key, _value in st.session_state.inventory_edit['edited_rows'].items():
 				row_to_update = edited_inventory_df.iloc[key]
 				equipment_to_save.append({
 					'id': row_to_update.get('id'),
@@ -216,7 +222,8 @@ def edit_glider_inventory(glider_data: dict, mode = ModeEdition.EDIT):
 
 		if equipment_to_save or len(st.session_state.inventory_edit['deleted_rows']) > 0:
 			try:
-				remaining_equipment = [e for i, e in enumerate(inventory_df.to_dict('records')) 
+				remaining_equipment: list[Dict[str, Any]] = [
+					{str(k): v for k, v in e.items()} for i, e in enumerate(inventory_df.to_dict('records'))
 					if i not in st.session_state.inventory_edit['deleted_rows']]
 				remaining_equipment.extend(equipment_to_save)
 				result = client.update_glider_inventory(glider_data['registration'], remaining_equipment)
@@ -262,7 +269,7 @@ def edit_glider_weight_and_balance(glider_data: dict):
 
 		if len (st.session_state.wandb_edit['edited_rows']) > 0:
 			st.info ('Sauvegarde des points modifiés', icon=':material/info:')
-			for key, value in st.session_state.wandb_edit['edited_rows'].items():
+			for key, _value in st.session_state.wandb_edit['edited_rows'].items():
 				row_to_update = edited_w_and_b.iloc[key]
 				updated_w_and_b.append([row_to_update['balance'], row_to_update['weight']])
 
