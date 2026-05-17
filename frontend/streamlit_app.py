@@ -17,6 +17,7 @@ from frontend.gliders import fetch_gliders, get_datum_image_by_label, DATUMS
 from frontend.config import FAVICON_WEB, get_python_logger_level
 from frontend.pages.sidebar import sidebar_menu
 from frontend.config import is_debug_mode
+from frontend.backend_client import BackendClient
 from frontend.weighing_sheet import display_detail_weighing
 from streamlit_theme import st_theme
 from shapely.geometry import Point, Polygon
@@ -200,6 +201,7 @@ def display_plot(
 	st.plotly_chart(fig,config=config, theme=None)
 
 def weight_and_balance_calculator(current_glider):
+	client = BackendClient()
 	col1, col2 = st.columns(2)
 	front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, wing_water_ballast_weight = 0, 0, 0, 0, 0
 
@@ -218,8 +220,22 @@ def weight_and_balance_calculator(current_glider):
 			placeholder='Type a number...', disabled=True if (current_glider.arms.arm_rear_watterballast_or_ballast == 0) else False)
 
 	if st.button('Calculer',type='primary', icon=':material/calculate:'):		
-		# calcul du centrage : ∑ des moments / ∑ des masses
-		total_weight, balance = current_glider.weight_and_balance_calculator(front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, wing_water_ballast_weight)
+		limits = client.get_glider_limits(current_glider.registration)
+		if limits is None:
+			st.error('Impossible de récupérer les limites de calcul depuis le backend', icon=':material/error:')
+			return
+		calc = client.calculate_weight_balance(
+			current_glider.registration,
+			front_pilot_weight,
+			rear_pilot_weight,
+			front_ballast_weight,
+			rear_ballast_weight,
+			wing_water_ballast_weight,
+		)
+		if calc is None:
+			return
+		total_weight = calc['total_weight']
+		balance = calc['center_of_gravity']
 
 		# centering in %
 		balance_percent = (balance - current_glider.limits.front_centering) / (current_glider.limits.rear_centering - current_glider.limits.front_centering) * 100
@@ -231,7 +247,18 @@ def weight_and_balance_calculator(current_glider):
 
 		# calcul du centrage water-ballast à vide: ∑ des moments / ∑ des masses
 		if (wing_water_ballast_weight>0):
-			total_weight_WB_empty, balance_WB_empty = current_glider.weight_and_balance_calculator(front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, 0)
+			calc_wb_empty = client.calculate_weight_balance(
+				current_glider.registration,
+				front_pilot_weight,
+				rear_pilot_weight,
+				front_ballast_weight,
+				rear_ballast_weight,
+				0,
+			)
+			if calc_wb_empty is None:
+				return
+			total_weight_WB_empty = calc_wb_empty['total_weight']
+			balance_WB_empty = calc_wb_empty['center_of_gravity']
 			st.write('Centrage calculé (water ballast vide) :orange[{}] mm (vs limite centrage avant: :blue[{}] mm, centrage arrière: :blue[{}] mm)'.format(
 				round(balance_WB_empty,0), current_glider.limits.front_centering, current_glider.limits.rear_centering
 			))
@@ -241,7 +268,7 @@ def weight_and_balance_calculator(current_glider):
 			total_weight_WB_empty, balance_WB_empty, balance_percent_wb_empty = None, None, None
 
 		# check if the maximum weight of non-lift elements if not exceeded
-		weight_none_lift = current_glider.last_weighing().mvenp() + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight
+		weight_none_lift = float(limits.get('mvenp', 0.0)) + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight
 		if (weight_none_lift > current_glider.limits.mmenp):
 			st.error('La masse maximum des éléments non portants  + occupants + gueuese et /ou waterballast arrière dépasse la Masse maximum des élements non portants', icon=':material/error:')
 		else:

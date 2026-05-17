@@ -94,15 +94,15 @@ class Weighing:
 
 	def mve(self) -> float:
 		'''
-		Retourne la masse a vide équipée (MVE) en Kg
+		Calcul déplacé au backend.
 		'''
-		return round(self.right_wing_weight + self.left_wing_weight + self.tail_weight + self.fuselage_weight + self.fix_ballast_weight, 2)
+		raise NotImplementedError('MVE calculation is backend-owned. Use GET /api/gliders/{glider_id}/limits')
 
 	def mvenp(self) -> float:
 		'''
-		Retourne la masse à vide des élements non portants (MVENP) en Kg
+		Calcul déplacé au backend.
 		'''
-		return round(self.tail_weight + self.fuselage_weight + self.fix_ballast_weight, 2)
+		raise NotImplementedError('MVENP calculation is backend-owned. Use GET /api/gliders/{glider_id}/limits')
 
 @dataclass
 class Instrument:
@@ -245,143 +245,94 @@ class Glider:
 	
 	def last_weighing(self) -> Optional[Weighing]:
 		return max(self.weighings, key=lambda x: x.date) if len(self.weighings)>0 else None
+
+	def _fetch_backend_limits(self) -> dict:
+		client = BackendClient()
+		limits = client.get_glider_limits(self.registration)
+		if limits is None:
+			raise ValueError(f'Unable to fetch backend limits for {self.registration}')
+		return limits
 	
 	def empty_weight(self) -> float:
-		last_weighing = self.last_weighing()
-		if last_weighing is None:
-			raise ValueError('No weighing for this glider')
-		
-		# p1 + p2 should be equals to mve
-		return last_weighing.mve()
-		# return last_weighing.p1 + last_weighing.p2
+		limits = self._fetch_backend_limits()
+		value = limits.get('empty_weight')
+		if value is None:
+			raise ValueError('No empty_weight available for this glider')
+		return float(value)
 	
 	def cv_max(self) -> float:
 		'''
 		Retourne la charge variable maximum en kg, défini comme la différence entre la masse maximale de l'appareil waterballast vide et la masse à vide équipée.
 		CV max = MMA - MVE
 		'''
-		last_weighing = self.last_weighing()
-		if last_weighing is None:
-			raise ValueError('No weighing for this glider')
-		if self.limits is None or self.limits.mmwv is None:
-			raise ValueError('Limits or mmwv is not set for this glider')
-		
-		# return round(self.limits.mmwp - last_weighing.mve(), 2)
-		return round(self.limits.mmwv - last_weighing.mve(), 2)
+		limits = self._fetch_backend_limits()
+		value = limits.get('cv_max')
+		if value is None:
+			raise ValueError('No cv_max available for this glider')
+		return float(value)
 
 	def cu_max(self) -> float:
 		'''
 		Retourne la charge utile maximum en kg, défini comme la différence entre la masse maximale des elements non portant
 		et la masse à vide des élement non portant. CU max = MMWV - MVENP
 		'''
-		last_weighing = self.last_weighing()
-		if last_weighing is None:
-			raise ValueError('No weighing for this glider')
-		if self.limits is None or self.limits.mmenp is None:
-			raise ValueError('Limits or mmenp is not set for this glider')
-		
-		return round(self.limits.mmenp - last_weighing.mvenp(), 2)
+		limits = self._fetch_backend_limits()
+		value = limits.get('cu_max')
+		if value is None:
+			raise ValueError('No cu_max available for this glider')
+		return float(value)
 	
 	def cu(self) -> float:
 		'''
 		Retourne la charge utile en kg, défini comme le minimum entre la charge variable max et la charge utile max
 		'''
-		return min(self.cv_max(), self.cu_max())
+		limits = self._fetch_backend_limits()
+		value = limits.get('cu')
+		if value is None:
+			raise ValueError('No cu available for this glider')
+		return float(value)
 	
 	def pilot_av_mini(self) -> float:
-		if self.limits is None or self.arms is None:
-			raise ValueError('Limits or arms are not set for this glider')
-		mass_mini_pilot: Optional[float] = None
-		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
-			mass_mini_pilot = self.empty_weight() * (self.empty_arm() - self.limits.rear_centering) / (self.arms.arm_front_pilot + self.limits.rear_centering)
-		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
-			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
-				mass_mini_pilot = self.empty_weight() * (self.limits.rear_centering - self.empty_arm()) / (self.limits.rear_centering - self.arms.arm_front_pilot)
-			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
-				mass_mini_pilot = self.empty_weight() * (self.empty_arm() - self.limits.rear_centering) / (self.limits.rear_centering - self.arms.arm_front_pilot)
-			else:
-				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-		if mass_mini_pilot is None:
-			raise ValueError('Failed to calculate mass_mini_pilot')
-		return round(mass_mini_pilot, 1)
+		limits = self._fetch_backend_limits()
+		value = limits.get('pilot_av_mini')
+		if value is None:
+			raise ValueError('No pilot_av_mini available for this glider')
+		return float(value)
 
 	def pilot_av_mini_duo(self) -> float:
-		if self.limits is None or self.arms is None:
-			raise ValueError('Limits or arms are not set for this glider')
-		mass_mini_pilot: Optional[float] = None
-		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
-			return self.pilot_av_mini()
-		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
-			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
-				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
-				mass_mini_pilot = self.pilot_av_mini() - (self.limits.weight_min_pilot * (self.limits.rear_centering - self.arms.arm_rear_pilot)) / (self.limits.rear_centering - self.arms.arm_front_pilot)
-			else:
-				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-		if mass_mini_pilot is None:
-			raise ValueError('Failed to calculate mass_mini_pilot')
-		return round(mass_mini_pilot, 1)
+		limits = self._fetch_backend_limits()
+		value = limits.get('pilot_av_mini_duo')
+		if value is None:
+			raise ValueError('No pilot_av_mini_duo available for this glider')
+		return float(value)
 
 	def pilot_av_maxi(self) -> float:
-		if self.limits is None or self.arms is None:
-			raise ValueError('Limits or arms are not set for this glider')
-		mass_maxi_pilot: Optional[float] = None
-		if self.pilot_position == DatumPilotPosition.PILOT_FORWARD_OF_DATUM.value:
-			mass_maxi_pilot = self.empty_weight() * (self.empty_arm() - self.limits.front_centering) / (self.arms.arm_front_pilot + self.limits.front_centering)
-		elif self.pilot_position == DatumPilotPosition.PILOT_AFT_OF_DATUM.value:
-			if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
-				mass_maxi_pilot = self.empty_weight() * (self.limits.front_centering - self.empty_arm()) / (self.limits.front_centering - self.arms.arm_front_pilot)
-			elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
-				mass_maxi_pilot = self.empty_weight() * (self.empty_arm() - self.limits.front_centering) / (self.limits.front_centering - self.arms.arm_front_pilot)
-			else:
-				raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
-		if mass_maxi_pilot is None:
-			raise ValueError('Failed to calculate mass_maxi_pilot')
-		return round(mass_maxi_pilot, 1)
+		limits = self._fetch_backend_limits()
+		value = limits.get('pilot_av_maxi')
+		if value is None:
+			raise ValueError('No pilot_av_maxi available for this glider')
+		return float(value)
 
 	def empty_arm(self) -> float:
-		last_weighing = self.last_weighing()
-		if last_weighing is None:
-			raise ValueError('No weighing for this glider')
-		
-		if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
-			# X0 = D1 + d , D1 = M2 * D / (M1 + M2)
-			D1 = last_weighing.D * last_weighing.p2 / (last_weighing.p1 + last_weighing.p2)
-			x0 = D1 + last_weighing.A
-			return round(x0,0)
-		elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
-			x0 = last_weighing.D - (last_weighing.p1 * (last_weighing.D - last_weighing.A))/(last_weighing.p1 + last_weighing.p2)
-			return round(x0,0)
-		else:
-			raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
+		limits = self._fetch_backend_limits()
+		value = limits.get('empty_arm')
+		if value is None:
+			raise ValueError('No empty_arm available for this glider')
+		return float(value)
 	
 	def weight_and_balance_calculator(self, front_pilot_weight, rear_pilot_weight, front_ballast_weight, rear_ballast_weight, wing_water_ballast_weight):
 		'''
 		return the total weight of the glider (kg) and the balance (mm)
 		'''
-
-		glider_weight = self.empty_weight() + front_pilot_weight + rear_pilot_weight + front_ballast_weight + rear_ballast_weight + wing_water_ballast_weight
-		if self.arms is None:
-			raise ValueError('Arms data is missing for this glider')
-		if self.datum == DatumWeighingPoints.DATUM_WING_2POINTS_AFT_OF_DATUM.value:
-			moment_arm = (
-					self.empty_weight() * self.empty_arm() +
-					front_pilot_weight * self.arms.arm_front_pilot * -1 +
-					rear_pilot_weight * self.arms.arm_rear_pilot * -1 +
-					front_ballast_weight * self.arms.arm_front_ballast *-1 +
-					rear_ballast_weight * self.arms.arm_rear_watterballast_or_ballast +
-					wing_water_ballast_weight * self.arms.arm_waterballast
-				)
-			return glider_weight, moment_arm / glider_weight
-		elif self.datum == DatumWeighingPoints.DATUM_FORWARD_GLIDER.value:
-			moment_arm = (
-					self.empty_weight() * self.empty_arm() +
-					front_pilot_weight * self.arms.arm_front_pilot +
-					rear_pilot_weight * self.arms.arm_rear_pilot +
-					front_ballast_weight * self.arms.arm_front_ballast +
-					rear_ballast_weight * self.arms.arm_rear_watterballast_or_ballast +
-					wing_water_ballast_weight * self.arms.arm_waterballast
-				)
-			return glider_weight, moment_arm / glider_weight
-		else:
-			raise NotImplementedError('The calculation is not implemented for this type of datum {}'.format(self.datum))
+		client = BackendClient()
+		result = client.calculate_weight_balance(
+			self.registration,
+			front_pilot_weight,
+			rear_pilot_weight,
+			front_ballast_weight,
+			rear_ballast_weight,
+			wing_water_ballast_weight,
+		)
+		if result is None:
+			raise ValueError(f'Backend calculation failed for {self.registration}')
+		return float(result['total_weight']), float(result['center_of_gravity'])

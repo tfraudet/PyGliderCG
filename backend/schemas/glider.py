@@ -148,6 +148,8 @@ class GliderCalculationsResponse(BaseModel):
 	"""Response containing glider calculations/performance data"""
 	registration: str
 	model: str
+	mve: Optional[float] = None
+	mvenp: Optional[float] = None
 	empty_weight: Optional[float] = None
 	cv_max: Optional[float] = None
 	cu_max: Optional[float] = None

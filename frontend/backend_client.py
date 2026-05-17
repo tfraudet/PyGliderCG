@@ -851,9 +851,6 @@ class BackendClient:
 		Returns:
 			Glider calculations dict or None on failure
 		"""
-		if not self.is_authenticated():
-			return None
-
 		try:
 			status_code, response = self._make_request('GET', f'/api/gliders/{glider_id}/limits')
 
@@ -893,10 +890,6 @@ class BackendClient:
 		Returns:
 			Weight balance calculation dict with total_weight and center_of_gravity, or None on failure
 		"""
-		if not self.is_authenticated():
-			st.error('Not authenticated')
-			return None
-
 		try:
 			data = {
 				'front_pilot_weight': front_pilot_weight,

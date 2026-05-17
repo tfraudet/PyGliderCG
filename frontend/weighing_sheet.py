@@ -8,115 +8,40 @@ import base64
 from xhtml2pdf import pisa
 
 from frontend.gliders import DATUMS
+from frontend.backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
 
-def _as_float(value, default=0.0):
-	try:
-		return float(value)
-	except (TypeError, ValueError):
-		return float(default)
 
-def _compute_derived_limits(glider_dict: dict, weighing) -> dict:
+def _get_backend_limits(glider_dict: dict) -> dict:
 	limits = dict(glider_dict.get('limits', {}))
-	arms = dict(glider_dict.get('arms', {}))
-	if weighing is None:
+	registration = glider_dict.get('registration')
+	if not registration:
 		return limits
-
-	p1 = _as_float(weighing.get('p1', 0) if isinstance(weighing, dict) else weighing.p1)
-	p2 = _as_float(weighing.get('p2', 0) if isinstance(weighing, dict) else weighing.p2)
-	A = _as_float(weighing.get('A', 0) if isinstance(weighing, dict) else weighing.A)
-	D = _as_float(weighing.get('D', 0) if isinstance(weighing, dict) else weighing.D)
-	right_wing = _as_float(weighing.get('right_wing_weight', 0) if isinstance(weighing, dict) else weighing.right_wing_weight)
-	left_wing = _as_float(weighing.get('left_wing_weight', 0) if isinstance(weighing, dict) else weighing.left_wing_weight)
-	tail = _as_float(weighing.get('tail_weight', 0) if isinstance(weighing, dict) else weighing.tail_weight)
-	fuselage = _as_float(weighing.get('fuselage_weight', 0) if isinstance(weighing, dict) else weighing.fuselage_weight)
-	fix_ballast = _as_float(weighing.get('fix_ballast_weight', 0) if isinstance(weighing, dict) else weighing.fix_ballast_weight)
-
-	mve = right_wing + left_wing + tail + fuselage + fix_ballast
-	mvenp = tail + fuselage + fix_ballast
-	limits['cv_max'] = round(_as_float(limits.get('mmwv', 0)) - mve, 2)
-	limits['cu_max'] = round(_as_float(limits.get('mmenp', 0)) - mvenp, 2)
-	limits['cu'] = min(limits['cv_max'], limits['cu_max'])
-
-	datum = int(glider_dict.get('datum', 1))
-	empty_arm = 0.0
-	if datum == 1:
-		total_p = p1 + p2
-		if total_p != 0:
-			D1 = D * p2 / total_p
-			empty_arm = round(D1 + A, 0)
-	elif datum == 4:
-		total_p = p1 + p2
-		if total_p != 0:
-			empty_arm = round(D - (p1 * (D - A)) / total_p, 0)
-	limits['empty_arm'] = empty_arm
-
-	front_centering = _as_float(limits.get('front_centering', 0))
-	rear_centering = _as_float(limits.get('rear_centering', 0))
-	arm_front_pilot = _as_float(arms.get('arm_front_pilot', 0))
-	arm_rear_pilot = _as_float(arms.get('arm_rear_pilot', 0))
-	weight_min_pilot = _as_float(limits.get('weight_min_pilot', 0))
-	pilot_position = int(glider_dict.get('pilot_position', 1))
-
-	pilot_av_mini = 0.0
-	pilot_av_max = 0.0
-	pilot_av_mini_duo = 0.0
-
-	if pilot_position == 1:
-		den_min = arm_front_pilot + rear_centering
-		den_max = arm_front_pilot + front_centering
-		if den_min != 0:
-			pilot_av_mini = round(mve * (empty_arm - rear_centering) / den_min, 1)
-		if den_max != 0:
-			pilot_av_max = round(mve * (empty_arm - front_centering) / den_max, 1)
-		pilot_av_mini_duo = pilot_av_mini
-	elif pilot_position == 2:
-		if datum == 1:
-			den_min = rear_centering - arm_front_pilot
-			den_max = front_centering - arm_front_pilot
-			if den_min != 0:
-				pilot_av_mini = round(mve * (rear_centering - empty_arm) / den_min, 1)
-			if den_max != 0:
-				pilot_av_max = round(mve * (front_centering - empty_arm) / den_max, 1)
-		elif datum == 4:
-			den = rear_centering - arm_front_pilot
-			den_max = front_centering - arm_front_pilot
-			if den != 0:
-				pilot_av_mini = round(mve * (empty_arm - rear_centering) / den, 1)
-			if den_max != 0:
-				pilot_av_max = round(mve * (empty_arm - front_centering) / den_max, 1)
-			if den != 0:
-				pilot_av_mini_duo = round(pilot_av_mini - (weight_min_pilot * (rear_centering - arm_rear_pilot)) / den, 1)
-
-	limits['pilot_av_mini'] = pilot_av_mini
-	limits['pilot_av_max'] = pilot_av_max
-	limits['pilot_av_mini_duo'] = pilot_av_mini_duo
+	client = BackendClient()
+	backend_limits = client.get_glider_limits(registration)
+	if not backend_limits:
+		return limits
+	limits.update(backend_limits)
+	if 'pilot_av_maxi' in limits:
+		limits['pilot_av_max'] = limits.get('pilot_av_maxi')
 	return limits
 
 def _glider_to_dict(glider) -> dict:
 	"""Convert a Glider object to dict format expected by weighing sheet functions."""
 	if isinstance(glider, dict):
 		return glider
-	try:
+	limits_dict = {}
+	if glider.limits:
 		limits_dict = {
-			'pilot_av_mini': glider.pilot_av_mini(),
-			'pilot_av_max': glider.pilot_av_maxi(),
-			'pilot_av_mini_duo': glider.pilot_av_mini_duo() if not glider.single_seat else 0,
-			'cu': glider.cu(),
-			'cu_max': glider.cu_max(),
-			'cv_max': glider.cv_max(),
-			'mm_harnais': glider.limits.mm_harnais if glider.limits else 0,
-			'weight_min_pilot': glider.limits.weight_min_pilot if glider.limits else 0,
-			'mmwv': glider.limits.mmwv if glider.limits else 0,
-			'mmwp': glider.limits.mmwp if glider.limits else 0,
-			'mmenp': glider.limits.mmenp if glider.limits else 0,
-			'front_centering': glider.limits.front_centering if glider.limits else 0,
-			'rear_centering': glider.limits.rear_centering if glider.limits else 0,
-			'empty_arm': glider.empty_arm(),
+			'mm_harnais': glider.limits.mm_harnais,
+			'weight_min_pilot': glider.limits.weight_min_pilot,
+			'mmwv': glider.limits.mmwv,
+			'mmwp': glider.limits.mmwp,
+			'mmenp': glider.limits.mmenp,
+			'front_centering': glider.limits.front_centering,
+			'rear_centering': glider.limits.rear_centering,
 		}
-	except Exception:
-		limits_dict = {}
 	try:
 		arms_dict = {
 			'arm_front_pilot': glider.arms.arm_front_pilot if glider.arms else 0,
@@ -436,7 +361,7 @@ def handle_print_weighing_sheet(weighing, current_glider):
 			contents = imgFile.read()
 			imgData = base64.b64encode(contents).decode("utf-8")
 
-		limits = _compute_derived_limits(current_glider, weighing)
+		limits = _get_backend_limits(current_glider)
 		arms = current_glider.get('arms', {})
 		
 		output = io.BytesIO()
@@ -452,8 +377,8 @@ def handle_print_weighing_sheet(weighing, current_glider):
 		fuselage_weight = weighing.get('fuselage_weight', 0)
 		fix_ballast_weight = weighing.get('fix_ballast_weight', 0)
 		
-		mve = right_wing_weight + left_wing_weight + tail_weight + fuselage_weight + fix_ballast_weight
-		mvenp = tail_weight + fuselage_weight + fix_ballast_weight
+		mve = limits.get('mve', 0)
+		mvenp = limits.get('mvenp', 0)
 		
 		weight_min_pilot = limits.get('weight_min_pilot', 50)
 		
@@ -629,7 +554,7 @@ def display_detail_weighing(weighing, current_glider, print=False):
 		st.subheader('Détails de la pesée #{} du {}'.format(weighing_id, weighing_date_label))
 		weighing_sheet(weighing)
 
-		limits = _compute_derived_limits(current_glider, weighing)
+		limits = _get_backend_limits(current_glider)
 		
 		p1 = weighing.get('p1', 0) if isinstance(weighing, dict) else weighing.p1
 		p2 = weighing.get('p2', 0) if isinstance(weighing, dict) else weighing.p2
@@ -639,8 +564,8 @@ def display_detail_weighing(weighing, current_glider, print=False):
 		fuselage = weighing.get('fuselage_weight', 0) if isinstance(weighing, dict) else weighing.fuselage_weight
 		fix_ballast = weighing.get('fix_ballast_weight', 0) if isinstance(weighing, dict) else weighing.fix_ballast_weight
 		
-		mve = right_wing + left_wing + tail + fuselage + fix_ballast
-		mvenp = tail + fuselage + fix_ballast
+		mve = limits.get('mve', 0)
+		mvenp = limits.get('mvenp', 0)
 		
 		col1, col2 = st.columns(2)
 		with col1:

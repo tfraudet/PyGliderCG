@@ -836,6 +836,8 @@ Retrieve center of gravity envelope and limits. **No authentication required.**
 {
 	"registration": "F-ABCD",
 	"model": "LS4",
+	"mve": 226.5,
+	"mvenp": 118.0,
 	"empty_weight": 226.5,
 	"cv_max": 273.5,
 	"cu_max": 160.0,
@@ -1301,6 +1303,8 @@ class WeightBalanceCalculationResponse:
 class GliderCalculationsResponse:
 	registration: str
 	model: str
+	mve: Optional[float]
+	mvenp: Optional[float]
 	empty_weight: Optional[float]
 	cv_max: Optional[float]
 	cu_max: Optional[float]

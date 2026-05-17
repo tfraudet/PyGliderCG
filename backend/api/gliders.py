@@ -584,8 +584,13 @@ async def get_glider_limits(glider_id: str):
 
 		try:
 			empty_weight = glider.empty_weight()
+			last_weighing = glider.last_weighing()
+			mve = last_weighing.mve() if last_weighing else None
+			mvenp = last_weighing.mvenp() if last_weighing else None
 		except ValueError:
 			empty_weight = None
+			mve = None
+			mvenp = None
 			logger.debug(f'No weighing data for glider {glider_id}')
 
 		try:
@@ -627,6 +632,8 @@ async def get_glider_limits(glider_id: str):
 		return GliderCalculationsResponse(
 			registration=glider.registration,
 			model=glider.model,
+			mve=mve,
+			mvenp=mvenp,
 			empty_weight=empty_weight,
 			cv_max=cv_max,
 			cu_max=cu_max,
