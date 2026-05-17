@@ -415,7 +415,6 @@ st.set_page_config(
 	page_title='Weight & Balance Calculator',
 	page_icon=FAVICON_WEB,
 	layout='wide',
-	# initial_sidebar_state='expanded'
 )
 
 if ('authenticated' not in st.session_state) or (not st.session_state.authenticated):

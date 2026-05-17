@@ -329,7 +329,6 @@ st.set_page_config(
 	page_title='Weight & Balance Calculator',
 	page_icon=FAVICON_WEB,
 	layout='wide',
-	initial_sidebar_state='collapsed'
 )
 # add_apple_icon()
 
