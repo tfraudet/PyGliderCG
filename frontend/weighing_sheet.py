@@ -556,14 +556,6 @@ def display_detail_weighing(weighing, current_glider, print=False):
 
 		limits = _get_backend_limits(current_glider)
 		
-		p1 = weighing.get('p1', 0) if isinstance(weighing, dict) else weighing.p1
-		p2 = weighing.get('p2', 0) if isinstance(weighing, dict) else weighing.p2
-		right_wing = weighing.get('right_wing_weight', 0) if isinstance(weighing, dict) else weighing.right_wing_weight
-		left_wing = weighing.get('left_wing_weight', 0) if isinstance(weighing, dict) else weighing.left_wing_weight
-		tail = weighing.get('tail_weight', 0) if isinstance(weighing, dict) else weighing.tail_weight
-		fuselage = weighing.get('fuselage_weight', 0) if isinstance(weighing, dict) else weighing.fuselage_weight
-		fix_ballast = weighing.get('fix_ballast_weight', 0) if isinstance(weighing, dict) else weighing.fix_ballast_weight
-		
 		mve = limits.get('mve', 0)
 		mvenp = limits.get('mvenp', 0)
 		

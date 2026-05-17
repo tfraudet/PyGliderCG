@@ -133,11 +133,6 @@ def display_plot(
 			)
 		)
 	
-	# Add a hline for empty weight
-	# fig.add_hline(y=current_glider.empty_weight(), 
-	# 		annotation_text='Masse à vide: {} kg'.format(current_glider.empty_weight()), annotation_font=dict(size=14),
-	# 		line_width=1, line_dash='dash', line_color=active_theme['emptyWeightLine'])
-
 	# Add maximum and compute weight of non-lifting elements + rear water ballast + gueuses
 	fig.add_hline(y=current_glider.limits.mmenp, 
 			annotation_text='Masse maximum élements non portants: {} kg'.format(current_glider.limits.mmenp), annotation_font=dict(size=14),
