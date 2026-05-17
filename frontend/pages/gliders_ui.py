@@ -47,7 +47,12 @@ def edit_glider_datasheet(glider_data: dict, mode = ModeEdition.EDIT):
 	col1, col2 = st.columns(2)
 	with col1:
 		registration = st.text_input('Immatriculation', value=glider_data.get('registration', ''), disabled= True if mode == ModeEdition.EDIT else False)
-		serial_number = st.text_input('Numéro de série', value=glider_data.get('serial_number', ''))
+		serial_number_value = glider_data.get('serial_number')
+		serial_number = st.text_input(
+			'Numéro de série',
+			value='' if serial_number_value is None else str(serial_number_value),
+			help='Optionnel',
+		)
 		single_seat = st.checkbox("Monoplace", value = glider_data.get('single_seat', True))
 	with col2:
 		model = st.text_input('Modèle', value=glider_data.get('model', ''))
@@ -105,6 +110,15 @@ def edit_glider_datasheet(glider_data: dict, mode = ModeEdition.EDIT):
 	st.divider()
 	save_glider_datasheet = st.button('Enregistrer', icon=':material/save:')
 	if save_glider_datasheet:
+		serial_number_clean = serial_number.strip()
+		serial_number_int = None
+		if serial_number_clean:
+			try:
+				serial_number_int = int(serial_number_clean)
+			except ValueError:
+				st.error('Le numéro de série doit être numérique ou vide', icon=':material/error:')
+				return
+
 		selected_datum = next(filter(lambda item: item[1]['label'] == datum_and_weighing_points_position, DATUMS.items()), None)
 		if selected_datum is None:
 			st.error('Référence de pesée invalide', icon=':material/error:')
@@ -116,7 +130,7 @@ def edit_glider_datasheet(glider_data: dict, mode = ModeEdition.EDIT):
 			'registration': registration,
 			'model': model,
 			'brand': brand,
-			'serial_number': serial_number,
+			'serial_number': serial_number_int,
 			'single_seat': single_seat,
 			'datum': datum_value,
 			'datum_label': datum_text,
