@@ -10,10 +10,13 @@ DEFAULT_LOG_LEVEL = 'INFO'
 FRONTEND_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = FRONTEND_DIR / 'img'
 
-FAVICON_WEB = str(ASSETS_DIR / 'icon/web/icon-512.png')
-
 def get_asset_path(relative_path: str) -> str:
+	frontend_path = FRONTEND_DIR / relative_path
+	if frontend_path.exists():
+		return str(frontend_path)
 	return str(ASSETS_DIR / relative_path)
+
+FAVICON_WEB = get_asset_path('icon/web/icon-512.png')
 
 @st.cache_data()
 def is_debug_mode() -> bool:

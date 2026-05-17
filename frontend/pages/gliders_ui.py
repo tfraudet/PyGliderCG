@@ -14,7 +14,6 @@ from frontend.gliders import DatumPilotPosition as Dpp
 
 logger = logging.getLogger(__name__)
 
-submitted = False
 client = BackendClient()
 
 def _serialize_inventory_value(value):
@@ -395,18 +394,18 @@ def display_glider():
 		except BackendException as e:
 			st.error(f'Erreur lors de la récupération des planeurs: {str(e)}', icon=':material/error:')
 
-def handle_button_state(boutton):
-	logger.debug('handle_button_state() is call by button {}'.format(boutton))
+def handle_button_state(button_kind):
+	logger.debug('handle_button_state() called by button {}'.format(button_kind))
 
-	if boutton in ('delete, list'):
+	if button_kind in ('delete', 'list'):
 		st.session_state.btn_edit_state = False
 		st.session_state.btn_add_state = False
 
-	if boutton == 'add':
+	if button_kind == 'add':
 		st.session_state.btn_edit_state = False
 		st.session_state.btn_add_state = True
 
-	if boutton == 'edit':
+	if button_kind == 'edit':
 		st.session_state.btn_edit_state = True
 		st.session_state.btn_add_state = False
 

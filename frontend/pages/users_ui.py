@@ -67,7 +67,6 @@ else:
 
 	with st.form('users-form'):
 		edited_users_df = st.data_editor(users_df, key='users_edit', width='stretch', num_rows='dynamic',
-				# disabled=True if st.session_state.get('FormSubmitter:users-form-Enregistrer') else False,
 				column_config={
 					"username": st.column_config.TextColumn(
 						label="Identifiant",
@@ -80,7 +79,6 @@ else:
 						label="eMail",
 						default="a@b.com",
 						max_chars=255,
-						# validate=r"^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$",
 					),
 					"password": st.column_config.TextColumn(
 						label="Mot de passe",
@@ -103,7 +101,6 @@ else:
 			)
 		submitted = st.form_submit_button('Enregistrer',icon=':material/save:',disabled= True if st.session_state.get('FormSubmitter:users-form-Enregistrer') else False)
 	
-	# st.write(st.session_state)
 	if submitted:
 		cache_to_refresh = False
 		# user added
@@ -128,7 +125,7 @@ else:
 
 		# user edited
 		if len (st.session_state.users_edit['edited_rows']) > 0:
-			for key, value in st.session_state.users_edit['edited_rows'].items():
+			for key, _ in st.session_state.users_edit['edited_rows'].items():
 				row_to_update = edited_users_df.iloc[key]
 				username = users_df.iloc[key]['username']
 				if row_to_update['username'] != username:
@@ -148,7 +145,7 @@ else:
 
 		# user deleted
 		if len (st.session_state.users_edit['deleted_rows']) > 0:
-			for idx, value in enumerate(st.session_state.users_edit['deleted_rows']):
+			for value in st.session_state.users_edit['deleted_rows']:
 				username_to_delete = users_df.iloc[value]['username']
 				if client.delete_user(username_to_delete):
 					cache_to_refresh = True
@@ -159,8 +156,6 @@ else:
 			logger.debug('Force users clear cache')
 			fetch_users.clear()
 
-			# logger.debug('Force rerun ')
-			# st.rerun(scope='app')
 		else:
 			st.warning('Aucun enregistrement a sauvegarder/effacer, vérifiez qu\'un des champs dans la table ne soit pas en erreur', icon=':material/warning:')
 
@@ -177,6 +172,5 @@ else:
 	if st.button(":material/cloud_upload: Importer la base de données"):
 		import_database()
 
-# st.write(st.session_state)
 logger.debug('END users_ui.py')
  

@@ -221,6 +221,7 @@ async def list_gliders(
 		)
 
 
+@router.get('/by-id/{glider_id:path}/details', response_model=GliderResponse)
 @router.get('/{glider_id}', response_model=GliderResponse)
 async def get_glider(glider_id: str):
 	"""
@@ -297,6 +298,7 @@ async def create_new_glider(
 		)
 
 
+@router.put('/by-id/{glider_id:path}/details', response_model=GliderResponse)
 @router.put('/{glider_id}', response_model=GliderResponse)
 async def update_glider_endpoint(
 	glider_id: str,
@@ -345,6 +347,7 @@ async def update_glider_endpoint(
 		)
 
 
+@router.delete('/by-id/{glider_id:path}/details', status_code=status.HTTP_204_NO_CONTENT)
 @router.delete('/{glider_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_glider_endpoint(
 	glider_id: str,
@@ -385,6 +388,7 @@ async def delete_glider_endpoint(
 		)
 
 
+@router.put('/by-id/{glider_id:path}/instruments', status_code=status.HTTP_200_OK)
 @router.put('/{glider_id}/instruments', status_code=status.HTTP_200_OK)
 async def update_glider_instruments(
 	glider_id: str,
@@ -442,6 +446,7 @@ async def update_glider_instruments(
 		raise HTTPException(status_code=500, detail='Failed to update instruments')
 
 
+@router.delete('/by-id/{glider_id:path}/instruments/{instrument_id}', status_code=status.HTTP_204_NO_CONTENT)
 @router.delete('/{glider_id}/instruments/{instrument_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_glider_instrument(
 	glider_id: str,
@@ -467,6 +472,7 @@ async def delete_glider_instrument(
 		raise HTTPException(status_code=500, detail='Failed to delete instrument')
 
 
+@router.post('/by-id/{glider_id:path}/weighings', status_code=status.HTTP_201_CREATED)
 @router.post('/{glider_id}/weighings', status_code=status.HTTP_201_CREATED)
 async def add_weighings(
 	glider_id: str,
@@ -514,6 +520,7 @@ async def add_weighings(
 		raise HTTPException(status_code=500, detail='Failed to add weighings')
 
 
+@router.delete('/by-id/{glider_id:path}/weighings/{weighing_id}', status_code=status.HTTP_204_NO_CONTENT)
 @router.delete('/{glider_id}/weighings/{weighing_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_glider_weighing(
 	glider_id: str,
@@ -536,6 +543,7 @@ async def delete_glider_weighing(
 		raise HTTPException(status_code=500, detail='Failed to delete weighing')
 
 
+@router.put('/by-id/{glider_id:path}/weight-and-balances', status_code=status.HTTP_200_OK)
 @router.put('/{glider_id}/weight-and-balances', status_code=status.HTTP_200_OK)
 async def update_weight_and_balances(
 	glider_id: str,
@@ -563,6 +571,7 @@ async def update_weight_and_balances(
 		raise HTTPException(status_code=500, detail='Failed to update weight and balances')
 
 
+@router.get('/by-id/{glider_id:path}/limits', response_model=GliderCalculationsResponse)
 @router.get('/{glider_id}/limits', response_model=GliderCalculationsResponse)
 async def get_glider_limits(glider_id: str):
 	"""
@@ -653,6 +662,7 @@ async def get_glider_limits(glider_id: str):
 		)
 
 
+@router.post('/by-id/{glider_id:path}/calculate', response_model=WeightBalanceCalculationResponse)
 @router.post('/{glider_id}/calculate', response_model=WeightBalanceCalculationResponse)
 async def calculate_weight_and_balance(
 	glider_id: str,

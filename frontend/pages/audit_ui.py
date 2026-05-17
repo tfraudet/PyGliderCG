@@ -57,6 +57,5 @@ else:
 	if st.button(":material/delete: Effacer l\'audit log"):
 		delete_audit_log()
 
-# st.write(st.session_state)
 logger.debug('END audit_ui.py')
  

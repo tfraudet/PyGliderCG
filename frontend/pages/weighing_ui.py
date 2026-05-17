@@ -11,10 +11,6 @@ from frontend.weighing_sheet import display_detail_weighing
 logger = logging.getLogger(__name__)
 client = BackendClient()
 
-def handle_button_state(action):
-	_ = action
-	pass
-
 logger.debug('START weighing_ui.py')
 st.set_page_config(
 	page_title='Weight & Balance Calculator',
@@ -42,8 +38,7 @@ else:
 
 		gliders_options = list(gliders_dict.keys())
 		selected_registration = st.selectbox('Choisir un planeur', gliders_options, 
-			index=gliders_options.index(st.session_state.selected_registration) if st.session_state.selected_registration in gliders_options else 0,
-			on_change=handle_button_state, args=('select', ))
+			index=gliders_options.index(st.session_state.selected_registration) if st.session_state.selected_registration in gliders_options else 0)
 		st.session_state.selected_registration = selected_registration
 		current_glider = gliders_dict.get(selected_registration)
 
@@ -51,24 +46,23 @@ else:
 			st.subheader('Liste des pesées précédentes pour ce planeur')
 			
 			weighings = current_glider.get('weighings', [])
-			weighings_data = []
-			
-			if weighings:
-				for w in weighings:
-					weighings_data.append({
-						'id': w.get('id'),
-						'date': datetime.fromisoformat(w['date']).date() if isinstance(w['date'], str) else w['date'],
-						'p1': w.get('p1', 0.0),
-						'p2': w.get('p2', 0.0),
-						'A': w.get('A', 0),
-						'D': w.get('D', 0),
-						'right_wing_weight': w.get('right_wing_weight', 0.0),
-						'left_wing_weight': w.get('left_wing_weight', 0.0),
-						'tail_weight': w.get('tail_weight', 0.0),
-						'fuselage_weight': w.get('fuselage_weight', 0.0),
-						'fix_ballast_weight': w.get('fix_ballast_weight', 0.0),
-					})
-				
+			weighings_data = [
+				{
+					'id': w.get('id'),
+					'date': datetime.fromisoformat(w['date']).date() if isinstance(w['date'], str) else w['date'],
+					'p1': w.get('p1', 0.0),
+					'p2': w.get('p2', 0.0),
+					'A': w.get('A', 0),
+					'D': w.get('D', 0),
+					'right_wing_weight': w.get('right_wing_weight', 0.0),
+					'left_wing_weight': w.get('left_wing_weight', 0.0),
+					'tail_weight': w.get('tail_weight', 0.0),
+					'fuselage_weight': w.get('fuselage_weight', 0.0),
+					'fix_ballast_weight': w.get('fix_ballast_weight', 0.0),
+				}
+				for w in weighings
+			]
+			if weighings_data:
 				weighings_df = pd.DataFrame(weighings_data)
 				st.dataframe(weighings_df, width='stretch', hide_index=True)
 			else:
@@ -105,7 +99,7 @@ else:
 			})
 
 			with st.form(key='add_weighing_form'):
-				edited_weighings = st.data_editor(
+				st.data_editor(
 					empty_weighing_df,
 					key='weighing_edit',
 					num_rows='dynamic',

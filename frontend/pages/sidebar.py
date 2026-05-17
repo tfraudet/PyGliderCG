@@ -8,8 +8,6 @@ logger = logging.getLogger(__name__)
 def display_main_menu(current_user: dict):
 	if st.session_state.get('authenticated'):
 		with st.sidebar:
-			username = current_user.get('username', '')
-
 			st.write('---')
 			st.sidebar.page_link("streamlit_app.py", label="Accueil", icon="🏠")
 
@@ -23,7 +21,7 @@ def display_main_menu(current_user: dict):
 				st.sidebar.page_link("pages/audit_ui.py", label="Audit Log", icon=':material/description:')
 
 def sidebar_menu():
-	DEBUG = is_debug_mode()
+	debug = is_debug_mode()
 	client = BackendClient()
 
 	# Initialize authentication state
@@ -77,7 +75,7 @@ def sidebar_menu():
 					st.switch_page('streamlit_app.py')
 
 	# In DEBUG mode, display the session content
-	if DEBUG:
+	if debug:
 		with st.sidebar:
 			st.write('---')
 			st.write(st.session_state)

@@ -3,7 +3,6 @@
 import logging
 import os
 from typing import List, Optional, Dict, Any, Tuple, Union
-from datetime import datetime
 
 import requests
 from requests.exceptions import RequestException, Timeout, ConnectionError
@@ -74,6 +73,12 @@ class BackendClient:
 			if status_code:
 				msg += f' - status: {status_code}'
 			logger.debug(msg)
+
+	@staticmethod
+	def _glider_endpoint(glider_id: str, suffix: str = '') -> str:
+		if suffix:
+			return f'/api/gliders/by-id/{glider_id}{suffix}'
+		return f'/api/gliders/by-id/{glider_id}/details'
 
 	def _make_request(
 		self,
@@ -471,7 +476,7 @@ class BackendClient:
 		try:
 			client = BackendClient()
 
-			status_code, response = client._make_request('GET', f'/api/gliders/{glider_id}')
+			status_code, response = client._make_request('GET', client._glider_endpoint(glider_id))
 			if status_code == 200:
 				return response
 			return None
@@ -489,7 +494,7 @@ class BackendClient:
 			Glider dict or None if not found
 		"""
 		try:
-			status_code, response = self._make_request('GET', f'/api/gliders/{glider_id}')
+			status_code, response = self._make_request('GET', self._glider_endpoint(glider_id))
 
 			if status_code == 200:
 				return response
@@ -563,7 +568,7 @@ class BackendClient:
 		try:
 			status_code, response = self._make_request(
 				'PUT',
-				f'/api/gliders/{glider_id}',
+				self._glider_endpoint(glider_id),
 				data=glider_data,
 				retry=False,
 			)
@@ -608,7 +613,7 @@ class BackendClient:
 		try:
 			status_code, response = self._make_request(
 				'DELETE',
-				f'/api/gliders/{glider_id}',
+				self._glider_endpoint(glider_id),
 				retry=False,
 			)
 
@@ -653,7 +658,7 @@ class BackendClient:
 		try:
 			status_code, response = self._make_request(
 				'DELETE',
-				f'/api/gliders/{glider_id}/instruments/{instrument_id}',
+				self._glider_endpoint(glider_id, f'/instruments/{instrument_id}'),
 				retry=False,
 			)
 
@@ -696,7 +701,7 @@ class BackendClient:
 		try:
 			status_code, response = self._make_request(
 				'PUT',
-				f'/api/gliders/{glider_id}/instruments',
+				self._glider_endpoint(glider_id, '/instruments'),
 				data=instruments,
 				retry=False,
 			)
@@ -727,7 +732,7 @@ class BackendClient:
 		try:
 			status_code, response = self._make_request(
 				'POST',
-				f'/api/gliders/{glider_id}/weighings',
+				self._glider_endpoint(glider_id, '/weighings'),
 				data=weighings,
 				retry=False,
 			)
@@ -759,7 +764,7 @@ class BackendClient:
 		try:
 			status_code, response = self._make_request(
 				'DELETE',
-				f'/api/gliders/{glider_id}/weighings/{weighing_id}',
+				self._glider_endpoint(glider_id, f'/weighings/{weighing_id}'),
 				retry=False,
 			)
 
@@ -803,7 +808,7 @@ class BackendClient:
 		try:
 			status_code, response = self._make_request(
 				'PUT',
-				f'/api/gliders/{glider_id}/weight-and-balances',
+				self._glider_endpoint(glider_id, '/weight-and-balances'),
 				data={'weight_and_balances': weight_and_balances},
 				retry=False,
 			)
@@ -834,7 +839,7 @@ class BackendClient:
 			if not client.is_authenticated():
 				return None
 
-			status_code, response = client._make_request('GET', f'/api/gliders/{glider_id}/limits')
+			status_code, response = client._make_request('GET', client._glider_endpoint(glider_id, '/limits'))
 			if status_code == 200:
 				return response
 			return None
@@ -852,7 +857,7 @@ class BackendClient:
 			Glider calculations dict or None on failure
 		"""
 		try:
-			status_code, response = self._make_request('GET', f'/api/gliders/{glider_id}/limits')
+			status_code, response = self._make_request('GET', self._glider_endpoint(glider_id, '/limits'))
 
 			if status_code == 200:
 				return response
@@ -901,7 +906,7 @@ class BackendClient:
 
 			status_code, response = self._make_request(
 				'POST',
-				f'/api/gliders/{glider_id}/calculate',
+				self._glider_endpoint(glider_id, '/calculate'),
 				data=data,
 				retry=False,
 			)

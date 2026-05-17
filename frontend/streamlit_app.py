@@ -1,12 +1,8 @@
-import pandas as pd
 import streamlit as st
 import logging
 import sys
 from pathlib import Path
 
-from datetime import datetime, timedelta
-
-import plotly.express as px
 import plotly.graph_objects as go
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -19,7 +15,6 @@ from frontend.pages.sidebar import sidebar_menu
 from frontend.config import is_debug_mode
 from frontend.backend_client import BackendClient
 from frontend.weighing_sheet import display_detail_weighing
-from streamlit_theme import st_theme
 from shapely.geometry import Point, Polygon
 from dotenv import load_dotenv
 
@@ -50,22 +45,8 @@ THEME_DARK = {
 	'cgLimitLine': 'deepskyblue',
 }
 
-
-# this doesn't work, need to try to inject the custom content to the index.html file at runtime.
-# hack possible here https://stackoverflow.com/questions/70520191/how-to-add-the-google-analytics-tag-to-website-developed-with-streamlit/78992559#78992559 
-import streamlit.components.v1 as components
-def add_apple_icon():
-	components.html(
-		"""
-		<link rel="apple-touch-icon" href="./frontend/img/icon/web/apple-touch-icon.png">
-		""",
-		height=0 # Important: Set height to 0 to avoid extra space
-	)
-
 def is_light_mode():
-	# theme = st_theme()
-	# return theme is not None and theme['backgroundColor'] == '#ffffff'
-	return True if st.get_option("theme.base")=='light' else False
+	return st.get_option('theme.base') == 'light'
 
 def display_plot(
 	current_glider,
@@ -349,8 +330,6 @@ st.set_page_config(
 	page_icon=FAVICON_WEB,
 	layout='wide',
 )
-# add_apple_icon()
-
 active_theme = THEME_LIGHT if is_light_mode() else THEME_DARK
 st.header('✈️ Calculateur Centrage Planeur')
 # load data
