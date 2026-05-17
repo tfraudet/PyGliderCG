@@ -45,20 +45,20 @@ The API is production-ready and designed for aviation professionals managing gli
 │                      FastAPI Backend                            │
 │                    (localhost:8000)                             │
 │                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │               Middleware Layer                           │  │
-│  │  • CORS Configuration (ports 8501, 3000)               │  │
-│  │  • JWT Token Validation & Extraction                    │  │
-│  │  • Role-Based Access Control (RBAC)                     │  │
-│  │  • Request/Response Logging                             │  │
-│  └──────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │               Middleware Layer                           │   │
+│  │  • CORS Configuration (ports 8501)                       │   │
+│  │  • JWT Token Validation & Extraction                     │   │
+│  │  • Role-Based Access Control (RBAC)                      │   │
+│  │  • Request/Response Logging                              │   │
+│  └──────────────────────────────────────────────────────────┘   │
 │                                                                 │
-│  ┌──────────────┬──────────────┬──────────────┬───────────────┐│
-│  │  Auth       │  Users       │  Gliders     │  Audit Logs   ││
-│  │  Router     │  Router      │  Router      │  Router       ││
-│  └──────────────┴──────────────┴──────────────┴───────────────┘│
-│                         │                                      │
-│                    (Business Logic)                            │
+│  ┌──────────────┬──────────────┬──────────────┬───────────────┐ │
+│  │  Auth        │  Users       │  Gliders     │  Audit Logs   │ │
+│  │  Router      │  Router      │  Router      │  Router       │ │
+│  └──────────────┴──────────────┴──────────────┴───────────────┘ │
+│                         │                                       │
+│                    (Business Logic)                             │
 │                                                                 │
 └────────────────────────────┬────────────────────────────────────┘
 							 │
@@ -68,10 +68,10 @@ The API is production-ready and designed for aviation professionals managing gli
 │                     DuckDB Database                             │
 │                   (data/pyglider.duckdb)                        │
 │                                                                 │
-│  • Users Table (credentials, roles)                            │
-│  • Gliders Table (specifications, CG limits)                   │
-│  • Weight Distribution Data                                    │
-│  • Audit Logs (all modifications)                              │
+│  • Users Table (credentials, roles)                             │
+│  • Gliders Table (specifications, CG limits)                    │
+│  • Weight Distribution Data                                     │
+│  • Audit Logs (all modifications)                               │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1420,71 +1420,6 @@ curl 'http://localhost:8000/api/audit-logs?limit=5&resource_type=glider' \
   -H "Authorization: Bearer $TOKEN" \
   | jq '.items[] | {user_id: .user_id, event: .event, time: .timestamp}'
 ```
-
----
-
-## Deployment
-
-### Environment Variables
-
-Create a `.env` file in the backend directory with:
-
-```bash
-# Server Configuration
-DEBUG=false
-HOST=0.0.0.0
-PORT=8000
-
-# Database
-DB_NAME=./data/pyglider.duckdb
-
-# Authentication
-COOKIE_KEY=your-super-secret-key-change-this-in-production
-JWT_EXPIRY_HOURS=24
-
-# CORS (comma-separated origins)
-CORS_ORIGINS=http://localhost:8501,http://localhost:3000
-
-# Logging
-LOG_LEVEL=INFO
-```
-
-### Installation
-
-```bash
-# Install dependencies
-pip install -r requirements-backend.txt
-
-# Run database initialization if needed
-python init_db.py
-
-# Start the server
-python backend/main.py
-```
-
-The API will be available at `http://localhost:8000`.
-
-### Production Deployment
-
-1. **Use environment-specific settings:**
-   - Change `DEBUG=false` for production
-   - Use strong `COOKIE_KEY` value (generate with `openssl rand -hex 32`)
-   - Configure `CORS_ORIGINS` for your actual domain
-
-2. **Use a production ASGI server:**
-   ```bash
-   gunicorn -w 4 -k uvicorn.workers.UvicornWorker backend.main:app --bind 0.0.0.0:8000
-   ```
-
-3. **Database:**
-   - Use persistent database file on reliable storage
-   - Implement regular backups of `data/pyglider.duckdb`
-
-4. **Security:**
-   - Always use HTTPS in production
-   - Implement rate limiting on auth endpoints
-   - Monitor audit logs for suspicious activity
-   - Consider implementing 2FA for admin accounts
 
 ---
 
