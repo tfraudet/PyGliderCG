@@ -131,9 +131,9 @@ class GliderResponse(BaseModel):
 	wedge_position: str
 	limits: Optional[LimitsSchema] = None
 	arms: Optional[ArmsSchema] = None
-	weighings: List[WeighingSchema] = []
-	weight_and_balances: List[Tuple[int, float]] = []
-	instruments: List[InstrumentSchema] = []
+	weighings: List[WeighingSchema] = Field(default_factory=list)
+	weight_and_balances: List[Tuple[int, float]] = Field(default_factory=list)
+	instruments: List[InstrumentSchema] = Field(default_factory=list)
 
 	class Config:
 		from_attributes = True
@@ -141,7 +141,7 @@ class GliderResponse(BaseModel):
 
 class WeightAndBalancesRequest(BaseModel):
 	"""Request for updating weight and balance limit points"""
-	weight_and_balances: List[Tuple[int, float]] = []
+	weight_and_balances: List[Tuple[int, float]] = Field(default_factory=list)
 
 
 class GliderCalculationsResponse(BaseModel):

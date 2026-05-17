@@ -2,14 +2,13 @@
 
 import logging
 from datetime import timedelta
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from backend.config import get_settings
 from backend.db.user_queries import UserQueries
 from backend.middleware.auth import get_current_user, verify_token
-from backend.models.user import TokenManager, PasswordHasher
+from backend.models.user import TokenManager
 from backend.schemas.user import (
 	LoginRequest,
 	TokenRequest,
@@ -96,7 +95,7 @@ async def logout(current_user = Depends(get_current_user)) -> dict:
 
 @router.post('/refresh', response_model=TokenResponse)
 async def refresh_token(
-	request: TokenRequest,
+	_request: TokenRequest,
 	token_payload = Depends(verify_token),
 ) -> TokenResponse:
 	"""

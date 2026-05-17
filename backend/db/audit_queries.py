@@ -22,18 +22,11 @@ class AuditQueries:
 			db_path: Path to DuckDB database (uses settings.DB_NAME if not provided)
 		"""
 		self.db_path = db_path or settings.DB_NAME
+		self._ensure_audit_table()
 
 	def _get_connection(self):
 		"""Get a DuckDB connection"""
 		return duckdb.connect(self.db_path)
-
-	def _table_exists(self, conn, table_name: str) -> bool:
-		"""Check if a table exists in the current database"""
-		result = conn.execute(
-			'SELECT COUNT(*) FROM information_schema.tables WHERE upper(table_name) = upper(?)',
-			[table_name]
-		).fetchall()
-		return bool(result and result[0][0] > 0)
 
 	def _ensure_audit_table(self):
 		"""Ensure the AUDITLOG table exists in the database"""

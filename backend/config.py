@@ -41,12 +41,6 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    # class Config:
-    #     env_file = ".env"
-    #     case_sensitive = True
-    #     extra = "ignore"
-
-
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance"""

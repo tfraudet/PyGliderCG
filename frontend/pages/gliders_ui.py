@@ -275,23 +275,22 @@ def edit_glider_weight_and_balance(glider_data: dict):
 		submitted = st.form_submit_button("Enregistrer", icon=':material/save:')
 
 	if submitted:
-		updated_w_and_b = []
+		# Send the full edited list to backend (endpoint performs replace semantics).
+		# This preserves unchanged rows while applying adds/edits/deletes in one save.
+		updated_w_and_b: list[list[float]] = []
+		for row in edited_w_and_b.to_dict('records'):
+			balance = row.get('balance')
+			weight = row.get('weight')
+			if pd.isna(balance) or pd.isna(weight):
+				continue
+			updated_w_and_b.append([int(balance), round(float(weight), 1)])
 
-		if len (st.session_state.wandb_edit['added_rows']) > 0:
-			st.info ('Ajout de point(s)', icon=':material/info:')
-			for row in st.session_state.wandb_edit['added_rows']:
-				balance = row.get('balance', 0)
-				weight = round(row.get('weight', 0.0), 1)
-				updated_w_and_b.append([balance, weight])
-
-		if len (st.session_state.wandb_edit['edited_rows']) > 0:
-			st.info ('Sauvegarde des points modifiés', icon=':material/info:')
-			for key, _ in st.session_state.wandb_edit['edited_rows'].items():
-				row_to_update = edited_w_and_b.iloc[key]
-				updated_w_and_b.append([row_to_update['balance'], row_to_update['weight']])
-
-		if len (st.session_state.wandb_edit['deleted_rows']) > 0:
-			st.info ('Suppression de point(s)', icon=':material/info:')
+		if len(st.session_state.wandb_edit['added_rows']) > 0:
+			st.info('Ajout de point(s)', icon=':material/info:')
+		if len(st.session_state.wandb_edit['edited_rows']) > 0:
+			st.info('Sauvegarde des points modifiés', icon=':material/info:')
+		if len(st.session_state.wandb_edit['deleted_rows']) > 0:
+			st.info('Suppression de point(s)', icon=':material/info:')
 
 		try:
 			result = client.update_glider_weight_and_balances(glider_data['registration'], updated_w_and_b)

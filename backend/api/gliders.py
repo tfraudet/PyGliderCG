@@ -65,6 +65,16 @@ def _parse_request_date(value: str, field_name: str) -> date:
 	)
 
 
+def _parse_optional_date(value: str | date | None, field_name: str) -> date | None:
+	if value is None:
+		return None
+	if isinstance(value, date):
+		return value
+	if isinstance(value, str):
+		return _parse_request_date(value, field_name)
+	raise ValueError(f'Invalid {field_name} type')
+
+
 def _convert_glider_to_response(glider: Glider) -> GliderResponse:
 	"""Convert Glider model to GliderResponse schema"""
 	limits_schema = None
@@ -400,22 +410,17 @@ async def update_glider_instruments(
 		glider = get_glider_by_id(glider_id)
 		if not glider:
 			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
-
 		conn = _get_database_connection()
-		conn.execute(f"DELETE FROM INVENTORY WHERE registration='{glider_id}'")
-		conn.close()
-
+		try:
+			conn.execute('DELETE FROM INVENTORY WHERE registration = ?', [glider_id])
+		finally:
+			conn.close()
 		instrument_objects = []
 		for inst in instruments:
-			parsed_date = None
-			if isinstance(inst.date, str) and inst.date:
-				try:
-					parsed_date = _parse_request_date(inst.date, 'instrument date')
-				except ValueError as e:
-					raise HTTPException(status_code=400, detail=str(e))
-			elif isinstance(inst.date, date):
-				parsed_date = inst.date
-
+			try:
+				parsed_date = _parse_optional_date(inst.date, 'instrument date')
+			except ValueError as e:
+				raise HTTPException(status_code=400, detail=str(e))
 			instrument_objects.append(
 				Instrument(
 					id=inst.id,
@@ -428,7 +433,6 @@ async def update_glider_instruments(
 					seat=inst.seat,
 				)
 			)
-		
 
 		if instrument_objects:
 			if not save_instruments(glider_id, instrument_objects):
@@ -462,7 +466,7 @@ async def delete_glider_instrument(
 		if not delete_instrument(glider_id, instrument_id):
 			raise HTTPException(status_code=404, detail=f'Instrument {instrument_id} not found')
 
-		event = f'Instrument {instrument_id} deleted for gldier {glider_id}'
+		event = f'Instrument {instrument_id} deleted for glider {glider_id}'
 		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
 			logger.warning(f'Failed to create instrument deletion audit event for {glider_id}/{instrument_id}')
 	except HTTPException:
@@ -488,7 +492,7 @@ async def add_weighings(
 		weighing_objects = []
 		for w in weighings:
 			try:
-				parsed_date = _parse_request_date(w.date, 'weighing date') if isinstance(w.date, str) else w.date
+				parsed_date = _parse_request_date(w.date, 'weighing date')
 			except ValueError as e:
 				raise HTTPException(status_code=400, detail=str(e))
 
@@ -508,7 +512,7 @@ async def add_weighings(
 
 		save_weighings(glider_id, weighing_objects)
 
-		event = f'Weighings {weighing_objects} updated for glider {glider_id}'
+		event = f'Weighings {weighing_objects} added for glider {glider_id}'
 		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
 			logger.warning(f'Failed to create weighing audit event for {glider_id}')
 
@@ -525,17 +529,19 @@ async def add_weighings(
 async def delete_glider_weighing(
 	glider_id: str,
 	weighing_id: int,
-	_admin_user = Depends(require_admin_role),
+	admin_user = Depends(require_admin_role),
 ):
 	"""Delete one weighing for a glider (admin only)."""
 	try:
-		_ = _admin_user
 		glider = get_glider_by_id(glider_id)
 		if not glider:
 			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
 
 		if not delete_weighing(glider_id, weighing_id):
 			raise HTTPException(status_code=404, detail=f'Weighing {weighing_id} not found')
+		event = f'Weighing {weighing_id} deleted for glider {glider_id}'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create weighing deletion audit event for {glider_id}/{weighing_id}')
 	except HTTPException:
 		raise
 	except Exception as e:
@@ -559,7 +565,7 @@ async def update_weight_and_balances(
 		if not save_weight_and_balance(glider_id, payload.weight_and_balances):
 			raise ValueError('Failed to save weight and balances')
 
-		event = f'Weight & balance {payload.weight_and_balances} for glidder {glider_id} updated'
+		event = f'Weight and balance {payload.weight_and_balances} updated for glider {glider_id}'
 		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
 			logger.warning(f'Failed to create weight and balance audit event for {glider_id}')
 
