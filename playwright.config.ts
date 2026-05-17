@@ -26,7 +26,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL used by E2E helpers. */
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8901',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8501',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -73,14 +73,14 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: [
     {
-      command: 'python -m uvicorn backend.main:app --host 127.0.0.1 --port 8800',
-      url: 'http://127.0.0.1:8800/health',
+      command: 'python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000',
+      url: 'http://127.0.0.1:8000/health',
       reuseExistingServer: false,
       timeout: 120_000,
     },
     {
-      command: 'BACKEND_URL=http://127.0.0.1:8800 streamlit run frontend/streamlit_app.py --server.headless true --server.address 127.0.0.1 --server.port 8901',
-      url: 'http://127.0.0.1:8901/_stcore/health',
+      command: 'BACKEND_URL=http://127.0.0.1:8000 streamlit run frontend/streamlit_app.py --server.headless false --server.address 127.0.0.1 --server.port 8501',
+      url: 'http://127.0.0.1:8501/_stcore/health',
       reuseExistingServer: false,
       timeout: 120_000,
     },
