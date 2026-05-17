@@ -80,10 +80,17 @@ async def import_database(
 
 		logger.info(f'Database imported successfully by {admin_user.username}')
 		return {'message': 'Database imported successfully'}
-	except zipfile.BadZipFile:
+	except zipfile.BadZipFile as e:
+		logger.error(f'Invalid zip file during import: {e}', exc_info=True)
 		raise HTTPException(
 			status_code=status.HTTP_400_BAD_REQUEST,
-			detail='Invalid zip file',
+			detail=f'Invalid zip file: {e}',
+		)
+	except duckdb.Error as e:
+		logger.error(f'Invalid database import content: {e}', exc_info=True)
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail=f'Invalid database export format: {e}',
 		)
 	except Exception as e:
 		logger.error(f'Error importing database: {e}', exc_info=True)

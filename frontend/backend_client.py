@@ -415,17 +415,38 @@ class BackendClient:
 			)
 			if response.status_code == 200:
 				return True
+
+			error_detail = ''
+			try:
+				error_detail = str(response.json().get('detail', '')).strip()
+			except Exception:
+				error_detail = response.text.strip()
+
+			if not error_detail:
+				error_detail = f'server returned {response.status_code}'
+
+			logger.error(
+				f'Database import failed (status={response.status_code}): {error_detail}'
+			)
+
 			if response.status_code == 403:
 				st.error('You do not have permission to import the database')
-			elif response.status_code == 400:
-				detail = response.json().get('detail', 'Invalid file')
-				st.error(f'Import failed: {detail}')
 			else:
-				st.error(f'Import failed: server returned {response.status_code}')
+				st.error(f'Import failed: {error_detail}')
+
+			if st.session_state.get('debug_mode', False):
+				with st.expander('Import error details'):
+					st.code(
+						f'status={response.status_code}\n{response.text}',
+						language='text',
+					)
+
 			return False
 		except Exception as e:
-			logger.error(f'Error importing database: {e}')
+			logger.exception(f'Error importing database: {e}')
 			st.error(f'Import failed: {str(e)}')
+			if st.session_state.get('debug_mode', False):
+				st.exception(e)
 			return False
 
 	# ===== Glider Methods =====
