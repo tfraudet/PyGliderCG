@@ -1,7 +1,7 @@
 import streamlit as st
 import logging
 from frontend.backend_client import BackendClient, BackendException
-from frontend.config import is_debug_mode, __version__
+from frontend.config import is_debug_mode, __version__, get_asset_path
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ def sidebar_menu():
 		st.session_state.current_user = None
 
 	# Logo
-	st.logo(image='img/app-logo-v2.png', size='large', icon_image='img/app-logo-short-v2.png')
+	st.logo(image=get_asset_path('app-logo-v2.png'), size='large', icon_image=get_asset_path('app-logo-short-v2.png'))
 
 	if not st.session_state.authenticated:
 		with st.sidebar:
@@ -86,5 +86,5 @@ def sidebar_menu():
 	st.sidebar.divider()
 	material_favorote_html = '<span role="img" aria-label="favorite icon" style="display: inline-block; font-family: &quot;Material Symbols Rounded&quot;; font-weight: 400; user-select: none; vertical-align: bottom; white-space: nowrap; overflow-wrap: normal;">favorite</span>'
 
-	st.sidebar.image('img/acph-logo-v2017-gray.png', width=100)
+	st.sidebar.image(get_asset_path('acph-logo-v2017-gray.png'), width=100)
 	st.sidebar.html(f'Made with <span style="color: green">{material_favorote_html}</span> by <a href="https://aeroclub-issoire.fr/">ACPH</a> - version {__version__}')

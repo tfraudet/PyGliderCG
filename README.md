@@ -1,5 +1,5 @@
 <p align="center">
-	 <img src="img/app-logo-short-v2.png" width="100" >
+	 <img src="frontend/img/app-logo-short-v2.png" width="100" >
 </p>
 
 # Center of Gravity Calculator for ACPH Gliders

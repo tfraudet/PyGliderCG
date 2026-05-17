@@ -59,7 +59,7 @@ import streamlit.components.v1 as components
 def add_apple_icon():
 	components.html(
 		"""
-		<link rel="apple-touch-icon" href="./img/icon/web/apple-touch-icon.png">
+		<link rel="apple-touch-icon" href="./frontend/img/icon/web/apple-touch-icon.png">
 		""",
 		height=0 # Important: Set height to 0 to avoid extra space
 	)

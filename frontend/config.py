@@ -1,13 +1,20 @@
 import streamlit as st
 import logging
 import os
+from pathlib import Path
 
 __version__ = "2.0.0"
 DEFAULT_DB_NAME = './data/gliders.db'
 DEFAULT_COOKIE_KEY = 'glider-cg-acph'
 DEFAULT_LOG_LEVEL = 'INFO'
 
-FAVICON_WEB = './img/icon/web/icon-512.png'
+FRONTEND_DIR = Path(__file__).resolve().parent
+ASSETS_DIR = FRONTEND_DIR / 'img'
+
+FAVICON_WEB = str(ASSETS_DIR / 'icon/web/icon-512.png')
+
+def get_asset_path(relative_path: str) -> str:
+	return str(ASSETS_DIR / relative_path)
 
 @st.cache_data()
 def is_debug_mode() -> bool:

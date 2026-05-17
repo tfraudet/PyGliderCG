@@ -7,14 +7,16 @@ PyGliderCG is a web application for calculating and managing center of gravity (
 
 ## Folder Structure
 
+- `/backend`: FastAPI service (API, auth, data access)
+- `/frontend`: Streamlit application (main app, pages, client modules)
+- `/frontend/img`: Application images and icons
+- `/frontend/pages`: Streamlit multipage screens
 - `/data`: DuckDB database files and import/export directories
-- `/docs`: Technical documentation for CG calculations and weight/balance procedures
-- `/img`: Glider images and application assets
-- `/logo`: Logo source files and design assets
+- `/doc`: Technical documentation for CG calculations and weight/balance procedures
 - `/e2e`: End-to-end tests written in TypeScript using Playwright
-- `/pages`: Streamlit application pages and components
-- `/spike`: Technical prototypes and experimental code
 - `/tests`: Unit tests using pytest
+- `/logo`: Logo source files and design assets
+- `/spike`: Technical prototypes and experimental code
 
 ## Technologies
 
