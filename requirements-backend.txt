@@ -7,7 +7,9 @@ uvicorn[standard]==0.24.0
 
 # Data validation and settings management
 pydantic==2.4.2
+pydantic-core==2.10.1
 pydantic-settings==2.0.3
+pydantic[email]
 
 # Environment variables
 python-dotenv==1.2.2

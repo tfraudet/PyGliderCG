@@ -4,7 +4,7 @@
 
 # Center of Gravity Calculator for ACPH Gliders
 
-PyGliderCG is now a two-tier application:
+A simple web  application to calculate center of gravity for [ACPH](https://aeroclub-issoire.fr/) gliders.
 - **Frontend:** Streamlit UI (pilot and admin workflows)
 - **Backend:** FastAPI service (business logic, auth, database access)
 
@@ -12,16 +12,12 @@ Frontend code now lives under `frontend/` and can run either:
 - locally with two processes (one for FastAPI, one for Streamlit), or
 - in Docker with a **single container** that starts both services.
 
-There are no Streamlit entrypoint/module wrappers at repository root anymore.
-
 ## Repository layout (relevant folders)
 
 - `frontend/`: Streamlit application (`streamlit_app.py`, pages, frontend modules)
 - `backend/`: FastAPI API service
 - `tests/`: pytest suite
 - `e2e/`: Playwright E2E tests
-
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://glider-cg.streamlit.app/)
 
 ## Requirements
 
@@ -67,7 +63,7 @@ cp .env.example .env
 Key variables:
 - `BACKEND_URL` (used by Streamlit client, default `http://localhost:8000`)
 - `COOKIE_KEY` (JWT signing key for backend auth)
-- `DB_NAME` / `DB_PATH` (DuckDB location)
+- `DB_NAME` (DuckDB file path)
 
 ### Run backend and frontend
 

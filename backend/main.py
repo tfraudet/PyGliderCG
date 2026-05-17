@@ -30,10 +30,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting PyGliderCG backend")
     logger.info(f"Debug mode: {get_settings().DEBUG}")
 
-    db_name = get_settings().DB_NAME
-    if get_settings().DB_PATH:
-        db_name = f'{get_settings().DB_PATH}/{db_name}'
-    initialize_database(db_name)
+    initialize_database(get_settings().DB_NAME)
     logger.info("✅ Database initialized")
 
     yield

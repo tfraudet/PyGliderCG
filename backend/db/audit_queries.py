@@ -2,7 +2,6 @@
 
 import logging
 from typing import Optional, List, Dict, Any
-from pathlib import Path
 from datetime import datetime, timezone
 
 import duckdb
@@ -23,8 +22,6 @@ class AuditQueries:
 			db_path: Path to DuckDB database (uses settings.DB_NAME if not provided)
 		"""
 		self.db_path = db_path or settings.DB_NAME
-		if settings.DB_PATH:
-			self.db_path = str(Path(settings.DB_PATH) / self.db_path)
 
 	def _get_connection(self):
 		"""Get a DuckDB connection"""

@@ -2,7 +2,6 @@
 
 import logging
 from typing import Optional, List, Set
-from pathlib import Path
 
 import duckdb
 
@@ -23,8 +22,6 @@ class UserQueries:
 			db_path: Path to DuckDB database (uses settings.DB_NAME if not provided)
 		"""
 		self.db_path = db_path or settings.DB_NAME
-		if settings.DB_PATH:
-			self.db_path = str(Path(settings.DB_PATH) / self.db_path)
 		self._ensure_users_table()
 
 	def _get_connection(self):

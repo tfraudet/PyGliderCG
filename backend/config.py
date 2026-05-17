@@ -2,8 +2,6 @@
 
 import os
 from functools import lru_cache
-from typing import Optional
-
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
@@ -26,7 +24,6 @@ class Settings(BaseSettings):
 
     # Database
     DB_NAME: str = os.getenv("DB_NAME", "pyglider.duckdb")
-    DB_PATH: Optional[str] = os.getenv("DB_PATH", None)
 
     # JWT/Authentication
     COOKIE_KEY: str = os.getenv("COOKIE_KEY", "your-secret-key-change-in-production")

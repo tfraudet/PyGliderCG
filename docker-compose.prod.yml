@@ -6,16 +6,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: pyglider-app:latest
-    container_name: pyglider-app-prod
+    container_name: pyglidercg-app
+    image: tfraudet/pyglidercg:latest
     restart: always
     ports:
       - '8000:8000'
       - '8501:8501'
     environment:
-      - DEBUG=false
-      - DB_NAME=gliders.db
-      - DB_PATH=/app/data
+      - APP_DEBUG_MODE=false
+      - DB_NAME=/app/data/gliders.db
       - HOST=0.0.0.0
       - PORT=8000
       - BACKEND_URL=http://127.0.0.1:8000

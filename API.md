@@ -1432,8 +1432,7 @@ HOST=0.0.0.0
 PORT=8000
 
 # Database
-DB_NAME=pyglider
-DB_PATH=./data/
+DB_NAME=./data/pyglider.duckdb
 
 # Authentication
 COOKIE_KEY=your-super-secret-key-change-this-in-production

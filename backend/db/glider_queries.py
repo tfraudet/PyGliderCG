@@ -14,10 +14,9 @@ logger = logging.getLogger(__name__)
 def _get_database_connection(read_only: bool = False):
 	"""Get DuckDB connection with proper configuration"""
 	settings = get_settings()
-	db_path = settings.DB_PATH or settings.DB_NAME
 	if read_only:
-		return duckdb.connect(db_path, config={'access_mode': 'READ_ONLY'})
-	return duckdb.connect(db_path)
+		return duckdb.connect(settings.DB_NAME, config={'access_mode': 'READ_ONLY'})
+	return duckdb.connect(settings.DB_NAME)
 
 
 def get_all_gliders() -> Dict[str, Glider]:

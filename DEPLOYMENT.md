@@ -215,7 +215,6 @@ Create a production `.env` file with appropriate values:
 cat > /opt/pyglider/.env << EOF
 DEBUG=false
 DB_NAME=/var/lib/pyglider/data/gliders.db
-DB_PATH=/var/lib/pyglider/data
 HOST=0.0.0.0
 PORT=8000
 BACKEND_URL=https://api.yourdomain.com
