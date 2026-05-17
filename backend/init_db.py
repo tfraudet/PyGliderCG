@@ -1,6 +1,6 @@
 import duckdb
-import bcrypt
 import logging
+from backend.models.user import PasswordHasher
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def init_users_table(conn):
 			conn.execute('INSERT INTO USERS VALUES (?, ?, ?, ?)', [
 				'admin',
 				'admin@gmail.com',
-				bcrypt.hashpw('admin'.encode('utf-8'), bcrypt.gensalt()),
+				PasswordHasher.hash_password('admin-pw'),
 				'administrator',
 			])
 		except duckdb.ConstraintException as e:

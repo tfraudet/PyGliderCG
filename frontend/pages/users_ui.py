@@ -3,75 +3,45 @@ import streamlit as st
 import pandas as pd
 import logging
 
-from frontend.config import FAVICON_WEB, get_database_name
+from frontend.config import FAVICON_WEB
 from frontend.pages.sidebar import sidebar_menu
 from frontend.backend_client import BackendClient
 
 logger = logging.getLogger(__name__)
 client = BackendClient()
 
-import duckdb
-import zipfile
-import os
-
 @st.cache_data(show_spinner='Chargement des utilisateurs...')
 def fetch_users():
 	return client.get_users()
 
-def export_database(exported_directory='data/exported_db'):
+def export_database():
 	@st.dialog('Exporter la base de données')
-	def download_file(zip_filename):
-		with open(zip_filename, 'rb') as f:
+	def download_dialog():
+		with st.spinner('Export en cours...'):
+			zip_bytes = client.export_database()
+		if zip_bytes is not None:
+			file_size = round(len(zip_bytes) / 1024, 2)
 			st.write('Base de données zippée avec succès')
-			file_size = round(os.path.getsize(zip_filename) / 1024, 2)
 			st.write(f'Taille du fichier à télécharger: {file_size} KB')
+			st.download_button('Télécharger', zip_bytes, file_name='exported_db.zip', mime='application/zip')
 
-			if st.download_button('Télécharger', f, file_name=zip_filename):
-				st.success('La base de données a été téléchargée avec succès', icon=':material/check_circle:')
-	
-	# Connect to the DuckDB database
-	con = duckdb.connect(get_database_name())
-	
-	# Export the database to a directory
-	con.execute(f"EXPORT DATABASE '{exported_directory}' (FORMAT PARQUET);")
-	con.close()
-	
-	# Create a zip file of the exported directory
-	zip_filename = 'exported_db.zip'
-	with zipfile.ZipFile(zip_filename, 'w') as zipf:
-		for root, dirs, files in os.walk(exported_directory):
-			for file in files:
-				zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), exported_directory))
-	download_file(zip_filename)
+	download_dialog()
 
-def import_database(imported_directory='data/imported_db'):
+def import_database():
 	@st.dialog('Importer la base de données')
-	def import_file(imported_directory):
+	def import_dialog():
 		uploaded_file = st.file_uploader('Sélectionner un fichier zip', type='zip')
 		if uploaded_file is not None:
-			# unzip the file uploaded_file to the directory 'imported_db'
-			with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-				zip_ref.extractall(imported_directory)
+			with st.spinner('Import en cours...'):
+				success = client.import_database(uploaded_file.read())
+			if success:
+				st.success('Base de données importée avec succès', icon=':material/check_circle:')
+				st.cache_data.clear()
+				with st.spinner('Vous allez être déconnecté dans 5 secondes...'):
+					time.sleep(5)
+				st.rerun()
 
-			# drop the old database and import the new one from the directory 'imported_db'
-			con = duckdb.connect(get_database_name())
-			con.execute(f"DROP TABLE WEIGHING;")
-			con.execute(f"DROP TABLE WB_LIMIT;")
-			con.execute(f"DROP TABLE INVENTORY;")
-			con.execute(f"DROP TABLE USERS;")
-			con.execute(f"DROP TABLE GLIDER;")
-			con.execute(f"DROP TABLE AUDITLOG;")
-			con.execute(f"DROP SEQUENCE inventory_id_seq;")
-			con.execute(f"DROP SEQUENCE auto_increment;")
-			con.execute(f"IMPORT DATABASE '{imported_directory}';")
-			con.close()
-			st.success('Base de données importée avec succès', icon=':material/check_circle:')
-			st.cache_data.clear()
-			with st.spinner('Vous allez être déconnecté dans 5 secondes...'):
-				time.sleep(5)
-			st.rerun()
-
-	import_file(imported_directory)
+	import_dialog()
 
 
 logger.debug('START users_ui.py')

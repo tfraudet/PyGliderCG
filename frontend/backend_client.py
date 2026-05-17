@@ -359,6 +359,69 @@ class BackendClient:
 			logger.error(f'Error deleting user {username}: {e}')
 			return False
 
+	# ===== Database Methods =====
+
+	def export_database(self) -> Optional[bytes]:
+		"""Export the full database as a zip archive (admin only).
+
+		Returns:
+			Zip file bytes or None on failure
+		"""
+		if not self.is_authenticated():
+			st.error('Not authenticated')
+			return None
+		try:
+			url = f'{self.backend_url}/api/database/export'
+			response = self.session.get(url, headers=self._get_headers(), timeout=60)
+			if response.status_code == 200:
+				return response.content
+			if response.status_code == 403:
+				st.error('You do not have permission to export the database')
+			else:
+				st.error(f'Export failed: server returned {response.status_code}')
+			return None
+		except Exception as e:
+			logger.error(f'Error exporting database: {e}')
+			st.error(f'Export failed: {str(e)}')
+			return None
+
+	def import_database(self, zip_bytes: bytes) -> bool:
+		"""Import the database from a zip archive (admin only).
+
+		Args:
+			zip_bytes: Zip file content
+
+		Returns:
+			True on success, False otherwise
+		"""
+		if not self.is_authenticated():
+			st.error('Not authenticated')
+			return False
+		try:
+			url = f'{self.backend_url}/api/database/import'
+			headers = self._get_headers()
+			headers.pop('Content-Type', None)  # let requests set multipart boundary
+			response = self.session.post(
+				url,
+				headers=headers,
+				files={'file': ('imported_db.zip', zip_bytes, 'application/zip')},
+				timeout=60,
+			)
+			if response.status_code == 200:
+				return True
+			if response.status_code == 403:
+				st.error('You do not have permission to import the database')
+			elif response.status_code == 400:
+				detail = response.json().get('detail', 'Invalid file')
+				st.error(f'Import failed: {detail}')
+			else:
+				st.error(f'Import failed: server returned {response.status_code}')
+			return False
+		except Exception as e:
+			logger.error(f'Error importing database: {e}')
+			st.error(f'Import failed: {str(e)}')
+			return False
+
 	# ===== Glider Methods =====
 
 	@staticmethod

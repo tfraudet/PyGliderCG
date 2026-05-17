@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import get_settings
 from backend.api.auth import router as auth_router
+from backend.api.database import router as database_router
 from backend.api.gliders import router as gliders_router
 from backend.api.audit import router as audit_router
 from backend.api.users import router as users_router
@@ -83,6 +84,7 @@ def create_app() -> FastAPI:
 
     # Register routers
     app.include_router(auth_router)
+    app.include_router(database_router)
     app.include_router(gliders_router)
     app.include_router(audit_router)
     app.include_router(users_router)
