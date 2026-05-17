@@ -108,6 +108,11 @@ def _glider_to_dict(glider) -> dict:
 			'cv_max': glider.cv_max(),
 			'mm_harnais': glider.limits.mm_harnais if glider.limits else 0,
 			'weight_min_pilot': glider.limits.weight_min_pilot if glider.limits else 0,
+			'mmwv': glider.limits.mmwv if glider.limits else 0,
+			'mmwp': glider.limits.mmwp if glider.limits else 0,
+			'mmenp': glider.limits.mmenp if glider.limits else 0,
+			'front_centering': glider.limits.front_centering if glider.limits else 0,
+			'rear_centering': glider.limits.rear_centering if glider.limits else 0,
 			'empty_arm': glider.empty_arm(),
 		}
 	except Exception:
@@ -131,6 +136,7 @@ def _glider_to_dict(glider) -> dict:
 	return {
 		'single_seat': glider.single_seat,
 		'datum': datum_val,
+		'pilot_position': glider.pilot_position.value if hasattr(glider.pilot_position, 'value') else int(glider.pilot_position),
 		'instruments': instruments,
 		'limits': limits_dict,
 		'arms': arms_dict,
@@ -446,8 +452,8 @@ def handle_print_weighing_sheet(weighing, current_glider):
 		fuselage_weight = weighing.get('fuselage_weight', 0)
 		fix_ballast_weight = weighing.get('fix_ballast_weight', 0)
 		
-		mve = p1 + p2 + right_wing_weight + left_wing_weight + tail_weight + fuselage_weight + fix_ballast_weight
-		mvenp = right_wing_weight + left_wing_weight + tail_weight + fuselage_weight
+		mve = right_wing_weight + left_wing_weight + tail_weight + fuselage_weight + fix_ballast_weight
+		mvenp = tail_weight + fuselage_weight + fix_ballast_weight
 		
 		weight_min_pilot = limits.get('weight_min_pilot', 50)
 		
@@ -633,8 +639,8 @@ def display_detail_weighing(weighing, current_glider, print=False):
 		fuselage = weighing.get('fuselage_weight', 0) if isinstance(weighing, dict) else weighing.fuselage_weight
 		fix_ballast = weighing.get('fix_ballast_weight', 0) if isinstance(weighing, dict) else weighing.fix_ballast_weight
 		
-		mve = p1 + p2 + right_wing + left_wing + tail + fuselage + fix_ballast
-		mvenp = right_wing + left_wing + tail + fuselage
+		mve = right_wing + left_wing + tail + fuselage + fix_ballast
+		mvenp = tail + fuselage + fix_ballast
 		
 		col1, col2 = st.columns(2)
 		with col1:
