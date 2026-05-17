@@ -1,4 +1,3 @@
-import time
 import streamlit as st
 import pandas as pd
 import logging
@@ -37,9 +36,10 @@ def import_database():
 			if success:
 				st.success('Base de données importée avec succès', icon=':material/check_circle:')
 				st.cache_data.clear()
-				with st.spinner('Vous allez être déconnecté dans 5 secondes...'):
-					time.sleep(5)
-				st.rerun()
+				st.session_state.authenticated = False
+				st.session_state.auth_token = None
+				st.session_state.current_user = None
+				st.switch_page('streamlit_app.py')
 
 	import_dialog()
 

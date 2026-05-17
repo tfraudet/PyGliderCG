@@ -123,6 +123,7 @@ class BackendClient:
 				if response.status_code == 401:
 					st.session_state.pop('auth_token', None)
 					st.session_state.pop('current_user', None)
+					st.session_state.authenticated = False
 					raise AuthenticationError('Unauthorized - please log in again')
 
 				if response.status_code == 403:
