@@ -14,9 +14,10 @@ from backend.api.audit import router as audit_router
 from backend.api.users import router as users_router
 from backend.init_db import initialize_database
 
-# Configure logging
+# Configure logging using LOG_LEVEL env variable (default: INFO)
+_settings = get_settings()
 logging.basicConfig(
-    level=logging.INFO,  # Default to INFO, can be overridden by settings
+    level=getattr(logging, _settings.LOG_LEVEL.upper(), logging.INFO),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
@@ -28,10 +29,10 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown event handlers"""
     # Startup
     logger.info("🚀 Starting PyGliderCG backend")
-    logger.info(f"Debug mode: {get_settings().DEBUG}")
+    logger.info(f"Debug mode: {get_settings().APP_DEBUG_MODE}")
 
     initialize_database(get_settings().DB_NAME)
-    logger.info("✅ Database initialized")
+    logger.info(f"✅ Database {get_settings().DB_NAME} initialized")
 
     yield
 
@@ -46,7 +47,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
         version=settings.APP_VERSION,
-        debug=settings.DEBUG,
+        debug=settings.APP_DEBUG_MODE,
         lifespan=lifespan,
     )
 
@@ -95,13 +96,18 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    import argparse
     import uvicorn
+
+    parser = argparse.ArgumentParser(description='PyGliderCG backend server')
+    parser.add_argument('--reload', action='store_true', default=False, help='Enable auto-reload on code changes')
+    args = parser.parse_args()
 
     settings = get_settings()
     uvicorn.run(
         "backend.main:app",
         host=settings.HOST,
         port=settings.PORT,
-        reload=settings.DEBUG,
+        reload=args.reload,
         log_level=settings.LOG_LEVEL.lower(),
     )

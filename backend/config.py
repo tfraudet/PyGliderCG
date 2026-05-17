@@ -5,10 +5,8 @@ from functools import lru_cache
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
-
 # Load environment variables from .env file
 load_dotenv()
-
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
@@ -16,7 +14,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "PyGliderCG"
     APP_VERSION: str = "2.0.0"
-    DEBUG: bool = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
+    APP_DEBUG_MODE: bool = os.getenv("APP_DEBUG_MODE", "False").lower() in ("true", "1", "yes")
 
     # Server
     HOST: str = os.getenv("HOST", "0.0.0.0")
@@ -33,9 +31,7 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: list[str] = [
-        "http://localhost:3000",
         "http://localhost:8501",
-        "http://127.0.0.1:3000",
         "http://127.0.0.1:8501",
     ]
     CORS_ALLOW_CREDENTIALS: bool = True
@@ -45,10 +41,10 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"
+    # class Config:
+    #     env_file = ".env"
+    #     case_sensitive = True
+    #     extra = "ignore"
 
 
 @lru_cache()

@@ -71,7 +71,7 @@ Run services in two terminals:
 
 **Terminal 1 - Backend (FastAPI)**
 ```bash
-python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn backend.main:app --reload
 ```
 
 **Terminal 2 - Frontend (Streamlit)**
