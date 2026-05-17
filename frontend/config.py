@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 
 __version__ = "2.0.0"
-DEFAULT_DB_NAME = './data/gliders.db'
 DEFAULT_COOKIE_KEY = 'glider-cg-acph'
 DEFAULT_LOG_LEVEL = 'INFO'
 
@@ -24,15 +23,6 @@ def is_debug_mode() -> bool:
 
 	logging.getLogger(__name__).info(f'APP_DEBUG_MODE is: {debug} ')
 	return debug
-
-@st.cache_data()
-def get_database_name() -> str:
-	dbanme = os.environ.get('DB_NAME', DEFAULT_DB_NAME)
-	if 'DB_NAME' not in os.environ:
-		logging.getLogger(__name__).warning('DB_NAME environment variable not defined, defaulting to DEFAULT_DB_NAME')
-
-	logging.getLogger(__name__).info(f'DB_NAME is: {dbanme} ')
-	return dbanme
 
 @st.cache_data()
 def get_cookie_key() -> str:
