@@ -66,10 +66,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         {/* Branding / toggle */}
         <button
-          onClick={() => user && setCollapsed((c) => !c)}
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          disabled={!user}
           className={cn(
             'flex items-center gap-2.5 px-3 py-3.5 w-full text-left transition-colors',
-            user ? 'hover:bg-sidebar-accent cursor-pointer' : 'cursor-default',
+            'disabled:pointer-events-none',
+            user && 'hover:bg-sidebar-accent cursor-pointer',
             isCollapsed && 'justify-center',
           )}
           aria-label={isCollapsed ? 'Déplier le menu' : 'Replier le menu'}
