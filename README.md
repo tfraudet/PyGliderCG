@@ -66,24 +66,72 @@ Key variables:
 - `COOKIE_KEY` (JWT signing key for backend auth)
 - `DB_NAME` (DuckDB file path)
 
-### Run backend and frontend
+### Launch options (backend + frontend)
 
-Run services in two terminals:
+You have 4 ways to run the app, depending on your workflow.
 
-**Terminal 1 - Backend (FastAPI)**
+#### Option 1 — Local dev (recommended for coding)
+
+Run backend and frontend separately in two terminals:
+
+**Terminal 1 - Backend (FastAPI, with reload)**
 ```bash
 python -m uvicorn backend.main:app --reload
 ```
 
-**Terminal 2 - Frontend (Vite + React)**
+**Terminal 2 - Frontend (Vite dev server)**
 ```bash
 npm run web:dev
 ```
 
-Endpoints:
+Access:
 - Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
+
+---
+
+#### Option 2 — Unified local run (single process)
+
+Build the React app, then serve it directly from FastAPI:
+
+```bash
+npm run web:build
+./start.sh
+```
+
+Access:
+- App + API: `http://localhost:8000`
+- Swagger UI: `http://localhost:8000/docs`
+
+---
+
+#### Option 3 — Docker (single container)
+
+```bash
+docker compose up --build
+```
+
+Access:
+- App + API: `http://localhost:8000`
+
+For production-style detached run:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+---
+
+#### Option 4 — Backend API only
+
+Useful if you only need API testing:
+
+```bash
+python -m uvicorn backend.main:app --reload
+```
+
+Then call API directly (e.g. with curl/Postman/Swagger).
 
 ### Quick API Test
 
@@ -103,7 +151,7 @@ For detailed endpoint documentation, see [API.md](./API.md).
 ## Run with Docker
 
 ```bash
-# Unified app container (frontend + backend in one service)
+# Unified app container (frontend build served by backend)
 docker compose up --build
 
 # Production stack (same unified app model)
