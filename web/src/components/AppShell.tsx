@@ -175,7 +175,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {!isCollapsed && !user && !loading && (
           <div className="flex flex-1 flex-col px-4 py-5">
             <div className="mb-5 flex items-center gap-2.5">
-              <LogIn size={18} className="text-primary" strokeWidth={1.8} />
+              {/* <LogIn size={18} className="text-primary" strokeWidth={1.8} /> */}
               <h2 className="text-lg font-bold text-foreground">Connexion</h2>
             </div>
             <form onSubmit={onLogin} className="flex flex-col gap-4">
