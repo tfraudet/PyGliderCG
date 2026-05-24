@@ -229,16 +229,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Footer */}
-        {!isCollapsed && (
-          <>
-            <Separator className="bg-sidebar-border" />
-            <div className="px-3 py-3">
+        {/* Footer — always visible */}
+        <Separator className="bg-sidebar-border" />
+        <div className={cn('px-3 py-3', isCollapsed && 'flex justify-center px-0')}>
+          {isCollapsed ? (
+            <span className="text-sm text-muted-foreground/50" title="Made with ❤ by ACPH">❤</span>
+          ) : (
+            <>
               <p className="text-[11px] text-muted-foreground/60">Made with ❤ by ACPH</p>
               <p className="text-[11px] text-muted-foreground/40">version 1.1.0</p>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </aside>
 
       {/* ── Main content ── */}
