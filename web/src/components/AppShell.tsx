@@ -65,28 +65,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       >
         {/* Branding / toggle */}
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => !c)}
-          disabled={!user}
-          className={cn(
-            'flex items-center gap-2.5 px-3 py-3.5 w-full text-left transition-colors',
-            'disabled:pointer-events-none',
-            user && 'hover:bg-sidebar-accent cursor-pointer',
-            isCollapsed && 'justify-center',
-          )}
-          aria-label={isCollapsed ? 'Déplier le menu' : 'Replier le menu'}
-        >
-          {isCollapsed
-            ? <PanelLeftOpen  size={20} strokeWidth={1.6} className="shrink-0 text-primary" />
-            : <PanelLeftClose size={20} strokeWidth={1.6} className="shrink-0 text-primary" />
-          }
-          {!isCollapsed && (
+        {user ? (
+          <button
+            type="button"
+            onClick={() => setCollapsed(c => !c)}
+            className={cn(
+              'flex items-center gap-2.5 px-3 py-3.5 w-full text-left transition-colors hover:bg-sidebar-accent',
+              isCollapsed && 'justify-center',
+            )}
+            aria-label={isCollapsed ? 'Déplier le menu' : 'Replier le menu'}
+          >
+            {isCollapsed
+              ? <PanelLeftOpen  size={20} strokeWidth={1.6} className="shrink-0 text-primary" />
+              : <PanelLeftClose size={20} strokeWidth={1.6} className="shrink-0 text-primary" />
+            }
+            {!isCollapsed && (
+              <span className="truncate text-sm font-bold tracking-tight text-foreground">
+                Aéroclub ACPH
+              </span>
+            )}
+          </button>
+        ) : (
+          <div className="flex items-center gap-2.5 px-3 py-3.5">
+            <PanelLeftClose size={20} strokeWidth={1.6} className="shrink-0 text-primary" />
             <span className="truncate text-sm font-bold tracking-tight text-foreground">
               Aéroclub ACPH
             </span>
-          )}
-        </button>
+          </div>
+        )}
 
         <Separator className="bg-sidebar-border" />
 
