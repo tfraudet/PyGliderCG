@@ -87,42 +87,68 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <Separator className="bg-sidebar-border" />
 
-        {/* ── Authenticated: user info + nav ── */}
-        {user && (
-          <>
-            {!isCollapsed && (
-              <div className="px-3 py-3">
-                <p className="text-sm font-semibold text-foreground">Bienvenue, {user.username}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Rôle :{' '}
-                  <span className={cn('font-medium underline underline-offset-2', ROLE_COLORS[user.role] ?? 'text-foreground')}>
-                    {user.role}
-                  </span>
-                </p>
-              </div>
+        {/* ── Collapsed: single auth icon ── */}
+        {isCollapsed && (
+          <div className="flex flex-1 items-center justify-center">
+            {user ? (
+              <Tooltip>
+                <TooltipTrigger className="flex items-center justify-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => logout()}
+                  >
+                    <LogOut size={18} strokeWidth={1.8} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Déconnexion</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger className="flex items-center justify-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-primary hover:bg-sidebar-accent"
+                    onClick={() => setCollapsed(false)}
+                  >
+                    <LogIn size={18} strokeWidth={1.8} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Se connecter</TooltipContent>
+              </Tooltip>
             )}
+          </div>
+        )}
+
+        {/* ── Expanded: authenticated content ── */}
+        {!isCollapsed && user && (
+          <>
+            <div className="px-3 py-3">
+              <p className="text-sm font-semibold text-foreground">Bienvenue, {user.username}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Rôle :{' '}
+                <span className={cn('font-medium underline underline-offset-2', ROLE_COLORS[user.role] ?? 'text-foreground')}>
+                  {user.role}
+                </span>
+              </p>
+            </div>
 
             <nav className="flex-1 space-y-0.5 px-1.5 py-2">
               {visibleLinks.map(({ to, label, Icon }) => {
                 const active = to === '/' ? pathname === '/' : pathname.startsWith(to)
-                const linkCls = cn(
-                  'flex items-center gap-3 rounded-md border-l-2 px-2.5 py-2 text-sm transition-colors',
-                  active
-                    ? 'border-primary bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
-                    : 'border-transparent text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground',
-                  isCollapsed && 'justify-center px-2',
-                )
-                return isCollapsed ? (
-                  <Tooltip key={to}>
-                    <TooltipTrigger className="block w-full">
-                      <Link to={to} className={linkCls}>
-                        <Icon size={16} className="shrink-0" strokeWidth={active ? 2.2 : 1.8} />
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">{label}</TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Link key={to} to={to} className={linkCls}>
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={cn(
+                      'flex items-center gap-3 rounded-md border-l-2 px-2.5 py-2 text-sm transition-colors',
+                      active
+                        ? 'border-primary bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                        : 'border-transparent text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground',
+                    )}
+                  >
                     <Icon size={16} className="shrink-0" strokeWidth={active ? 2.2 : 1.8} />
                     <span>{label}</span>
                   </Link>
@@ -133,36 +159,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Separator className="bg-sidebar-border" />
 
             <div className="p-2">
-              <Tooltip>
-                <TooltipTrigger className="block w-full">
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      'w-full justify-start gap-3 text-destructive hover:bg-destructive/10 hover:text-destructive',
-                      isCollapsed && 'justify-center px-2',
-                    )}
-                    onClick={() => logout()}
-                  >
-                    <LogOut size={16} strokeWidth={1.8} />
-                    {!isCollapsed && 'Déconnexion'}
-                  </Button>
-                </TooltipTrigger>
-                {isCollapsed && <TooltipContent side="right">Déconnexion</TooltipContent>}
-              </Tooltip>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => logout()}
+              >
+                <LogOut size={16} strokeWidth={1.8} />
+                Déconnexion
+              </Button>
             </div>
           </>
         )}
 
-        {/* ── Unauthenticated: login form ── */}
-        {!user && !loading && (
+        {/* ── Expanded: unauthenticated login form ── */}
+        {!isCollapsed && !user && !loading && (
           <div className="flex flex-1 flex-col px-4 py-5">
             <div className="mb-5 flex items-center gap-2.5">
               <LogIn size={18} className="text-primary" strokeWidth={1.8} />
-              <h2
-                className="text-lg font-bold text-foreground"
-              >
-                Connexion
-              </h2>
+              <h2 className="text-lg font-bold text-foreground">Connexion</h2>
             </div>
             <form onSubmit={onLogin} className="flex flex-col gap-4">
               <div className="space-y-1.5">
