@@ -62,8 +62,8 @@ export function HomePage() {
         </h1>
       </div>
 
-      <Alert className="border-destructive/40 bg-destructive/8 text-foreground">
-        <TriangleAlert size={15} className="text-destructive" />
+      <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-200">
+        <TriangleAlert size={15} className="text-amber-400" />
         <AlertDescription className="text-xs">
           Outil d'aide à la décision. Vérifiez toujours le centrage avant chaque vol.
         </AlertDescription>
