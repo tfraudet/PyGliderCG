@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-base: #0b132b;
+  --color-panel: #1c2541;
+  --color-surface: #243b67;
+  --color-accent: #f9c74f;
+  --color-danger: #f94144;
+  --color-ok: #43aa8b;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  color: #f7fbff;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(67, 170, 139, 0.25), transparent 30%),
+    radial-gradient(circle at 90% 0%, rgba(249, 199, 79, 0.22), transparent 28%),
+    linear-gradient(180deg, #091227 0%, #0a1c35 100%);
+}

@@ -3,9 +3,11 @@
 import logging
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.config import get_settings
 from backend.api.auth import router as auth_router
@@ -71,23 +73,27 @@ def create_app() -> FastAPI:
             "version": settings.APP_VERSION,
         }
 
-    # Root endpoint
-    @app.get("/", tags=["root"])
-    async def root():
-        """Root endpoint"""
-        return {
-            "message": f"Welcome to {settings.APP_NAME}",
-            "version": settings.APP_VERSION,
-            "docs": "/docs",
-            "redoc": "/redoc",
-        }
-
     # Register routers
     app.include_router(auth_router)
     app.include_router(database_router)
     app.include_router(gliders_router)
     app.include_router(audit_router)
     app.include_router(users_router)
+
+    web_dist = Path(__file__).resolve().parent.parent / 'web' / 'dist'
+    if web_dist.exists():
+        app.mount('/', StaticFiles(directory=str(web_dist), html=True), name='web')
+        logger.info(f'✅ Serving React frontend from {web_dist}')
+    else:
+        @app.get('/', tags=['root'])
+        async def root():
+            return {
+                'message': f'Welcome to {settings.APP_NAME}',
+                'version': settings.APP_VERSION,
+                'docs': '/docs',
+                'redoc': '/redoc',
+                'frontend': 'Build web frontend with `npm run build --prefix web`',
+            }
 
     logger.info("✅ FastAPI application created successfully")
     return app

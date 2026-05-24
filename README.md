@@ -5,16 +5,16 @@
 # Center of Gravity Calculator for ACPH Gliders
 
 A simple web  application to calculate center of gravity for [ACPH](https://aeroclub-issoire.fr/) gliders.
-- **Frontend:** Streamlit UI (pilot and admin workflows)
+- **Frontend:** React + Vite + Tailwind UI (pilot and admin workflows)
 - **Backend:** FastAPI service (business logic, auth, database access)
 
-Frontend code now lives under `frontend/` and can run either:
-- locally with two processes (one for FastAPI, one for Streamlit), or
-- in Docker with a **single container** that starts both services.
+Frontend code now lives under `web/` and can run either:
+- locally with two processes (one for FastAPI, one for Vite dev server), or
+- in Docker with a **single container** serving built React assets through FastAPI.
 
 ## Repository layout (relevant folders)
 
-- `frontend/`: Streamlit application (`streamlit_app.py`, pages, frontend modules)
+- `web/`: React frontend application
 - `backend/`: FastAPI API service
 - `tests/`: pytest suite
 - `e2e/`: Playwright E2E tests
@@ -61,7 +61,8 @@ cp .env.example .env
 ```
 
 Key variables:
-- `BACKEND_URL` (used by Streamlit client, default `http://localhost:8000`)
+- `BACKEND_URL` (backend API URL, default `http://localhost:8000`)
+- `VITE_BACKEND_URL` (optional override for React frontend API base URL)
 - `COOKIE_KEY` (JWT signing key for backend auth)
 - `DB_NAME` (DuckDB file path)
 
@@ -74,13 +75,13 @@ Run services in two terminals:
 python -m uvicorn backend.main:app --reload
 ```
 
-**Terminal 2 - Frontend (Streamlit)**
+**Terminal 2 - Frontend (Vite + React)**
 ```bash
-BACKEND_URL=http://localhost:8000 streamlit run frontend/streamlit_app.py
+npm run web:dev
 ```
 
 Endpoints:
-- Frontend: `http://localhost:8501`
+- Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
 
@@ -126,7 +127,7 @@ pytest tests/test_integration.py -v
 
 ### Run end to end tests
 
-You can run the tests using [Playwright](https://playwright.dev/) framework. Make sure backend and Streamlit (`frontend/streamlit_app.py`) are already running.
+You can run the tests using [Playwright](https://playwright.dev/) framework. The config starts backend and frontend web servers automatically.
 
 ```bash
 # Install Playwright dependencies

@@ -7,7 +7,12 @@
     "doc": "doc",
     "test": "tests"
   },
-  "scripts": {},
+  "scripts": {
+    "web:dev": "npm run dev --prefix web",
+    "web:build": "npm run build --prefix web",
+    "e2e": "npx playwright test --config=playwright.config.ts",
+    "e2e:chromium": "npx playwright test --config=playwright.config.ts --project=chromium"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tfraudet/PyGliderCG.git"
