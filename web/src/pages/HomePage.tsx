@@ -65,7 +65,7 @@ export function HomePage() {
       <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-200">
         <TriangleAlert size={15} className="text-amber-400" />
         <AlertDescription className="text-xs">
-          Outil d'aide à la décision. Vérifiez toujours le centrage avant chaque vol.
+          Attention : Ce logiciel est un outil d'aide à la décision pour le calcul du centrage. La fiche de pesée est le document de référence, et la responsabilité finale du centrage incombe au commandant de bord.
         </AlertDescription>
       </Alert>
 
