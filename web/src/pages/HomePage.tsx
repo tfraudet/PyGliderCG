@@ -1,6 +1,25 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { apiError, backend } from '../lib/api'
+import { Calculator, TriangleAlert, PlaneTakeoff } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { apiError, backend } from '@/lib/api'
+
+const PAYLOAD_LABELS: Record<string, string> = {
+  front_pilot_weight:       'Pilote avant (kg)',
+  rear_pilot_weight:        'Pilote arrière (kg)',
+  front_ballast_weight:     'Ballast avant (kg)',
+  rear_ballast_weight:      'Ballast arrière (kg)',
+  wing_water_ballast_weight:'Ballast eau ailes (kg)',
+}
 
 export function HomePage() {
   const glidersQuery = useQuery({
@@ -31,83 +50,164 @@ export function HomePage() {
     mutationFn: () => backend.calculateWeightBalance(selected, payload),
   })
 
-  if (glidersQuery.isLoading) {
-    return <p>Chargement des planeurs...</p>
-  }
-
   return (
-    <section className="space-y-4">
-      <h2 className="text-xl font-bold text-white">Calculateur centrage pilote</h2>
-      <p className="rounded-md border border-amber-500/40 bg-amber-400/15 p-3 text-sm text-amber-100">
-        Attention : Ce logiciel est un outil d'aide à la décision pour le calcul du centrage.
-      </p>
-      <label className="flex flex-col gap-1">
-        <span className="text-sm">Choisir un planeur</span>
-        <select
-          className="rounded-md border border-white/20 bg-black/20 px-3 py-2"
-          value={selected}
-          onChange={(event) => setSelected(event.target.value)}
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Calculator size={22} className="text-primary" strokeWidth={1.8} />
+        <h1
+          className="text-xl font-bold text-foreground"
+          style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
         >
-          <option value="">Sélectionner...</option>
-          {glidersQuery.data?.map((glider) => (
-            <option key={glider.registration} value={glider.registration}>
-              {glider.registration} — {glider.model}
-            </option>
-          ))}
-        </select>
-      </label>
-      {selectedGlider ? (
-        <div className="space-y-4">
-          <p className="text-sm text-blue-100">
-            {selectedGlider.single_seat ? 'Monoplace' : 'Biplace'} {selectedGlider.registration} —{' '}
-            {selectedGlider.model} ({selectedGlider.brand})
-          </p>
-          <div className="grid gap-2 md:grid-cols-2">
-            {Object.entries(payload).map(([key, value]) => (
-              <label key={key} className="flex flex-col gap-1 text-sm">
-                <span>{key}</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={value}
-                  onChange={(event) =>
-                    setPayload((prev) => ({
-                      ...prev,
-                      [key]: Number(event.target.value),
-                    }))
-                  }
-                  className="rounded-md border border-white/20 bg-black/20 px-3 py-2"
-                />
-              </label>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => calcMutation.mutate()}
-            className="rounded-md border border-emerald-300 bg-emerald-500/20 px-3 py-2 text-sm font-semibold"
-          >
-            Calculer
-          </button>
-          {calcMutation.error ? (
-            <p className="rounded-md border border-red-400/50 bg-red-500/20 p-3 text-sm text-red-200">
-              {apiError(calcMutation.error)}
-            </p>
-          ) : null}
-          {calcMutation.data ? (
-            <div className="rounded-md border border-emerald-300/40 bg-emerald-500/10 p-3">
-              <p>Total masse : {calcMutation.data.total_weight} kg</p>
-              <p>Centrage calculé : {calcMutation.data.center_of_gravity} mm</p>
+          Calculateur de centrage
+        </h1>
+      </div>
+
+      <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-200">
+        <TriangleAlert size={15} className="text-amber-400" />
+        <AlertDescription className="text-xs">
+          Outil d'aide à la décision. Vérifiez toujours le centrage avant chaque vol.
+        </AlertDescription>
+      </Alert>
+
+      {/* Glider selector */}
+      <Card className="border-border/60 bg-card/80">
+        <CardHeader className="pb-3 pt-4 px-4">
+          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Sélection du planeur
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <Select value={selected} onValueChange={(v: string | null) => { if (v) setSelected(v) }} disabled={glidersQuery.isLoading}>
+            <SelectTrigger className="bg-input/50">
+              <SelectValue placeholder={glidersQuery.isLoading ? 'Chargement…' : 'Sélectionner un planeur…'} />
+            </SelectTrigger>
+            <SelectContent>
+              {glidersQuery.data?.map((glider) => (
+                <SelectItem key={glider.registration} value={glider.registration}>
+                  {glider.registration} — {glider.model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {selectedGlider && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <Badge variant="secondary" className="text-xs">
+                <PlaneTakeoff size={11} className="mr-1" />
+                {selectedGlider.brand}
+              </Badge>
+              <Badge variant="secondary" className="text-xs">{selectedGlider.model}</Badge>
+              <Badge variant="outline" className="text-xs">
+                {selectedGlider.single_seat ? 'Monoplace' : 'Biplace'}
+              </Badge>
             </div>
-          ) : null}
-          {limitsQuery.data ? (
-            <div className="grid gap-2 text-sm md:grid-cols-3">
-              <p className="rounded border border-white/20 p-2">MVE: {limitsQuery.data.mve ?? '-'}</p>
-              <p className="rounded border border-white/20 p-2">MVENP: {limitsQuery.data.mvenp ?? '-'}</p>
-              <p className="rounded border border-white/20 p-2">CU max: {limitsQuery.data.cu_max ?? '-'}</p>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
+          )}
+        </CardContent>
+      </Card>
+
+      {selectedGlider && (
+        <>
+          {/* Weight inputs */}
+          <Card className="border-border/60 bg-card/80">
+            <CardHeader className="pb-3 pt-4 px-4">
+              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Masses embarquées
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {Object.entries(payload).map(([key, value]) => (
+                  <div key={key} className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      {PAYLOAD_LABELS[key] ?? key}
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.1}
+                      value={value}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setPayload((prev) => ({ ...prev, [key]: Number(e.target.value) }))
+                      }
+                      className="bg-input/50 font-mono"
+                    />
+                  </div>
+                ))}
+              </div>
+              <Button
+                className="mt-4 gap-2"
+                onClick={() => calcMutation.mutate()}
+                disabled={calcMutation.isPending}
+              >
+                <Calculator size={15} />
+                {calcMutation.isPending ? 'Calcul…' : 'Calculer le centrage'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Error */}
+          {calcMutation.error && (
+            <Alert variant="destructive">
+              <AlertDescription>{apiError(calcMutation.error)}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Result */}
+          {calcMutation.data && (
+            <Card className="border-primary/30 bg-primary/8">
+              <CardContent className="px-4 py-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-primary">
+                  Résultat du calcul
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-md border border-border/50 bg-card/60 p-3">
+                    <p className="text-xs text-muted-foreground">Masse totale</p>
+                    <p className="font-mono text-xl font-bold text-foreground">
+                      {calcMutation.data.total_weight}{' '}
+                      <span className="text-sm font-normal text-muted-foreground">kg</span>
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-primary/40 bg-primary/10 p-3">
+                    <p className="text-xs text-muted-foreground">Centrage</p>
+                    <p className="font-mono text-xl font-bold text-primary">
+                      {calcMutation.data.center_of_gravity}{' '}
+                      <span className="text-sm font-normal text-muted-foreground">mm</span>
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Limits */}
+          {limitsQuery.data && (
+            <Card className="border-border/60 bg-card/80">
+              <CardHeader className="pb-2 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Limites opérationnelles
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {[
+                    { label: 'MVE',   value: limitsQuery.data.mve },
+                    { label: 'MVENP', value: limitsQuery.data.mvenp },
+                    { label: 'CU max',value: limitsQuery.data.cu_max },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-md border border-border/50 bg-card/40 p-2.5 text-center">
+                      <p className="text-[11px] text-muted-foreground">{label}</p>
+                      <p className="font-mono text-sm font-semibold text-foreground">{value ?? '—'}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <Separator className="my-2 bg-border/40" />
+        </>
+      )}
+    </div>
   )
 }

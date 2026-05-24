@@ -1,18 +1,33 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import clsx from 'clsx'
-import { apiError } from '../lib/api'
-import { useAuth } from '../state/auth'
+import {
+  Home, PlaneTakeoff, Scale, Users, ClipboardList,
+  ChevronLeft, ChevronRight, LogOut, LogIn, Eye, EyeOff,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { apiError } from '@/lib/api'
+import { useAuth } from '@/state/auth'
 
 const roleOrder: Record<string, number> = { viewer: 1, editor: 2, administrator: 3 }
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Accueil', icon: '🏠', minRole: null },
-  { to: '/gliders', label: 'Planeurs', icon: '✈️', minRole: 'editor' },
-  { to: '/weighings', label: 'Pesées', icon: '⚖️', minRole: 'editor' },
-  { to: '/users', label: 'Utilisateurs', icon: '👤', minRole: 'administrator' },
-  { to: '/audit', label: 'Audit Log', icon: '📋', minRole: 'administrator' },
+  { to: '/',          label: 'Accueil',       Icon: Home,          minRole: null },
+  { to: '/gliders',   label: 'Planeurs',      Icon: PlaneTakeoff,  minRole: 'editor' },
+  { to: '/weighings', label: 'Pesées',        Icon: Scale,         minRole: 'editor' },
+  { to: '/users',     label: 'Utilisateurs',  Icon: Users,         minRole: 'administrator' },
+  { to: '/audit',     label: 'Audit Log',     Icon: ClipboardList, minRole: 'administrator' },
 ]
+
+const ROLE_COLORS: Record<string, string> = {
+  administrator: 'text-amber-300',
+  editor:        'text-emerald-400',
+  viewer:        'text-blue-300',
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
@@ -21,7 +36,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [loginError, setLoginError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  // Never collapse when not authenticated — login form needs space
   const isCollapsed = user ? collapsed : false
 
   const visibleLinks = NAV_ITEMS.filter(({ minRole }) => {
@@ -45,79 +59,106 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       {/* ── Sidebar ── */}
       <aside
-        className={clsx(
-          'flex flex-shrink-0 flex-col border-r border-white/10 bg-slate-950 transition-[width] duration-300',
-          isCollapsed ? 'w-14' : 'w-56',
+        className={cn(
+          'flex flex-shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-[width] duration-300',
+          isCollapsed ? 'w-14' : 'w-58',
         )}
       >
-        {/* Branding + collapse */}
-        <div className="flex items-center gap-2 border-b border-white/10 px-3 py-3">
-          <span className="shrink-0 text-xl">🛩️</span>
+        {/* Branding */}
+        <div className={cn(
+          'flex items-center gap-2.5 px-3 py-3.5',
+          isCollapsed && 'justify-center',
+        )}>
+          <PlaneTakeoff
+            className="shrink-0 text-primary"
+            size={20}
+            strokeWidth={1.8}
+          />
           {!isCollapsed && (
-            <span className="font-[Bricolage_Grotesque] truncate text-sm font-bold text-white">
+            <span
+              className="truncate text-sm font-bold tracking-tight text-foreground"
+              style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
+            >
               Aéroclub ACPH
             </span>
           )}
           {user && (
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
               onClick={() => setCollapsed((c) => !c)}
-              className="ml-auto shrink-0 rounded p-1 text-blue-200/60 hover:bg-white/10 hover:text-white"
               title={isCollapsed ? 'Déplier' : 'Replier'}
             >
-              {isCollapsed ? '»' : '«'}
-            </button>
+              {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </Button>
           )}
         </div>
+
+        <Separator className="bg-sidebar-border" />
 
         {/* ── Authenticated: user info + nav ── */}
         {user && (
           <>
             {!isCollapsed && (
-              <div className="border-b border-white/10 px-3 py-3">
-                <p className="text-sm font-semibold text-white">Bienvenue, {user.username}</p>
-                <p className="mt-0.5 text-xs text-blue-200/70">
-                  Votre role est{' '}
-                  <span className="font-medium text-amber-300 underline underline-offset-2">{user.role}</span>
+              <div className="px-3 py-3">
+                <p className="text-sm font-semibold text-foreground">Bienvenue, {user.username}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Rôle :{' '}
+                  <span className={cn('font-medium underline underline-offset-2', ROLE_COLORS[user.role] ?? 'text-foreground')}>
+                    {user.role}
+                  </span>
                 </p>
               </div>
             )}
 
-            <nav className="flex-1 py-2">
-              {visibleLinks.map(({ to, label, icon }) => {
+            <nav className="flex-1 space-y-0.5 px-1.5 py-2">
+              {visibleLinks.map(({ to, label, Icon }) => {
                 const active = to === '/' ? pathname === '/' : pathname.startsWith(to)
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    title={isCollapsed ? label : undefined}
-                    className={clsx(
-                      'flex items-center gap-3 border-l-2 px-3 py-2.5 text-sm transition-colors',
-                      active
-                        ? 'border-amber-300 bg-amber-300/10 font-semibold text-amber-100'
-                        : 'border-transparent text-blue-100/75 hover:bg-white/8 hover:text-blue-50',
-                      isCollapsed && 'justify-center',
-                    )}
-                  >
-                    <span className="shrink-0 text-base leading-none">{icon}</span>
-                    {!isCollapsed && <span>{label}</span>}
+                const linkCls = cn(
+                  'flex items-center gap-3 rounded-md border-l-2 px-2.5 py-2 text-sm transition-colors',
+                  active
+                    ? 'border-primary bg-sidebar-accent text-sidebar-accent-foreground font-semibold'
+                    : 'border-transparent text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground',
+                  isCollapsed && 'justify-center px-2',
+                )
+                return isCollapsed ? (
+                  <Tooltip key={to}>
+                    <TooltipTrigger className="block w-full">
+                      <Link to={to} className={linkCls}>
+                        <Icon size={16} className="shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{label}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Link key={to} to={to} className={linkCls}>
+                    <Icon size={16} className="shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                    <span>{label}</span>
                   </Link>
                 )
               })}
             </nav>
 
-            <div className="border-t border-white/10 p-2">
-              <button
-                type="button"
-                onClick={() => logout()}
-                title={isCollapsed ? 'Déconnexion' : undefined}
-                className={clsx(
-                  'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-red-300/80 hover:bg-red-500/10 hover:text-red-200',
-                  isCollapsed && 'justify-center',
-                )}
-              >
-                <span className="shrink-0">🚪</span>
-                {!isCollapsed && <span>Déconnexion</span>}
-              </button>
+            <Separator className="bg-sidebar-border" />
+
+            <div className="p-2">
+              <Tooltip>
+                <TooltipTrigger className="block w-full">
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      'w-full justify-start gap-3 text-destructive hover:bg-destructive/10 hover:text-destructive',
+                      isCollapsed && 'justify-center px-2',
+                    )}
+                    onClick={() => logout()}
+                  >
+                    <LogOut size={16} strokeWidth={1.8} />
+                    {!isCollapsed && 'Déconnexion'}
+                  </Button>
+                </TooltipTrigger>
+                {isCollapsed && <TooltipContent side="right">Déconnexion</TooltipContent>}
+              </Tooltip>
             </div>
           </>
         )}
@@ -125,78 +166,83 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* ── Unauthenticated: login form ── */}
         {!user && !loading && (
           <div className="flex flex-1 flex-col px-4 py-5">
-            <p className="mb-5 font-[Bricolage_Grotesque] text-xl font-bold text-white">Connexion</p>
+            <div className="mb-5 flex items-center gap-2.5">
+              <LogIn size={18} className="text-primary" strokeWidth={1.8} />
+              <h2
+                className="text-lg font-bold text-foreground"
+                style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
+              >
+                Connexion
+              </h2>
+            </div>
             <form onSubmit={onLogin} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm text-blue-100/80">Identifiant</label>
-                <input
+              <div className="space-y-1.5">
+                <Label htmlFor="sidebar-username" className="text-sm text-muted-foreground">
+                  Identifiant
+                </Label>
+                <Input
+                  id="sidebar-username"
                   name="username"
                   autoComplete="username"
-                  className="w-full rounded-lg border border-white/15 bg-slate-900 px-3 py-2.5 text-sm text-white outline-none placeholder:text-blue-200/30 focus:ring-2 focus:ring-amber-300/50"
+                  className="bg-input/50 border-border/60 focus-visible:ring-primary/60"
                   required
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-sm text-blue-100/80">Mot de passe</label>
+              <div className="space-y-1.5">
+                <Label htmlFor="sidebar-password" className="text-sm text-muted-foreground">
+                  Mot de passe
+                </Label>
                 <div className="relative">
-                  <input
+                  <Input
+                    id="sidebar-password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    className="w-full rounded-lg border border-white/15 bg-slate-900 px-3 py-2.5 pr-10 text-sm text-white outline-none placeholder:text-blue-200/30 focus:ring-2 focus:ring-amber-300/50"
+                    className="bg-input/50 border-border/60 pr-10 focus-visible:ring-primary/60"
                     required
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     tabIndex={-1}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword((s) => !s)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-blue-200/50 hover:text-blue-200"
-                    title={showPassword ? 'Masquer' : 'Afficher'}
                   >
-                    {showPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
-                        <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-                        <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
-                        <path fillRule="evenodd" d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z" clipRule="evenodd" />
-                        <path d="m10.748 13.93 2.523 2.523a9.987 9.987 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z" />
-                      </svg>
-                    )}
-                  </button>
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </Button>
                 </div>
               </div>
               {loginError && (
-                <p className="rounded-md bg-red-500/15 px-3 py-2 text-xs text-red-300">{loginError}</p>
+                <p className="rounded-md bg-destructive/15 px-3 py-2 text-xs text-destructive">
+                  {loginError}
+                </p>
               )}
-              <button
-                type="submit"
-                className="mt-1 flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 active:scale-[0.98]"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="size-4">
-                  <path fillRule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clipRule="evenodd" />
-                  <path fillRule="evenodd" d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-1.047a.75.75 0 1 0-1.06-1.061l-2.25 2.25a.75.75 0 0 0 0 1.061l2.25 2.25a.75.75 0 1 0 1.06-1.06L8.704 10.75H18.25A.75.75 0 0 0 19 10Z" clipRule="evenodd" />
-                </svg>
+              <Button type="submit" className="mt-1 gap-2">
+                <LogIn size={15} strokeWidth={2} />
                 Se connecter
-              </button>
+              </Button>
             </form>
           </div>
         )}
 
         {/* Footer */}
         {!isCollapsed && (
-          <div className="border-t border-white/10 px-3 py-3">
-            <p className="text-xs text-blue-200/50">Made with ❤ by ACPH</p>
-            <p className="text-xs text-blue-200/35">version 1.1.0</p>
-          </div>
+          <>
+            <Separator className="bg-sidebar-border" />
+            <div className="px-3 py-3">
+              <p className="text-[11px] text-muted-foreground/60">Made with ❤ by ACPH</p>
+              <p className="text-[11px] text-muted-foreground/40">version 1.1.0</p>
+            </div>
+          </>
         )}
       </aside>
 
-      {/* ── Main area ── */}
-      <main className="flex min-h-screen flex-1 flex-col overflow-hidden p-5">
+      {/* ── Main content ── */}
+      <main className="flex min-h-screen flex-1 flex-col overflow-hidden p-6">
         {children}
       </main>
     </div>
   )
 }
+
