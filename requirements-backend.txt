@@ -25,7 +25,7 @@ bcrypt==4.3.0
 python-multipart==0.0.6
 
 # Production server (optional, use with: gunicorn -w 4 -k uvicorn.workers.UvicornWorker backend.main:app)
-gunicorn==21.2.0
+gunicorn==22.0.0
 
 # Monitoring and logging (optional)
 # python-json-logger==2.0.7
