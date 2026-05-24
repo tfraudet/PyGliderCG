@@ -73,6 +73,66 @@ def auth_token(test_credentials):
 	raise RuntimeError(f'Failed to obtain test token: {response.status_code} - {response.text}')
 
 
+def _calculate_weight_and_balance(glider_id: str, payload: dict, timeout: int) -> dict:
+	"""Call weight and balance calculation endpoint and return response payload."""
+	response = requests.post(
+		f'{BACKEND_URL}/api/gliders/{glider_id}/calculate',
+		json=payload,
+		timeout=timeout,
+	)
+	assert response.status_code == 200
+	data = response.json()
+	assert 'total_weight' in data
+	assert 'center_of_gravity' in data
+	return data
+
+
+def _get_glider_limits(glider_id: str, timeout: int) -> dict:
+	"""Get glider limit/calculation metadata used in UI computation."""
+	response = requests.get(
+		f'{BACKEND_URL}/api/gliders/{glider_id}/limits',
+		timeout=timeout,
+	)
+	assert response.status_code == 200
+	data = response.json()
+	assert 'mvenp' in data
+	return data
+
+
+def _get_glider_details(glider_id: str, timeout: int) -> dict:
+	"""Get complete glider payload including weight_and_balances polygon points."""
+	response = requests.get(
+		f'{BACKEND_URL}/api/gliders/{glider_id}',
+		timeout=timeout,
+	)
+	assert response.status_code == 200
+	data = response.json()
+	assert 'weight_and_balances' in data
+	return data
+
+
+def _is_point_inside_polygon(point_x: float, point_y: float, polygon: list[list[float]]) -> bool:
+	"""Ray-casting point-in-polygon test."""
+	inside = False
+	num_points = len(polygon)
+	if num_points < 3:
+		return False
+
+	j = num_points - 1
+	for i in range(num_points):
+		xi, yi = polygon[i]
+		xj, yj = polygon[j]
+		intersects = (
+			(yi > point_y) != (yj > point_y)
+			and point_x < (xj - xi) * (point_y - yi) / (yj - yi + 1e-12) + xi
+		)
+		if intersects:
+			inside = not inside
+		j = i
+
+	return inside
+
+
 class TestBackendHealth:
 	"""Backend health and connectivity tests"""
 
@@ -216,6 +276,225 @@ class TestGliderOperations:
 		)
 		
 		assert response.status_code == 404
+
+
+class TestCGCalculationsFromE2E:
+	"""Port of CG scenarios from e2e/cg-calculation.spec.ts to API integration tests."""
+
+	@pytest.mark.parametrize(
+		'scenario',
+		[
+			{
+				'name': 'F-CGUP 80kg pilot',
+				'glider_id': 'F-CGUP',
+				'payload': {
+					'front_pilot_weight': 80.0,
+					'rear_pilot_weight': 0.0,
+					'front_ballast_weight': 0.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 356.0,
+				'expected_total_weight': 364.8,
+				'expected_non_lifting': 212.0,
+			},
+			{
+				'name': 'F-CGUP 95kg pilot',
+				'glider_id': 'F-CGUP',
+				'payload': {
+					'front_pilot_weight': 95.0,
+					'rear_pilot_weight': 0.0,
+					'front_ballast_weight': 0.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 322.0,
+				'expected_total_weight': 379.8,
+				'expected_non_lifting': 227.0,
+			},
+			{
+				'name': 'F-CGUP 62kg pilot out-of-sector',
+				'glider_id': 'F-CGUP',
+				'payload': {
+					'front_pilot_weight': 62.0,
+					'rear_pilot_weight': 0.0,
+					'front_ballast_weight': 0.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 401.0,
+				'expected_total_weight': 346.8,
+				'expected_non_lifting': 194.0,
+				'expected_out_of_sector': True,
+			},
+			{
+				'name': 'D-2080 80kg pilot',
+				'glider_id': 'D-2080',
+				'payload': {
+					'front_pilot_weight': 80.0,
+					'rear_pilot_weight': 0.0,
+					'front_ballast_weight': 0.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 351.0,
+				'expected_total_weight': 364.2,
+				'expected_non_lifting': 214.2,
+			},
+			{
+				'name': 'D-2080 80kg pilot + 3kg rear ballast out-of-sector',
+				'glider_id': 'D-2080',
+				'payload': {
+					'front_pilot_weight': 80.0,
+					'rear_pilot_weight': 0.0,
+					'front_ballast_weight': 0.0,
+					'rear_ballast_weight': 3.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 383.0,
+				'expected_total_weight': 367.2,
+				'expected_non_lifting': 217.2,
+				'expected_out_of_sector': True,
+			},
+			{
+				'name': 'D-2080 65kg pilot + 5kg front ballast',
+				'glider_id': 'D-2080',
+				'payload': {
+					'front_pilot_weight': 65.0,
+					'rear_pilot_weight': 0.0,
+					'front_ballast_weight': 5.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 359.0,
+				'expected_total_weight': 354.2,
+				'expected_non_lifting': 204.2,
+			},
+			{
+				'name': 'F-CJBH 60kg front + 80kg rear pilot',
+				'glider_id': 'F-CJBH',
+				'payload': {
+					'front_pilot_weight': 60.0,
+					'rear_pilot_weight': 80.0,
+					'front_ballast_weight': 0.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 2330.0,
+				'expected_total_weight': 501.4,
+				'expected_non_lifting': 321.0,
+			},
+			{
+				'name': 'F-CJBH 50kg front + 80kg rear pilot out-of-sector',
+				'glider_id': 'F-CJBH',
+				'payload': {
+					'front_pilot_weight': 50.0,
+					'rear_pilot_weight': 80.0,
+					'front_ballast_weight': 0.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 2356.0,
+				'expected_total_weight': 491.4,
+				'expected_non_lifting': 311.0,
+				'expected_out_of_sector': True,
+			},
+			{
+				'name': 'F-CJBH 50kg front + 80kg rear + 5kg front ballast',
+				'glider_id': 'F-CJBH',
+				'payload': {
+					'front_pilot_weight': 50.0,
+					'rear_pilot_weight': 80.0,
+					'front_ballast_weight': 5.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 0.0,
+				},
+				'expected_cg': 2333.0,
+				'expected_total_weight': 496.4,
+				'expected_non_lifting': 316.0,
+				'expected_out_of_sector': False,
+			},
+			{
+				'name': 'F-CJDT 60kg front + 80kg rear + 5kg front + 40kg wing ballast out-of-sector',
+				'glider_id': 'F-CJDT',
+				'payload': {
+					'front_pilot_weight': 60.0,
+					'rear_pilot_weight': 80.0,
+					'front_ballast_weight': 5.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 40.0,
+				},
+				'expected_cg': 203.0,
+				'expected_total_weight': 595.9,
+				'expected_non_lifting': 336.4,
+				'expected_out_of_sector': True,
+				'expected_empty_wing': {
+					'cg': 206.0,
+					'total_weight': 555.9,
+				},
+			},
+			{
+				'name': 'F-CJDT 50kg front + 80kg rear + 5kg front + 40kg wing ballast in-sector',
+				'glider_id': 'F-CJDT',
+				'payload': {
+					'front_pilot_weight': 50.0,
+					'rear_pilot_weight': 80.0,
+					'front_ballast_weight': 5.0,
+					'rear_ballast_weight': 0.0,
+					'wing_water_ballast_weight': 40.0,
+				},
+				'expected_cg': 229.0,
+				'expected_total_weight': 585.9,
+				'expected_non_lifting': 326.4,
+				'expected_out_of_sector': False,
+				'expected_empty_wing': {
+					'cg': 233.0,
+					'total_weight': 545.9,
+				},
+			},
+		],
+		ids=lambda s: s['name'],
+	)
+	def test_cg_scenarios_match_e2e(self, timeout, scenario):
+		glider_id = scenario['glider_id']
+		payload = scenario['payload']
+
+		limits = _get_glider_limits(glider_id, timeout)
+		calc = _calculate_weight_and_balance(glider_id, payload, timeout)
+
+		assert round(calc['center_of_gravity'], 0) == scenario['expected_cg']
+		assert round(calc['total_weight'], 1) == scenario['expected_total_weight']
+
+		non_lifting_weight = (
+			float(limits['mvenp'])
+			+ payload['front_pilot_weight']
+			+ payload['rear_pilot_weight']
+			+ payload['front_ballast_weight']
+			+ payload['rear_ballast_weight']
+		)
+		assert round(non_lifting_weight, 1) == scenario['expected_non_lifting']
+
+		if 'expected_out_of_sector' in scenario:
+			glider = _get_glider_details(glider_id, timeout)
+			polygon = glider['weight_and_balances']
+			assert len(polygon) >= 3
+
+			is_inside = _is_point_inside_polygon(
+				calc['center_of_gravity'],
+				calc['total_weight'],
+				polygon,
+			)
+			if scenario['expected_out_of_sector']:
+				assert not is_inside
+			else:
+				assert is_inside
+
+		if 'expected_empty_wing' in scenario:
+			empty_wing_payload = dict(payload)
+			empty_wing_payload['wing_water_ballast_weight'] = 0.0
+			calc_empty_wing = _calculate_weight_and_balance(glider_id, empty_wing_payload, timeout)
+			assert round(calc_empty_wing['center_of_gravity'], 0) == scenario['expected_empty_wing']['cg']
+			assert round(calc_empty_wing['total_weight'], 1) == scenario['expected_empty_wing']['total_weight']
 
 	@pytest.mark.parametrize('glider_id', ['test-1', 'test-2', 'invalid-id-xyz'])
 	def test_get_nonexistent_gliders(self, timeout, glider_id):
