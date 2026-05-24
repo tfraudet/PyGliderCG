@@ -72,17 +72,11 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: [
-    {
-      command: 'python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000',
-      url: 'http://127.0.0.1:8000/health',
-      reuseExistingServer: false,
-      timeout: 120_000,
-    },
-    {
-      command: 'BACKEND_URL=http://127.0.0.1:8000 streamlit run frontend/streamlit_app.py --server.headless false --server.address 127.0.0.1 --server.port 8501',
-      url: 'http://127.0.0.1:8501/_stcore/health',
-      reuseExistingServer: false,
-      timeout: 120_000,
-    },
+    // {
+    //   command: 'BACKEND_URL=http://127.0.0.1:8000 streamlit run frontend/streamlit_app.py --server.headless false --server.address 127.0.0.1 --server.port 8501 --client.showSidebarNavigation false',
+    //   url: 'http://127.0.0.1:8501/_stcore/health',
+    //   reuseExistingServer: true,
+    //   timeout: 120_000,
+    // },
   ],
 });
