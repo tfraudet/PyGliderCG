@@ -1,6 +1,6 @@
 import datetime
 import pytest
-from gliders import Glider, Limits, Arms, Weighing, DatumWeighingPoints, DatumPilotPosition
+from backend.models.glider import Glider, Limits, Arms, Weighing, DatumWeighingPoints, DatumPilotPosition
 
 @pytest.fixture
 def glider_FCGUP():

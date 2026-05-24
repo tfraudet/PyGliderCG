@@ -10,10 +10,9 @@
 
 data
 **/doc
-**/HFDA64Portable
+
 **/logo
 
-**/PP2
 **/spike
 
 **.dockerignore
@@ -27,7 +26,6 @@ data
 Dockerfile
 *.md
 **.DS_Store
-.streamlit/secrets.toml
 
 # Playwright
 node_modules/
@@ -36,5 +34,3 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /tests-examples/
-
-

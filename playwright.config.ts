@@ -19,14 +19,14 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  /* Run tests sequentially to avoid shared DB state interference */
+  workers: process.env.CI ? 1 : 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://localhost:3000',
+    /* Base URL used by E2E helpers. */
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8501',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -71,9 +71,12 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
+  webServer: [
+    // {
+    //   command: 'BACKEND_URL=http://127.0.0.1:8000 streamlit run frontend/streamlit_app.py --server.headless false --server.address 127.0.0.1 --server.port 8501 --client.showSidebarNavigation false',
+    //   url: 'http://127.0.0.1:8501/_stcore/health',
+    //   reuseExistingServer: true,
+    //   timeout: 120_000,
+    // },
+  ],
 });

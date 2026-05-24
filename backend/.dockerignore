@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+test-results/
+playwright-report/
+.pytest_cache/
+
+# Misc
+.git
+.gitignore
+.dockerignore
+.github/
+.streamlit/
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Documentation
+*.md
+docs/
+
+# Application files that change frequently
+logs/
+*.log
+data/
+.env*
+
+# Temporary files
+tmp/
+temp/
+*.tmp

@@ -1,7 +1,7 @@
 {
   "name": "pyglidercg",
   "version": "1.0.0",
-  "description": "<p align=\"center\"> \t <img src=\"img/app-logo-short-v2.png\" width=\"100\" > </p>",
+  "description": "<p align=\"center\"> \t <img src=\"frontend/img/app-logo-short-v2.png\" width=\"100\" > </p>",
   "main": "index.js",
   "directories": {
     "doc": "doc",
@@ -23,6 +23,7 @@
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.1.0",
-    "dotenv": "^17.2.1"
+    "dotenv": "^17.2.1",
+    "typescript": "^6.0.3"
   }
 }

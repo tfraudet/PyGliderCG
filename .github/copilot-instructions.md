@@ -1,40 +1,97 @@
-# Project Overview
+# PyGliderCG Copilot Instructions
 
-PyGliderCG is a web application for calculating and managing center of gravity (CG) data for gliders. It provides:
-- CG calculation tools for pilots and technicians
-- Administrative interface for managing glider database
-- Weight and balance documentation management
+## Build, test, and lint commands
 
-## Folder Structure
+### Setup
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-backend.txt
+npm install
+```
 
-- `/data`: DuckDB database files and import/export directories
-- `/docs`: Technical documentation for CG calculations and weight/balance procedures
-- `/img`: Glider images and application assets
-- `/logo`: Logo source files and design assets
-- `/e2e`: End-to-end tests written in TypeScript using Playwright
-- `/pages`: Streamlit application pages and components
-- `/spike`: Technical prototypes and experimental code
-- `/tests`: Unit tests using pytest
+### Run app locally (two processes)
+```bash
+# Terminal 1
+python -m uvicorn backend.main:app --reload
 
-## Technologies
+# Terminal 2
+BACKEND_URL=http://localhost:8000 streamlit run frontend/streamlit_app.py
+```
 
-- **Frontend**: Streamlit for web interface and user interactions
-- **Database**: DuckDB for efficient data storage and queries
-- **Visualization**: Plotly for interactive charts and diagrams
-- **Testing**: 
-  - Playwright (TypeScript) for E2E testing
-  - Pytest for Python unit testing
+### Run unified app entrypoint (used in container)
+```bash
+./start.sh
+```
 
-## Coding Standards
+### Build container
+```bash
+docker compose up --build
+```
 
-- Indentation: Use tabs (not spaces)
-- Strings: Use single quotes
-- Python: Follow PEP 8 style guide
-- TypeScript: Use strict mode and type annotations
+### Python tests (pytest)
+```bash
+# Full suite
+pytest tests/ -v
 
-## UI Guidelines
+# Single file
+pytest tests/test_glider.py -v
 
-- Use Streamlit's built-in components when possible
-- Keep interface clean and intuitive for aviation professionals
-- Ensure all numerical inputs have proper validation
-- Display units consistently (metric system)
+# Single test
+pytest tests/test_glider.py::Test_Glider_D2080::test_center_gravity_calculation -v
+
+# Single integration test
+pytest tests/test_integration.py::TestAuthentication::test_login_valid_credentials -v
+```
+
+### E2E tests (Playwright)
+```bash
+playwright install
+
+# Full E2E suite
+npx playwright test --config=playwright.config.ts
+
+# Single spec file
+npx playwright test e2e/glider-mngmt.spec.ts --config=playwright.config.ts --project=chromium
+
+# Single test case
+npx playwright test e2e/glider-mngmt.spec.ts -g "your test title" --config=playwright.config.ts --project=chromium
+```
+
+### Lint
+```bash
+# CI-style lint used in workflow
+pylint backend/ --exit-zero --disable=all --enable=E,F
+```
+
+### Integration-test environment variables
+```bash
+export BACKEND_URL=http://localhost:8000
+export TEST_ADMIN_USERNAME=testadmin
+export TEST_ADMIN_PASSWORD=testpass123
+```
+
+## High-level architecture
+
+- The app is split between a **Streamlit frontend** (`frontend/`) and a **FastAPI backend** (`backend/`). Frontend calls backend over HTTP (`BACKEND_URL`, default `http://localhost:8000`).
+- `backend/main.py` wires routers (`auth`, `users`, `gliders`, `audit`, `database`) and initializes DuckDB schema at startup via `backend/init_db.py`.
+- Backend logic is layered: **API routers** (`backend/api/*`) -> **query layer** (`backend/db/*`) -> **domain models** (`backend/models/*`). CG formulas live in `backend/models/glider.py`.
+- Data is persisted in a single **DuckDB** file (`DB_NAME` env). `glider_queries` rebuilds full `Glider` aggregates (limits, arms, weighings, inventory, WB points) from normalized tables.
+- `frontend/backend_client.py` is the single API client for Streamlit pages. It handles JWT bearer headers, retries for GET requests, and error mapping.
+- Authentication is JWT-based (`COOKIE_KEY`), with roles `administrator`, `editor`, `viewer`. Sidebar navigation (`frontend/pages/sidebar.py`) is role-gated.
+
+## Key codebase conventions
+
+- Keep existing **tab indentation** and **single-quote string style** in Python files; match surrounding file style when editing mixed-style files.
+- Glider API supports both legacy and canonical routes. Frontend uses `/api/gliders/by-id/{glider_id:path}/...` to support registrations containing `/`; prefer `BackendClient._glider_endpoint(...)`.
+- Public vs protected API behavior matters:
+	- Public: glider list/details/limits/calculate.
+	- Admin-only: user CRUD, database import/export, glider mutations, weighing/instrument/WB updates.
+- Streamlit pages under `frontend/pages/` are executable page scripts, usually with:
+	- `st.set_page_config(...)` near top,
+	- auth guard via `st.session_state.authenticated`,
+	- `sidebar_menu()` call in page flow.
+- `@st.cache_data` is used for fetch helpers; after mutating data, explicitly clear related cache (`fetch_*.clear()` or `st.cache_data.clear()`).
+- User management endpoints intentionally return hashed `password` values in responses; frontend `users_ui.py` edits them via table workflows.
+- Date input handling is lenient in glider API (`YYYY-MM-DD`, `DD/MM/YYYY`, `DD-MM-YYYY`, `YYYY/MM/DD`); preserve this behavior when changing request parsing.

@@ -1,0 +1,51 @@
+# Production Docker Compose configuration
+# Usage: docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pyglidercg-app
+    image: tfraudet/pyglidercg:latest
+    restart: always
+    ports:
+      - '8000:8000'
+      - '8501:8501'
+    environment:
+      - APP_DEBUG_MODE=false
+      - DB_NAME=/app/data/gliders.db
+      - HOST=0.0.0.0
+      - PORT=8000
+      - BACKEND_URL=http://127.0.0.1:8000
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+      - STREAMLIT_SERVER_ENABLE_CORS=false
+      - STREAMLIT_CLIENT_TOOLBAR_MODE=minimal
+      - COOKIE_KEY=${COOKIE_KEY:?error}
+      - LOG_LEVEL=WARNING
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    volumes:
+      - /var/lib/pyglider/data:/app/data
+      - /var/lib/pyglider/logs:/app/logs
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health && curl -f http://localhost:8501/_stcore/health']
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '100m'
+        max-file: '3'
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
