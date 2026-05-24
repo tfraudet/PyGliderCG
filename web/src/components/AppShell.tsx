@@ -24,9 +24,9 @@ const NAV_ITEMS = [
 ]
 
 const ROLE_COLORS: Record<string, string> = {
-  administrator: 'text-amber-300',
-  editor:        'text-emerald-400',
-  viewer:        'text-blue-300',
+  administrator: 'text-primary font-semibold',
+  editor:        'text-foreground',
+  viewer:        'text-muted-foreground',
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -77,7 +77,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {!isCollapsed && (
             <span
               className="truncate text-sm font-bold tracking-tight text-foreground"
-              style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
             >
               Aéroclub ACPH
             </span>
@@ -170,7 +169,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <LogIn size={18} className="text-primary" strokeWidth={1.8} />
               <h2
                 className="text-lg font-bold text-foreground"
-                style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
               >
                 Connexion
               </h2>

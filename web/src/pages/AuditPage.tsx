@@ -11,10 +11,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { apiError, backend } from '@/lib/api'
 
 const EVENT_COLOR: Record<string, string> = {
-  CREATE: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  UPDATE: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
-  DELETE: 'bg-destructive/15 text-destructive border-destructive/30',
-  LOGIN:  'bg-amber-500/15 text-amber-300 border-amber-500/30',
+  CREATE: 'bg-primary/10 text-primary border-primary/30',
+  UPDATE: 'bg-secondary text-secondary-foreground border-border',
+  DELETE: 'bg-destructive/10 text-destructive border-destructive/30',
+  LOGIN:  'bg-muted text-muted-foreground border-border',
   LOGOUT: 'bg-muted/50 text-muted-foreground border-border/40',
 }
 
@@ -46,7 +46,6 @@ export function AuditPage() {
           <ClipboardList size={22} className="text-primary" strokeWidth={1.8} />
           <h1
             className="text-xl font-bold text-foreground"
-            style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
           >
             Audit Log
           </h1>

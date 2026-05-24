@@ -72,7 +72,6 @@ export function WeighingsPage() {
         <Scale size={22} className="text-primary" strokeWidth={1.8} />
         <h1
           className="text-xl font-bold text-foreground"
-          style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
         >
           Pesées
         </h1>

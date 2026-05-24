@@ -17,9 +17,9 @@ import type { User } from '@/lib/types'
 const EMPTY_USER: User = { username: '', email: '', password: '', role: 'viewer' }
 
 const ROLE_BADGE: Record<string, string> = {
-  administrator: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-  editor:        'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-  viewer:        'bg-blue-500/20 text-blue-300 border-blue-500/40',
+  administrator: 'bg-primary/10 text-primary border-primary/30',
+  editor:        'bg-secondary text-secondary-foreground border-border',
+  viewer:        'bg-muted text-muted-foreground border-border',
 }
 
 export function UsersPage() {
@@ -80,7 +80,6 @@ export function UsersPage() {
         <Users size={22} className="text-primary" strokeWidth={1.8} />
         <h1
           className="text-xl font-bold text-foreground"
-          style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
         >
           Utilisateurs
         </h1>

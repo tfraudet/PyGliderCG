@@ -84,7 +84,6 @@ export function GlidersPage() {
         <PlaneTakeoff size={22} className="text-primary" strokeWidth={1.8} />
         <h1
           className="text-xl font-bold text-foreground"
-          style={{ fontFamily: 'Bricolage Grotesque, sans-serif' }}
         >
           Gestion des planeurs
         </h1>
