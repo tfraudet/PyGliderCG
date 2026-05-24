@@ -26,7 +26,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL used by E2E helpers. */
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8501',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8501',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',

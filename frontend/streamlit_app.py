@@ -329,6 +329,7 @@ st.set_page_config(
 	page_title='Weight & Balance Calculator',
 	page_icon=FAVICON_WEB,
 	layout='wide',
+	initial_sidebar_state='collapsed',
 )
 active_theme = THEME_LIGHT if is_light_mode() else THEME_DARK
 st.header('✈️ Calculateur Centrage Planeur')
