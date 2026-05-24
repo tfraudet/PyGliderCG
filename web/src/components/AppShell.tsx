@@ -89,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* ── Collapsed: single auth icon ── */}
         {isCollapsed && (
-          <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-1 flex-col items-center justify-start pt-2">
             {user ? (
               <Tooltip>
                 <TooltipTrigger className="flex items-center justify-center">
