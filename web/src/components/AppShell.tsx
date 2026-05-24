@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   Home, PlaneTakeoff, Scale, Users, ClipboardList,
-  ChevronLeft, ChevronRight, LogOut, LogIn, Eye, EyeOff,
+  LogOut, LogIn, Eye, EyeOff, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,35 +64,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           isCollapsed ? 'w-14' : 'w-58',
         )}
       >
-        {/* Branding */}
-        <div className={cn(
-          'flex items-center gap-2.5 px-3 py-3.5',
-          isCollapsed && 'justify-center',
-        )}>
-          <PlaneTakeoff
-            className="shrink-0 text-primary"
-            size={20}
-            strokeWidth={1.8}
-          />
+        {/* Branding / toggle */}
+        <button
+          onClick={() => user && setCollapsed((c) => !c)}
+          className={cn(
+            'flex items-center gap-2.5 px-3 py-3.5 w-full text-left transition-colors',
+            user ? 'hover:bg-sidebar-accent cursor-pointer' : 'cursor-default',
+            isCollapsed && 'justify-center',
+          )}
+          aria-label={isCollapsed ? 'Déplier le menu' : 'Replier le menu'}
+        >
+          {isCollapsed
+            ? <PanelLeftOpen  size={20} strokeWidth={1.6} className="shrink-0 text-primary" />
+            : <PanelLeftClose size={20} strokeWidth={1.6} className="shrink-0 text-primary" />
+          }
           {!isCollapsed && (
-            <span
-              className="truncate text-sm font-bold tracking-tight text-foreground"
-            >
+            <span className="truncate text-sm font-bold tracking-tight text-foreground">
               Aéroclub ACPH
             </span>
           )}
-          {user && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-auto h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-              onClick={() => setCollapsed((c) => !c)}
-              title={isCollapsed ? 'Déplier' : 'Replier'}
-            >
-              {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-            </Button>
-          )}
-        </div>
+        </button>
 
         <Separator className="bg-sidebar-border" />
 
