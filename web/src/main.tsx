@@ -6,22 +6,34 @@ import { BrowserRouter } from 'react-router-dom'
 import { App } from './App'
 import { AuthProvider } from './state/auth'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-// Always dark — cockpit theme
 document.documentElement.classList.add('dark')
 
-const queryClient = new QueryClient()
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      throwOnError: false,
+    },
+    mutations: {
+      throwOnError: false,
+    },
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <TooltipProvider>
-            <App />
-          </TooltipProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <TooltipProvider>
+              <App />
+            </TooltipProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )

@@ -218,7 +218,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               {loginError && (
                 <p className="rounded-md bg-destructive/15 px-3 py-2 text-xs text-destructive">
-                  {loginError}
+                  {String(loginError)}
                 </p>
               )}
               <Button type="submit" className="mt-1 gap-2">
