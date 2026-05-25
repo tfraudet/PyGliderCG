@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Calculator, TriangleAlert, PlaneTakeoff } from 'lucide-react'
+import { Calculator, TriangleAlert, PlaneTakeoff, UserRound, UsersRound, Barcode, Plane } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -70,15 +70,12 @@ export function HomePage() {
       </Alert>
 
       {/* Glider selector */}
-      <Card className="border-border/60 bg-card/80">
-        <CardHeader className="pb-3 pt-4 px-4">
-          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Sélection du planeur
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+      <Card>
+        <CardHeader className="flex flex-wrap items-center gap-3">
+          <CardTitle>Planeur</CardTitle>
+
           <Select value={selected} onValueChange={(v: string | null) => { if (v) setSelected(v) }} disabled={glidersQuery.isLoading}>
-            <SelectTrigger className="bg-input/50">
+            <SelectTrigger className="bg-input/50 min-w-[15rem]">
               <SelectValue placeholder={glidersQuery.isLoading ? 'Chargement…' : 'Sélectionner un planeur…'} />
             </SelectTrigger>
             <SelectContent>
@@ -89,15 +86,20 @@ export function HomePage() {
               ))}
             </SelectContent>
           </Select>
-
+        </CardHeader>
+        <CardContent>
           {selectedGlider && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               <Badge variant="secondary" className="text-xs">
-                <PlaneTakeoff size={11} className="mr-1" />
+                <Plane size={11} className="mr-1"/>
                 {selectedGlider.brand}
               </Badge>
-              <Badge variant="secondary" className="text-xs">{selectedGlider.model}</Badge>
+              <Badge variant="secondary" className="text-xs">
+                <Barcode size={11} className="mr-1"/>
+                {selectedGlider.model}
+              </Badge>
               <Badge variant="outline" className="text-xs">
+                {selectedGlider.single_seat ?  <UserRound /> : <UsersRound /> }
                 {selectedGlider.single_seat ? 'Monoplace' : 'Biplace'}
               </Badge>
             </div>
