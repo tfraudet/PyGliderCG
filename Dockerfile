@@ -24,8 +24,7 @@ RUN apk add --no-cache --virtual .build-deps \
 	&& apk add --no-cache cairo
 
 # install python dependencies for backend
-RUN pip3 install --no-cache-dir -r requirements.txt && \
-	pip3 install --no-cache-dir -r requirements-backend.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Clean up build tools to save space
 RUN apk del .build-deps

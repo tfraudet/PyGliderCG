@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Users, Plus, Save, Trash2, Database, Upload } from 'lucide-react'
+import { Users, Plus, Save, Trash2, Database, Upload, ArrowUpDown } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Separator } from '@/components/ui/separator'
+import { DataTable } from '@/components/DataTable'
 import { apiError, backend } from '@/lib/api'
 import type { User } from '@/lib/types'
 
@@ -32,11 +34,6 @@ export function UsersPage() {
     queryKey: ['users'],
     queryFn: () => backend.getUsers(),
   })
-
-  const selectedUser = useMemo(
-    () => usersQuery.data?.find((item) => item.username === selectedUsername) ?? null,
-    [usersQuery.data, selectedUsername],
-  )
 
   const saveMutation = useMutation({
     mutationFn: async () =>
@@ -74,122 +71,177 @@ export function UsersPage() {
 
   const anyError = saveMutation.error ?? deleteMutation.error ?? exportMutation.error ?? importMutation.error
 
+  // Define columns for the data table
+  const columns: ColumnDef<User>[] = [
+    {
+      accessorKey: 'username',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-auto p-0 font-semibold hover:bg-transparent"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Identifiant
+          {column.getIsSorted() && (
+            <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+          )}
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span
+          className="cursor-pointer hover:underline"
+          onClick={() => {
+            setSelectedUsername(row.original.username)
+            setDraft({ ...row.original, password: '' })
+            setNewMode(false)
+          }}
+        >
+          {row.getValue('username')}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'email',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-auto p-0 font-semibold hover:bg-transparent"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          eMail
+          {column.getIsSorted() && (
+            <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
+          )}
+        </Button>
+      ),
+      cell: ({ row }) => <div className="break-all">{row.getValue('email')}</div>,
+    },
+    {
+      accessorKey: 'password',
+      header: 'Mot de passe',
+      cell: ({ row }) => {
+        const pwd = row.getValue('password') as string
+        return (
+          <span className="font-mono text-xs text-muted-foreground break-all">
+            {pwd ? `${pwd.substring(0, 20)}…` : '—'}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: 'role',
+      header: 'Rôle',
+      cell: ({ row }) => (
+        <Badge variant="outline" className={`text-xs ${ROLE_BADGE[row.getValue('role') as string]}`}>
+          {row.getValue('role')}
+        </Badge>
+      ),
+    },
+  ]
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <Users size={22} className="text-primary" strokeWidth={1.8} />
-        <h1
-          className="text-xl font-bold text-foreground"
-        >
-          Utilisateurs
-        </h1>
+        <h1 className="text-xl font-bold text-foreground">Liste des utilisateurs</h1>
       </div>
 
       <Card className="border-border/60 bg-card/80">
-        <CardContent className="flex flex-wrap items-center gap-2 px-4 py-3">
-          <Select
-            value={selectedUsername}
-            onValueChange={(u: string | null) => {
-              if (!u) return
-              setSelectedUsername(u)
-              const next = usersQuery.data?.find((item) => item.username === u)
-              if (next) { setDraft({ ...next, password: '' }); setNewMode(false) }
-            }}
-          >
-            <SelectTrigger className="w-56 bg-input/50">
-              <SelectValue placeholder="Sélectionner un utilisateur…" />
-            </SelectTrigger>
-            <SelectContent>
-              {usersQuery.data?.map((item) => (
-                <SelectItem key={item.username} value={item.username}>
-                  <span className="flex items-center gap-2">
-                    {item.username}
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${ROLE_BADGE[item.role]}`}>
-                      {item.role}
-                    </Badge>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {selectedUser && (
-            <Badge variant="outline" className={`${ROLE_BADGE[selectedUser.role]}`}>
-              {selectedUser.role}
-            </Badge>
-          )}
-
-          <Button
-            variant="outline" size="sm" className="gap-1.5"
-            onClick={() => { setNewMode(true); setDraft(EMPTY_USER); setSelectedUsername('') }}
-          >
-            <Plus size={14} /> Nouveau
-          </Button>
-          <Button
-            size="sm" className="gap-1.5"
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending}
-          >
-            <Save size={14} /> Enregistrer
-          </Button>
-          <Button
-            variant="destructive" size="sm" className="gap-1.5"
-            onClick={() => deleteMutation.mutate()}
-            disabled={!selectedUsername || deleteMutation.isPending}
-          >
-            <Trash2 size={14} /> Supprimer
-          </Button>
+        <CardContent className="px-4 py-4">
+          <DataTable
+            columns={columns}
+            data={usersQuery.data ?? []}
+            filterColumn="username"
+            filterPlaceholder="Filtrer par identifiant…"
+          />
         </CardContent>
       </Card>
 
       <Card className="border-border/60 bg-card/80">
-        <CardContent className="grid gap-4 px-4 py-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Identifiant</Label>
-            <Input
-              value={draft.username}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setDraft((prev) => ({ ...prev, username: e.target.value }))}
-              className="bg-input/50"
-            />
+        <CardHeader className="pb-3 pt-4 px-4">
+          <CardTitle className="text-sm font-semibold text-foreground">
+            {newMode ? 'Nouvel utilisateur' : 'Éditer l\'utilisateur'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 px-4 pb-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Identifiant</Label>
+              <Input
+                value={draft.username}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setDraft((prev) => ({ ...prev, username: e.target.value }))}
+                className="bg-input/50"
+                placeholder="ex: jdoe"
+                disabled={!newMode && selectedUsername !== ''}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Input
+                type="email"
+                value={draft.email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setDraft((prev) => ({ ...prev, email: e.target.value }))}
+                className="bg-input/50"
+                placeholder="ex: john@example.com"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Mot de passe</Label>
+              <Input
+                type="password"
+                value={draft.password ?? ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setDraft((prev) => ({ ...prev, password: e.target.value }))}
+                className="bg-input/50"
+                placeholder={newMode ? 'Mot de passe' : 'Laisser vide pour ne pas changer'}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Rôle</Label>
+              <Select
+                value={draft.role}
+                onValueChange={(v: string | null) =>
+                  setDraft((prev) => ({ ...prev, role: (v ?? 'viewer') as User['role'] }))}
+              >
+                <SelectTrigger className="bg-input/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="viewer">viewer</SelectItem>
+                  <SelectItem value="editor">editor</SelectItem>
+                  <SelectItem value="administrator">administrator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Email</Label>
-            <Input
-              type="email"
-              value={draft.email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setDraft((prev) => ({ ...prev, email: e.target.value }))}
-              className="bg-input/50"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Mot de passe</Label>
-            <Input
-              type="password"
-              value={draft.password ?? ''}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setDraft((prev) => ({ ...prev, password: e.target.value }))}
-              className="bg-input/50"
-              placeholder="Laisser vide pour ne pas changer"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">Rôle</Label>
-            <Select
-              value={draft.role}
-              onValueChange={(v: string | null) =>
-                setDraft((prev) => ({ ...prev, role: (v ?? 'viewer') as User['role'] }))}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm" className="gap-1.5"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending || !draft.username || (newMode && !draft.password)}
             >
-              <SelectTrigger className="bg-input/50">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="viewer">viewer</SelectItem>
-                <SelectItem value="editor">editor</SelectItem>
-                <SelectItem value="administrator">administrator</SelectItem>
-              </SelectContent>
-            </Select>
+              <Save size={14} /> Enregistrer
+            </Button>
+            {selectedUsername && (
+              <Button
+                variant="destructive" size="sm" className="gap-1.5"
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 size={14} /> Supprimer
+              </Button>
+            )}
+            <Button
+              variant="outline" size="sm" className="gap-1.5"
+              onClick={() => { setNewMode(true); setDraft(EMPTY_USER); setSelectedUsername('') }}
+            >
+              <Plus size={14} /> Nouveau
+            </Button>
           </div>
         </CardContent>
       </Card>

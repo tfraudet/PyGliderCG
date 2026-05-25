@@ -10,8 +10,8 @@ RUN apk add --no-cache --virtual .build-deps \
 	python3-dev
 
 # Copy requirements and install to /install directory
-COPY requirements-backend.txt .
-RUN pip install --user --no-cache-dir -r requirements-backend.txt
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
 
 # Stage 2: Runtime
 FROM python:3.12.13-alpine3.23

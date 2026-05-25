@@ -1,5 +1,5 @@
 <p align="center">
-	 <img src="frontend/img/app-logo-short-v2.png" width="100" >
+	<h1>PyGliderCG</h1>
 </p>
 
 # Center of Gravity Calculator for ACPH Gliders
@@ -50,7 +50,6 @@ On Window systems
 
 ```bash
 pip install -r requirements.txt
-pip install -r requirements-backend.txt
 npm install
 ```
 

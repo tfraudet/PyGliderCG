@@ -1,11 +1,11 @@
 # PyGliderCG Production Deployment Guide
 
-> **Important:** the current runtime model is a **single Docker container** running both FastAPI and Streamlit.  
-> Commands below in the "Quick Start with Docker Compose" section reflect this unified setup.
+> **Overview:** Single Docker container running both FastAPI backend and React frontend (built assets).  
+> The application is containerized and uses Docker Compose for orchestration.
 
 ## Overview
 
-This guide covers deploying the PyGliderCG application (FastAPI backend + Streamlit frontend) to production. The application uses Docker and Docker Compose for containerization and orchestration.
+This guide covers deploying the PyGliderCG application (FastAPI backend + React frontend) to production. The application uses Docker and Docker Compose for containerization and orchestration.
 
 ## Table of Contents
 
@@ -78,15 +78,15 @@ cd PyGliderCG
 cp .env.example .env
 # Edit .env and set required values, especially COOKIE_KEY
 
-# 3. Start application service (frontend + backend)
+# 3. Start application service (backend serving frontend + API)
 docker compose up -d --build
 
 # 4. Verify service is running
 docker compose ps
 
 # 5. Access services:
-# - Frontend: http://localhost:8501
-# - Backend API: http://localhost:8000
+# - Frontend UI: http://localhost:8000
+# - Backend API: http://localhost:8000/api
 # - API Docs: http://localhost:8000/docs
 ```
 
@@ -140,51 +140,34 @@ docker build -t pyglider-backend:v0.1.0 -f backend/Dockerfile .
 DOCKER_BUILDKIT=1 docker build -t pyglider-backend:latest -f backend/Dockerfile .
 ```
 
-#### Frontend Image
+#### Building the Unified App Container
+
+The Docker image builds both the React frontend and Python backend, then serves them from a single container:
 
 ```bash
-# Build frontend image
-docker build -t pyglider-frontend:latest .
+# Build unified app image (includes React build)
+docker build -t pyglidercg:latest .
 
 # Build with version tag
-docker build -t pyglider-frontend:v0.1.0 .
+docker build -t pyglidercg:v0.1.0 .
 ```
 
-### Running Individual Containers
-
-#### Backend Container
+### Running the Application Container
 
 ```bash
-# Run backend standalone
+# Run unified app (FastAPI backend + React frontend on one port)
 docker run -d \
-  --name pyglider-backend \
+  --name pyglidercg-app \
   -p 8000:8000 \
-  -e DEBUG=false \
+  -e APP_DEBUG_MODE=false \
   -e DB_NAME=/app/data/gliders.db \
   -e COOKIE_KEY="your-secret-key-here" \
   -v $(pwd)/data:/app/data \
-  pyglider-backend:latest
+  pyglidercg:latest
 
-# Health check
+# Health check - both backend API and frontend UI
 curl http://localhost:8000/health
-```
-
-#### Unified Application Container
-
-```bash
-# Run unified app (FastAPI + Streamlit in one container)
-docker run -d \
-  --name pyglider-app \
-  -p 8000:8000 \
-  -p 8501:8501 \
-  -e DEBUG=false \
-  -e BACKEND_URL=http://127.0.0.1:8000 \
-  -v $(pwd)/data:/app/data \
-  pyglider-app:latest
-
-# Health check
-curl http://localhost:8000/health
-curl http://localhost:8501/_stcore/health
+curl http://localhost:8000/
 ```
 
 ### Multi-container with Docker Compose
@@ -236,58 +219,6 @@ upstream backend {
     server localhost:8000;
 }
 
-upstream frontend {
-    server localhost:8501;
-}
-
-server {
-    listen 80;
-    server_name api.yourdomain.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name api.yourdomain.com;
-
-    # SSL Configuration
-    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-
-    # Security Headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-Frame-Options "DENY" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self'" always;
-
-    # Logging
-    access_log /var/log/nginx/pyglider-api-access.log;
-    error_log /var/log/nginx/pyglider-api-error.log;
-
-    # API Proxy
-    location / {
-        proxy_pass http://backend;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-
-    # Rate limiting
-    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/m;
-    limit_req zone=api_limit burst=200 nodelay;
-}
-
 server {
     listen 80;
     server_name yourdomain.com;
@@ -315,31 +246,21 @@ server {
     add_header Referrer-Policy "no-referrer-when-downgrade" always;
 
     # Logging
-    access_log /var/log/nginx/pyglider-frontend-access.log;
-    error_log /var/log/nginx/pyglider-frontend-error.log;
+    access_log /var/log/nginx/pyglidercg-access.log;
+    error_log /var/log/nginx/pyglidercg-error.log;
 
-    # Frontend Proxy
+    # Proxy to unified app (backend serving React frontend + API)
     location / {
-        proxy_pass http://frontend;
+        proxy_pass http://backend;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
-        proxy_buffering off;
-    }
-
-    # WebSocket support for Streamlit
-    location /_stcore/stream {
-        proxy_pass http://frontend;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
     }
 }
 ```
@@ -371,29 +292,27 @@ sudo systemctl start certbot.timer
 sudo certbot renew --dry-run
 ```
 
-### SystemD Service Files
+### SystemD Service File
 
-#### Backend Service
-
-Create `/etc/systemd/system/pyglider-backend.service`:
+Create `/etc/systemd/system/pyglidercg.service`:
 
 ```ini
 [Unit]
-Description=PyGliderCG Backend (FastAPI)
+Description=PyGliderCG (FastAPI backend + React frontend)
 After=docker.service
 Requires=docker.service
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/pyglider
-EnvironmentFile=/opt/pyglider/.env
+WorkingDirectory=/opt/pyglidercg
+EnvironmentFile=/opt/pyglidercg/.env
 ExecStart=/usr/bin/docker run --rm \
-    --name pyglider-backend \
+    --name pyglidercg-app \
     -p 8000:8000 \
-    --env-file /opt/pyglider/.env \
-    -v /var/lib/pyglider/data:/app/data \
-    pyglider-backend:latest
+    --env-file /opt/pyglidercg/.env \
+    -v /var/lib/pyglidercg/data:/app/data \
+    pyglidercg:latest
 Restart=always
 RestartSec=10
 
@@ -401,41 +320,13 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-#### Frontend Service
-
-Create `/etc/systemd/system/pyglider-frontend.service`:
-
-```ini
-[Unit]
-Description=PyGliderCG Frontend (Streamlit)
-After=docker.service pyglider-backend.service
-Requires=docker.service pyglider-backend.service
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/opt/pyglider
-EnvironmentFile=/opt/pyglider/.env
-ExecStart=/usr/bin/docker run --rm \
-    --name pyglider-frontend \
-    -p 8501:8501 \
-    --env-file /opt/pyglider/.env \
-    -v /var/lib/pyglider/data:/app/data \
-    pyglider-frontend:latest
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start services:
+Enable and start the service:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable pyglider-backend pyglider-frontend
-sudo systemctl start pyglider-backend pyglider-frontend
-sudo systemctl status pyglider-backend pyglider-frontend
+sudo systemctl enable pyglidercg
+sudo systemctl start pyglidercg
+sudo systemctl status pyglidercg
 ```
 
 ---
@@ -447,15 +338,12 @@ sudo systemctl status pyglider-backend pyglider-frontend
 Initialize the DuckDB database:
 
 ```bash
-# Using docker-compose profile
-docker-compose --profile init up db-init
-
-# Or manually run init script
+# Using unified app container
 docker run --rm \
-    -v /var/lib/pyglider/data:/app/data \
+    -v /var/lib/pyglidercg/data:/app/data \
     -e DB_NAME=/app/data/gliders.db \
-    pyglider-frontend:latest \
-    python init_db.py
+    pyglidercg:latest \
+    python -m backend.init_db
 ```
 
 ### Database Backups
@@ -522,11 +410,14 @@ du -h /var/lib/pyglider/data/gliders.db
 
 ## Health Checks & Monitoring
 
-### Backend Health Check
+### Application Health Checks
 
 ```bash
-# Basic health check
+# Basic health check (backend API)
 curl -s http://localhost:8000/health | jq .
+
+# Check frontend UI is served
+curl -s http://localhost:8000/ | grep -q '<html>' && echo "Frontend OK" || echo "Frontend Error"
 
 # Continuous monitoring
 watch -n 5 'curl -s http://localhost:8000/health | jq .'
@@ -535,30 +426,20 @@ watch -n 5 'curl -s http://localhost:8000/health | jq .'
 curl -w "\nHTTP Status: %{http_code}\n" -s http://localhost:8000/health
 ```
 
-### Frontend Health Check
-
-```bash
-# Streamlit health endpoint
-curl -s http://localhost:8501/_stcore/health
-
-# Full status check
-curl -w "\nHTTP Status: %{http_code}\n" -s http://localhost:8501/_stcore/health
-```
-
 ### Docker Container Health
 
 ```bash
 # Check container status
 docker-compose ps
 
-# View detailed container logs
-docker-compose logs backend frontend
+# View container logs
+docker-compose logs -f app
 
 # Monitor in real-time
 docker stats
 
 # Check container health status
-docker inspect pyglider-backend | jq '.[0].State.Health'
+docker inspect pyglidercg-app | jq '.[0].State.Health'
 ```
 
 ### Prometheus Monitoring (Optional)
@@ -820,7 +701,7 @@ docker-compose logs backend > backup/logs-$(date +%Y%m%d).txt
 
 - **GitHub Issues**: [PyGliderCG Issues](https://github.com/tfraudet/PyGliderCG/issues)
 - **FastAPI Documentation**: https://fastapi.tiangolo.com/
-- **Streamlit Documentation**: https://docs.streamlit.io/
+- **React Documentation**: https://react.dev/
 - **Docker Documentation**: https://docs.docker.com/
 
 ---
