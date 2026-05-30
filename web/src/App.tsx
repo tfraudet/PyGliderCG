@@ -2,6 +2,7 @@ import type { ReactElement } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { AuditPage } from './pages/AuditPage'
+import { GliderEditorPage } from './pages/GliderEditorPage'
 import { GlidersPage } from './pages/GlidersPage'
 import { HomePage } from './pages/HomePage'
 import { UsersPage } from './pages/UsersPage'
@@ -41,6 +42,22 @@ export function App() {
           element={
             <Guard minRole="editor">
               <GlidersPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/gliders/new"
+          element={
+            <Guard minRole="editor">
+              <GliderEditorPage mode="create" />
+            </Guard>
+          }
+        />
+        <Route
+          path="/gliders/edit"
+          element={
+            <Guard minRole="editor">
+              <GliderEditorPage mode="edit" />
             </Guard>
           }
         />

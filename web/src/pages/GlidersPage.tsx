@@ -1,447 +1,333 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlaneTakeoff, Plus, Save, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
+import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, MoreHorizontal, Pencil, PlaneTakeoff, Plus, Trash2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+	Pagination,
+	PaginationContent,
+	PaginationEllipsis,
+	PaginationItem,
+	PaginationLink,
+	PaginationNext,
+	PaginationPrevious,
+} from '@/components/ui/pagination'
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table'
 import { apiError, backend } from '@/lib/api'
-import { EMPTY_GLIDER, type Glider, type Instrument } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
-function cloneGlider(glider: Glider): Glider {
-  return JSON.parse(JSON.stringify(glider)) as Glider
+const PAGE_SIZE = 10
+
+type PageToken = number | 'ellipsis'
+type SortKey = 'registration' | 'model' | 'brand' | 'serial_number' | 'single_seat'
+type SortDirection = 'asc' | 'desc'
+
+function isChecked(value: boolean | 'indeterminate') {
+	return value === true
 }
 
-const LIMIT_LABELS: Record<string, string> = {
-  mve: 'MVE (kg)', mvenp: 'MVENP (kg)', cu_max: 'CU max (mm)',
-  cu_min: 'CU min (mm)', cu_solo: 'CU solo (mm)',
-}
-const ARM_LABELS: Record<string, string> = {
-  front_pilot_arm: 'Bras pilote avant (mm)', rear_pilot_arm: 'Bras pilote arrière (mm)',
-  front_ballast_arm: 'Bras ballast avant (mm)', rear_ballast_arm: 'Bras ballast arrière (mm)',
-  wing_water_ballast_arm: 'Bras ballast eau (mm)',
+function getPageTokens(pageCount: number, currentPage: number): PageToken[] {
+	if (pageCount <= 7) return Array.from({ length: pageCount }, (_, index) => index + 1)
+	if (currentPage <= 3) return [1, 2, 3, 4, 'ellipsis', pageCount]
+	if (currentPage >= pageCount - 2) return [1, 'ellipsis', pageCount - 3, pageCount - 2, pageCount - 1, pageCount]
+	return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', pageCount]
 }
 
 export function GlidersPage() {
-  const queryClient = useQueryClient()
-  const [selectedRegistration, setSelectedRegistration] = useState('')
-  const [draft, setDraft] = useState<Glider>(cloneGlider(EMPTY_GLIDER))
-  const [newMode, setNewMode] = useState(false)
+	const navigate = useNavigate()
+	const queryClient = useQueryClient()
+	const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>([])
+	const [currentPage, setCurrentPage] = useState(1)
+	const [sortKey, setSortKey] = useState<SortKey>('registration')
+	const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
-  const glidersQuery = useQuery({
-    queryKey: ['gliders'],
-    queryFn: () => backend.getGliders(),
-  })
+	const glidersQuery = useQuery({
+		queryKey: ['gliders'],
+		queryFn: () => backend.getGliders(),
+	})
 
-  const selectedGlider = useMemo(
-    () => glidersQuery.data?.find((item) => item.registration === selectedRegistration) ?? null,
-    [glidersQuery.data, selectedRegistration],
-  )
+	const deleteMutation = useMutation({
+		mutationFn: async (registrations: string[]) => Promise.all(registrations.map((registration) => backend.deleteGlider(registration))),
+		onSuccess: async (_, registrations) => {
+			await queryClient.invalidateQueries({ queryKey: ['gliders'] })
+			setSelectedRegistrations((previous) => previous.filter((registration) => !registrations.includes(registration)))
+		},
+	})
 
-  const saveMutation = useMutation({
-    mutationFn: async () =>
-      newMode ? backend.createGlider(draft) : backend.updateGlider(selectedRegistration, draft),
-    onSuccess: async (saved) => {
-      await queryClient.invalidateQueries({ queryKey: ['gliders'] })
-      setSelectedRegistration(saved.registration)
-      setDraft(cloneGlider(saved))
-      setNewMode(false)
-    },
-  })
+	const gliders = glidersQuery.data ?? []
+	const sortedGliders = useMemo(
+		() => [...gliders].sort((left, right) => {
+			if (sortKey === 'single_seat') {
+				if (left.single_seat !== right.single_seat) {
+					return sortDirection === 'asc'
+						? Number(left.single_seat) - Number(right.single_seat)
+						: Number(right.single_seat) - Number(left.single_seat)
+				}
+			} else {
+				const leftValue = String(left[sortKey] ?? '')
+				const rightValue = String(right[sortKey] ?? '')
+				const comparison = leftValue.localeCompare(rightValue, undefined, { numeric: true, sensitivity: 'base' })
+				if (comparison !== 0) {
+					return sortDirection === 'asc' ? comparison : -comparison
+				}
+			}
 
-  const deleteMutation = useMutation({
-    mutationFn: async () => backend.deleteGlider(selectedRegistration),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['gliders'] })
-      setDraft(cloneGlider(EMPTY_GLIDER))
-      setSelectedRegistration('')
-      setNewMode(false)
-    },
-  })
+			return left.registration.localeCompare(right.registration, undefined, { numeric: true, sensitivity: 'base' })
+		}),
+		[gliders, sortDirection, sortKey],
+	)
+	const allSelected = sortedGliders.length > 0 && selectedRegistrations.length === sortedGliders.length
+	const pageCount = Math.max(1, Math.ceil(sortedGliders.length / PAGE_SIZE))
+	const currentPageGliders = useMemo(() => {
+		const startIndex = (currentPage - 1) * PAGE_SIZE
+		return sortedGliders.slice(startIndex, startIndex + PAGE_SIZE)
+	}, [currentPage, sortedGliders])
+	const pageTokens = useMemo(() => getPageTokens(pageCount, currentPage), [currentPage, pageCount])
+	const visibleStart = sortedGliders.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
+	const visibleEnd = sortedGliders.length === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, sortedGliders.length)
 
-  const saveInventory = useMutation({
-    mutationFn: async () => backend.updateGliderInstruments(draft.registration, draft.instruments),
-  })
+	useEffect(() => {
+		setSelectedRegistrations((previous) => previous.filter((registration) => sortedGliders.some((item) => item.registration === registration)))
+	}, [sortedGliders])
 
-  const saveWeightBalances = useMutation({
-    mutationFn: async () =>
-      backend.updateWeightBalances(draft.registration, draft.weight_and_balances),
-  })
+	useEffect(() => {
+		if (currentPage > pageCount) setCurrentPage(pageCount)
+	}, [currentPage, pageCount])
 
-  const hasSelection = newMode || Boolean(selectedRegistration)
+	function toggleSort(nextKey: SortKey) {
+		setCurrentPage(1)
+		if (sortKey === nextKey) {
+			setSortDirection((current) => current === 'asc' ? 'desc' : 'asc')
+			return
+		}
 
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <PlaneTakeoff size={22} className="text-primary" strokeWidth={1.8} />
-        <h1
-          className="text-xl font-bold text-foreground"
-        >
-          Gestion des planeurs
-        </h1>
-      </div>
+		setSortKey(nextKey)
+		setSortDirection('asc')
+	}
 
-      {/* Toolbar */}
-      <Card className="border-border/60 bg-card/80">
-        <CardContent className="flex flex-wrap items-center gap-2 px-4 py-3">
-          <Select
-            value={selectedRegistration}
-            onValueChange={(value: string | null) => {
-              if (!value) return
-              setSelectedRegistration(value)
-              const found = glidersQuery.data?.find((item) => item.registration === value)
-              if (found) { setDraft(cloneGlider(found)); setNewMode(false) }
-            }}
-          >
-            <SelectTrigger className="w-56 bg-input/50">
-              <SelectValue placeholder="Sélectionner un planeur…" />
-            </SelectTrigger>
-            <SelectContent>
-              {glidersQuery.data?.map((item) => (
-                <SelectItem key={item.registration} value={item.registration}>
-                  {item.registration} — {item.model}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+	return (
+		<div className="flex flex-col gap-6">
+			<div className="flex items-center gap-3">
+				<PlaneTakeoff className="text-primary" />
+				<div>
+					<h1 className="text-3xl font-bold tracking-tight">Gestion des planeurs</h1>
+					<p className="text-muted-foreground">Affichez, modifiez et supprimez les planeurs enregistres.</p>
+				</div>
+			</div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => { setDraft(cloneGlider(EMPTY_GLIDER)); setNewMode(true); setSelectedRegistration('') }}
-          >
-            <Plus size={14} /> Nouveau
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => saveMutation.mutate()}
-            disabled={!hasSelection || saveMutation.isPending}
-          >
-            <Save size={14} /> Enregistrer
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => deleteMutation.mutate()}
-            disabled={!selectedRegistration || deleteMutation.isPending}
-          >
-            <Trash2 size={14} /> Supprimer
-          </Button>
-        </CardContent>
-      </Card>
+			{glidersQuery.error && (
+				<Alert variant="destructive">
+					<AlertDescription className="whitespace-pre-wrap break-words">{apiError(glidersQuery.error)}</AlertDescription>
+				</Alert>
+			)}
 
-      {(saveMutation.error || deleteMutation.error) && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {apiError(saveMutation.error ?? deleteMutation.error)}
-          </AlertDescription>
-        </Alert>
-      )}
+			{deleteMutation.error && (
+				<Alert variant="destructive">
+					<AlertDescription className="whitespace-pre-wrap break-words">{apiError(deleteMutation.error)}</AlertDescription>
+				</Alert>
+			)}
 
-      {/* Tabs */}
-      {hasSelection && (
-        <Tabs defaultValue="fiche">
-          <TabsList className="bg-muted/40 border border-border/40">
-            <TabsTrigger value="fiche">Fiche</TabsTrigger>
-            <TabsTrigger value="limites">Limites &amp; Bras</TabsTrigger>
-            <TabsTrigger value="inventaire">Inventaire</TabsTrigger>
-            <TabsTrigger value="wb">Masse / Centrage</TabsTrigger>
-          </TabsList>
+			<div className="flex flex-wrap items-center justify-end gap-2">
+				<Button
+					variant="destructive"
+					onClick={() => deleteMutation.mutate(selectedRegistrations)}
+					disabled={deleteMutation.isPending || selectedRegistrations.length === 0}
+				>
+					<Trash2 data-icon="inline-start" />
+					Supprimer la selection
+				</Button>
+				<Button onClick={() => navigate('/gliders/new')}>
+					<Plus data-icon="inline-start" />
+					Ajouter un planeur
+				</Button>
+			</div>
 
-          {/* ── Fiche ── */}
-          <TabsContent value="fiche">
-            <Card className="border-border/60 bg-card/80">
-              <CardContent className="grid gap-4 px-4 py-4 sm:grid-cols-2">
-                {[
-                  { key: 'registration' as keyof Glider, label: 'Immatriculation' },
-                  { key: 'model' as keyof Glider,        label: 'Modèle' },
-                  { key: 'brand' as keyof Glider,        label: 'Marque' },
-                ].map(({ key, label }) => (
-                  <div key={key} className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">{label}</Label>
-                    <Input
-                      value={(draft[key] as string) ?? ''}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        setDraft((prev) => ({ ...prev, [key]: e.target.value }))}
-                      className="bg-input/50"
-                    />
-                  </div>
-                ))}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">N° série</Label>
-                  <Input
-                    type="number"
-                    value={draft.serial_number ?? ''}
-                    onChange={(e) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        serial_number: e.target.value ? Number(e.target.value) : null,
-                      }))
-                    }
-                    className="bg-input/50 font-mono"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+			<div className="overflow-hidden rounded-lg border border-border/60">
+				<div className="overflow-x-auto">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead className="w-12">
+									<Checkbox
+										checked={allSelected}
+										aria-label="Selectionner tous les planeurs"
+										onCheckedChange={(checked) => {
+											setSelectedRegistrations(isChecked(checked) ? sortedGliders.map((item) => item.registration) : [])
+										}}
+									/>
+								</TableHead>
+								<TableHead><SortableHeader label="Immatriculation" active={sortKey === 'registration'} direction={sortDirection} onClick={() => toggleSort('registration')} /></TableHead>
+								<TableHead><SortableHeader label="Modele" active={sortKey === 'model'} direction={sortDirection} onClick={() => toggleSort('model')} /></TableHead>
+								<TableHead><SortableHeader label="Marque" active={sortKey === 'brand'} direction={sortDirection} onClick={() => toggleSort('brand')} /></TableHead>
+								<TableHead><SortableHeader label="Numero de serie" active={sortKey === 'serial_number'} direction={sortDirection} onClick={() => toggleSort('serial_number')} /></TableHead>
+								<TableHead><SortableHeader label="Monoplace" active={sortKey === 'single_seat'} direction={sortDirection} onClick={() => toggleSort('single_seat')} /></TableHead>
+								<TableHead className="w-16 text-right">Actions</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{glidersQuery.isLoading ? (
+								<TableRow>
+									<TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+										Chargement...
+									</TableCell>
+								</TableRow>
+							) : currentPageGliders.length === 0 ? (
+								<TableRow>
+									<TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+										Aucun planeur enregistre.
+									</TableCell>
+								</TableRow>
+							) : (
+								currentPageGliders.map((glider) => (
+									<TableRow key={glider.registration}>
+										<TableCell>
+											<Checkbox
+												checked={selectedRegistrations.includes(glider.registration)}
+												aria-label={`Selectionner ${glider.registration}`}
+												onCheckedChange={(checked) => {
+													setSelectedRegistrations((previous) => (
+														isChecked(checked)
+															? Array.from(new Set([...previous, glider.registration]))
+															: previous.filter((registration) => registration !== glider.registration)
+													))
+												}}
+											/>
+										</TableCell>
+										<TableCell className="font-medium">{glider.registration}</TableCell>
+										<TableCell>{glider.model || '—'}</TableCell>
+										<TableCell>{glider.brand || '—'}</TableCell>
+										<TableCell>{glider.serial_number ?? '—'}</TableCell>
+										<TableCell>
+											<Checkbox checked={glider.single_seat} disabled aria-label={`Monoplace ${glider.registration}`} />
+										</TableCell>
+										<TableCell className="text-right">
+											<DropdownMenu>
+												<DropdownMenuTrigger
+													render={(
+														<Button variant="ghost" size="icon" aria-label={`Actions pour ${glider.registration}`} />
+													)}
+												>
+													<MoreHorizontal />
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuItem onClick={() => navigate(`/gliders/edit?registration=${encodeURIComponent(glider.registration)}`)}>
+														<Pencil />
+														Voir / modifier
+													</DropdownMenuItem>
+													<DropdownMenuSeparator />
+													<DropdownMenuItem
+														variant="destructive"
+														onClick={() => deleteMutation.mutate([glider.registration])}
+													>
+														<Trash2 />
+														Supprimer
+													</DropdownMenuItem>
+												</DropdownMenuContent>
+											</DropdownMenu>
+										</TableCell>
+									</TableRow>
+								))
+							)}
+						</TableBody>
+					</Table>
+				</div>
 
-          {/* ── Limites & Bras ── */}
-          <TabsContent value="limites">
-            <Card className="border-border/60 bg-card/80">
-              <CardHeader className="pb-2 pt-4 px-4">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Limites de masse
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
-                {Object.entries(draft.limits).map(([key, value]) => (
-                  <div key={key} className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">{LIMIT_LABELS[key] ?? key}</Label>
-                    <Input
-                      type="number"
-                      value={value}
-                      onChange={(e) =>
-                        setDraft((prev) => ({ ...prev, limits: { ...prev.limits, [key]: Number(e.target.value) } }))
-                      }
-                      className="bg-input/50 font-mono"
-                    />
-                  </div>
-                ))}
-              </CardContent>
-              <CardHeader className="pb-2 pt-2 px-4">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Bras de leviers
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 px-4 pb-4 sm:grid-cols-2">
-                {Object.entries(draft.arms).map(([key, value]) => (
-                  <div key={key} className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">{ARM_LABELS[key] ?? key}</Label>
-                    <Input
-                      type="number"
-                      value={Number(value ?? 0)}
-                      onChange={(e) =>
-                        setDraft((prev) => ({ ...prev, arms: { ...prev.arms, [key]: Number(e.target.value) } }))
-                      }
-                      className="bg-input/50 font-mono"
-                    />
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
+				{sortedGliders.length > 0 && (
+					<div className="flex flex-col gap-4 border-t border-border/40 px-4 py-4 md:flex-row md:items-center md:justify-between">
+						<p className="text-sm text-muted-foreground">
+							Affichage de {visibleStart} a {visibleEnd} sur {sortedGliders.length} planeur{sortedGliders.length > 1 ? 's' : ''}
+						</p>
 
-          {/* ── Inventaire ── */}
-          <TabsContent value="inventaire">
-            <Card className="border-border/60 bg-card/80">
-              <CardContent className="px-4 py-4">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-border/40 hover:bg-transparent">
-                        <TableHead className="text-xs">Instrument</TableHead>
-                        <TableHead className="text-xs">Marque</TableHead>
-                        <TableHead className="text-xs">Type</TableHead>
-                        <TableHead className="text-xs">N°</TableHead>
-                        <TableHead className="text-xs">Siège</TableHead>
-                        <TableHead className="text-xs text-center">Installé</TableHead>
-                        <TableHead />
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {draft.instruments.map((instrument, index) => (
-                        <InstrumentRow
-                          key={`${instrument.id ?? 'new'}-${index}`}
-                          value={instrument}
-                          onChange={(next) =>
-                            setDraft((prev) => ({
-                              ...prev,
-                              instruments: prev.instruments.map((row, i) => (i === index ? next : row)),
-                            }))
-                          }
-                          onDelete={() =>
-                            setDraft((prev) => ({
-                              ...prev,
-                              instruments: prev.instruments.filter((_, i) => i !== index),
-                            }))
-                          }
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        instruments: [
-                          ...prev.instruments,
-                          { on_board: false, instrument: '', brand: '', type: '', number: '', seat: '', date: null },
-                        ],
-                      }))
-                    }
-                  >
-                    <Plus size={13} /> Ajouter ligne
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => saveInventory.mutate()}
-                    disabled={!draft.registration || saveInventory.isPending}
-                  >
-                    <Save size={13} /> Enregistrer inventaire
-                  </Button>
-                </div>
-                {saveInventory.error && (
-                  <p className="mt-2 text-xs text-destructive">{apiError(saveInventory.error)}</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+						{pageCount > 1 && (
+							<Pagination className="mx-0 w-auto justify-start md:justify-end">
+								<PaginationContent>
+									<PaginationItem>
+										<PaginationPrevious
+											href="#"
+											text="Precedent"
+											onClick={(event) => {
+												event.preventDefault()
+												if (currentPage > 1) setCurrentPage(currentPage - 1)
+											}}
+											className={cn(currentPage === 1 && 'pointer-events-none opacity-50')}
+										/>
+									</PaginationItem>
 
-          {/* ── Masse / Centrage ── */}
-          <TabsContent value="wb">
-            <Card className="border-border/60 bg-card/80">
-              <CardContent className="px-4 py-4 space-y-3">
-                <div className="grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-[1fr_1fr_auto]">
-                  <span className="font-medium">Masse (kg)</span>
-                  <span className="font-medium">Centrage (mm)</span>
-                  <span />
-                </div>
-                {draft.weight_and_balances.map((pair, index) => (
-                  <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                    <Input
-                      type="number"
-                      value={pair[0]}
-                      onChange={(e) =>
-                        setDraft((prev) => ({
-                          ...prev,
-                          weight_and_balances: prev.weight_and_balances.map((item, i) =>
-                            i === index ? [Number(e.target.value), item[1]] : item,
-                          ),
-                        }))
-                      }
-                      className="bg-input/50 font-mono"
-                    />
-                    <Input
-                      type="number"
-                      value={pair[1]}
-                      onChange={(e) =>
-                        setDraft((prev) => ({
-                          ...prev,
-                          weight_and_balances: prev.weight_and_balances.map((item, i) =>
-                            i === index ? [item[0], Number(e.target.value)] : item,
-                          ),
-                        }))
-                      }
-                      className="bg-input/50 font-mono"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                      onClick={() =>
-                        setDraft((prev) => ({
-                          ...prev,
-                          weight_and_balances: prev.weight_and_balances.filter((_, i) => i !== index),
-                        }))
-                      }
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                ))}
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        weight_and_balances: [...prev.weight_and_balances, [0, 0]],
-                      }))
-                    }
-                  >
-                    <Plus size={13} /> Ajouter point
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => saveWeightBalances.mutate()}
-                    disabled={!draft.registration || saveWeightBalances.isPending}
-                  >
-                    <Save size={13} /> Enregistrer points
-                  </Button>
-                </div>
-                {saveWeightBalances.error && (
-                  <p className="text-xs text-destructive">{apiError(saveWeightBalances.error)}</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      )}
+									{pageTokens.map((token, index) => (
+										<PaginationItem key={`${token}-${index}`}>
+											{typeof token === 'number' ? (
+												<PaginationLink
+													href="#"
+													isActive={token === currentPage}
+													onClick={(event) => {
+														event.preventDefault()
+														setCurrentPage(token)
+													}}
+												>
+													{token}
+												</PaginationLink>
+											) : (
+												<PaginationEllipsis />
+											)}
+										</PaginationItem>
+									))}
 
-      {selectedGlider && (
-        <p className="text-xs text-muted-foreground">
-          Dernière pesée : {selectedGlider.weighings.at(-1)?.date ?? 'aucune'}
-        </p>
-      )}
-    </div>
-  )
+									<PaginationItem>
+										<PaginationNext
+											href="#"
+											text="Suivant"
+											onClick={(event) => {
+												event.preventDefault()
+												if (currentPage < pageCount) setCurrentPage(currentPage + 1)
+											}}
+											className={cn(currentPage === pageCount && 'pointer-events-none opacity-50')}
+										/>
+									</PaginationItem>
+								</PaginationContent>
+							</Pagination>
+						)}
+					</div>
+				)}
+			</div>
+		</div>
+	)
 }
 
-function InstrumentRow({
-  value, onChange, onDelete,
-}: { value: Instrument; onChange: (next: Instrument) => void; onDelete: () => void }) {
-  return (
-    <TableRow className="border-border/30 hover:bg-muted/20">
-      {(['instrument', 'brand', 'type', 'number', 'seat'] as const).map((field) => (
-        <TableCell key={field} className="py-1.5 px-2">
-          <Input
-            value={value[field]}
-            onChange={(e) => onChange({ ...value, [field]: e.target.value })}
-            className="h-7 bg-input/40 text-xs"
-          />
-        </TableCell>
-      ))}
-      <TableCell className="py-1.5 px-2 text-center">
-        <input
-          type="checkbox"
-          checked={value.on_board}
-          onChange={(e) => onChange({ ...value, on_board: e.target.checked })}
-          className="accent-primary h-4 w-4 cursor-pointer"
-        />
-      </TableCell>
-      <TableCell className="py-1.5 px-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-destructive hover:bg-destructive/10"
-          onClick={onDelete}
-        >
-          <Trash2 size={12} />
-        </Button>
-      </TableCell>
-    </TableRow>
-  )
+function SortableHeader({
+	label,
+	active,
+	direction,
+	onClick,
+}: {
+	label: string
+	active: boolean
+	direction: SortDirection
+	onClick: () => void
+}) {
+	return (
+		<Button variant="ghost" className="-ml-3 h-8 px-3" onClick={onClick}>
+			{label}
+			{active ? (
+				direction === 'asc' ? <ArrowUpAZ data-icon="inline-end" /> : <ArrowDownAZ data-icon="inline-end" />
+			) : (
+				<ArrowUpDown data-icon="inline-end" />
+			)}
+		</Button>
+	)
 }
-
-
