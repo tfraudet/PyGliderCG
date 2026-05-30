@@ -1,5 +1,7 @@
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, MoreHorizontal, Pencil, Plus, RulerDimensionLine, Trash2, Weight } from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
+import { MoreHorizontal, Pencil, Plus, RulerDimensionLine, Trash2, Weight } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { SortableTableHead } from '@/components/table/SortableTableHead'
+import { TableStatusRow } from '@/components/table/TableStatusRow'
 import { Button } from '@/components/ui/button'
 import {
 	Dialog,
@@ -43,39 +45,6 @@ type WeightBalanceDraft = {
 interface WeightBalanceTabProps {
 	weightAndBalances: Array<[number, number]>
 	onChange: UpdateWeightBalances
-}
-
-function SortIcon({ active, direction }: { active: boolean; direction: SortDirection }) {
-	if (!active) return <ArrowUpDown data-icon="inline-end" />
-	return direction === 'asc' ? <ArrowUpAZ data-icon="inline-end" /> : <ArrowDownAZ data-icon="inline-end" />
-}
-
-function SortableHeader({
-	label,
-	sortKey,
-	activeSortKey,
-	sortDirection,
-	onSort,
-}: {
-	label: ReactNode
-	sortKey: SortKey
-	activeSortKey: SortKey
-	sortDirection: SortDirection
-	onSort: (nextKey: SortKey) => void
-}) {
-	return (
-		<TableHead>
-			<Button
-				variant="ghost"
-				size="sm"
-				className="-ml-2 h-8 px-2"
-				onClick={() => onSort(sortKey)}
-			>
-				{label}
-				<SortIcon active={activeSortKey === sortKey} direction={sortDirection} />
-			</Button>
-		</TableHead>
-	)
 }
 
 function pointToDraft([weight, balance]: WeightBalancePoint): WeightBalanceDraft {
@@ -253,14 +222,14 @@ export function WeightBalanceTab({
 										aria-label="Sélectionner tous les points de masse et centrage"
 									/>
 								</TableHead>
-								<SortableHeader
+								<SortableTableHead
 									label={<><Weight data-icon="inline-start" />Masse (kg)</>}
 									sortKey="weight"
 									activeSortKey={sortKey}
 									sortDirection={sortDirection}
 									onSort={handleSort}
 								/>
-								<SortableHeader
+								<SortableTableHead
 									label={<><RulerDimensionLine data-icon="inline-start" />Centrage (mm)</>}
 									sortKey="balance"
 									activeSortKey={sortKey}
@@ -272,11 +241,9 @@ export function WeightBalanceTab({
 						</TableHeader>
 						<TableBody>
 							{weightAndBalances.length === 0 ? (
-								<TableRow>
-									<TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-										Aucun point.
-									</TableCell>
-								</TableRow>
+								<TableStatusRow colSpan={4} className="py-8 text-sm">
+									Aucun point.
+								</TableStatusRow>
 							) : (
 								sortedPoints.map(({ point, index }) => (
 									<TableRow key={`${point[0]}-${point[1]}-${index}`}>

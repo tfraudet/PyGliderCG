@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Scale } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { QueryErrorAlert } from '@/components/QueryErrorAlert'
 import {
 	Select,
 	SelectContent,
@@ -9,7 +9,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select'
-import { apiError, backend } from '@/lib/api'
+import { backend } from '@/lib/api'
+import { invalidateGliderQueries, useGliderLimits, useGliders } from '@/hooks/use-app-queries'
 import type { Weighing } from '@/lib/types'
 import { createEmptyWeighing } from './weighings/constants'
 import { WeighingFormDialog } from './weighings/WeighingFormDialog'
@@ -26,20 +27,13 @@ export function WeighingsPage() {
 	const [dialogState, setDialogState] = useState<DialogState>(null)
 	const [selectedWeighingIds, setSelectedWeighingIds] = useState<Set<number>>(new Set())
 
-	const glidersQuery = useQuery({
-		queryKey: ['gliders'],
-		queryFn: () => backend.getGliders(),
-	})
+	const glidersQuery = useGliders()
 
 	const selectedGlider = useMemo(
 		() => glidersQuery.data?.find((item) => item.registration === selectedRegistration) ?? null,
 		[glidersQuery.data, selectedRegistration],
 	)
-	const gliderLimitsQuery = useQuery({
-		queryKey: ['gliderLimits', selectedRegistration],
-		queryFn: () => backend.gliderLimits(selectedRegistration),
-		enabled: Boolean(selectedRegistration),
-	})
+	const gliderLimitsQuery = useGliderLimits(selectedRegistration)
 
 	const saveMutation = useMutation({
 		mutationFn: async ({ weighing, originalWeighingId }: { weighing: Weighing; originalWeighingId: number | null }) => {
@@ -49,7 +43,7 @@ export function WeighingsPage() {
 			}
 		},
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ['gliders'] })
+			await invalidateGliderQueries(queryClient, [selectedRegistration])
 			setDialogState(null)
 		},
 	})
@@ -61,10 +55,22 @@ export function WeighingsPage() {
 			}
 		},
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ['gliders'] })
+			await invalidateGliderQueries(queryClient, [selectedRegistration])
 			setSelectedWeighingIds(new Set())
 		},
 	})
+
+	const handleRegistrationChange = (value: string | null) => {
+		if (!value || value === selectedRegistration) {
+			return
+		}
+
+		setDialogState(null)
+		setSelectedWeighingIds(new Set())
+		saveMutation.reset()
+		deleteMutation.reset()
+		setSelectedRegistration(value)
+	}
 
 	const openCreateDialog = () => {
 		setDialogState({
@@ -105,7 +111,9 @@ export function WeighingsPage() {
 				</h1>
 			</div>
 
-			<Select value={selectedRegistration} onValueChange={(value: string | null) => { if (value) setSelectedRegistration(value) }}>
+			<QueryErrorAlert error={glidersQuery.error} />
+
+			<Select value={selectedRegistration} onValueChange={handleRegistrationChange}>
 				<SelectTrigger className="w-64 bg-input/50">
 					<SelectValue placeholder="Sélectionner un planeur…" />
 				</SelectTrigger>
@@ -120,6 +128,8 @@ export function WeighingsPage() {
 
 			{selectedGlider && (
 				<>
+					<QueryErrorAlert error={gliderLimitsQuery.error} />
+
 					<WeighingsHistorySection
 						glider={selectedGlider}
 						limitsData={gliderLimitsQuery.data}
@@ -133,13 +143,7 @@ export function WeighingsPage() {
 						onDeleteOne={(weighingId) => deleteWeighings([weighingId])}
 					/>
 
-					{mutationError != null && (
-						<Alert variant="destructive">
-							<AlertDescription className="whitespace-pre-wrap break-words">
-								{apiError(mutationError)}
-							</AlertDescription>
-						</Alert>
-					)}
+					<QueryErrorAlert error={mutationError} />
 				</>
 			)}
 

@@ -1,46 +1,40 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, PlaneTakeoff, Save } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { QueryErrorAlert } from '@/components/QueryErrorAlert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { apiError, backend } from '@/lib/api'
-import { EMPTY_GLIDER } from '@/lib/types'
+import { backend } from '@/lib/api'
+import { invalidateGliderQueries } from '@/hooks/use-app-queries'
+import { queryKeys } from '@/lib/query-keys'
+import { EMPTY_GLIDER, type Glider } from '@/lib/types'
 import { FicheTab } from './glider-editor/FicheTab'
 import { InventaireTab } from './glider-editor/InventaireTab'
 import type { UpdateGliderDraft, UpdateInstruments, UpdateWeightBalances } from './glider-editor/types'
 import { cloneGlider, getRegistrationError } from './glider-editor/utils'
 import { WeightBalanceTab } from './glider-editor/WeightBalanceTab'
 
-export function GliderEditorPage({ mode }: { mode: 'create' | 'edit' }) {
+interface GliderEditorFormProps {
+	mode: 'create' | 'edit'
+	originalRegistration: string
+	initialDraft: Glider
+}
+
+function GliderEditorForm({
+	mode,
+	originalRegistration,
+	initialDraft,
+}: GliderEditorFormProps) {
 	const queryClient = useQueryClient()
 	const navigate = useNavigate()
-	const [searchParams] = useSearchParams()
-	const originalRegistration = searchParams.get('registration') ?? ''
 	const isCreateMode = mode === 'create'
-	const [draft, setDraft] = useState(() => cloneGlider(EMPTY_GLIDER))
+	const [draft, setDraft] = useState(() => cloneGlider(initialDraft))
 	const [showValidation, setShowValidation] = useState(false)
-
-	const gliderQuery = useQuery({
-		queryKey: ['glider', originalRegistration],
-		queryFn: () => backend.getGlider(originalRegistration),
-		enabled: !isCreateMode && Boolean(originalRegistration),
-	})
-
-	useEffect(() => {
-		if (isCreateMode) {
-			setDraft(cloneGlider(EMPTY_GLIDER))
-			return
-		}
-
-		if (gliderQuery.data) {
-			setDraft(cloneGlider(gliderQuery.data))
-		}
-	}, [gliderQuery.data, isCreateMode])
 
 	const saveMutation = useMutation({
 		mutationFn: async () => {
@@ -58,10 +52,9 @@ export function GliderEditorPage({ mode }: { mode: 'create' | 'edit' }) {
 				? `Le planeur ${savedGlider.registration} a été créé avec succès.`
 				: `Le planeur ${savedGlider.registration} a été enregistré avec succès.`
 
-			await Promise.all([
-				queryClient.invalidateQueries({ queryKey: ['gliders'] }),
-				queryClient.invalidateQueries({ queryKey: ['glider', originalRegistration] }),
-				queryClient.invalidateQueries({ queryKey: ['glider', savedGlider.registration] }),
+			await invalidateGliderQueries(queryClient, [
+				originalRegistration,
+				savedGlider.registration,
 			])
 
 			setDraft(cloneGlider(savedGlider))
@@ -89,9 +82,6 @@ export function GliderEditorPage({ mode }: { mode: 'create' | 'edit' }) {
 	}
 
 	const registrationError = getRegistrationError(draft.registration, isCreateMode)
-	const saveError = saveMutation.error
-	const blockingLoadError = !isCreateMode ? gliderQuery.error : null
-	const showMissingRegistration = !isCreateMode && !originalRegistration
 
 	const handleRegistrationChange = (nextRegistration: string) => {
 		if (!isCreateMode) {
@@ -113,6 +103,74 @@ export function GliderEditorPage({ mode }: { mode: 'create' | 'edit' }) {
 		saveMutation.mutate()
 	}
 
+	return (
+		<>
+			<QueryErrorAlert error={saveMutation.error} />
+
+			{showValidation && registrationError && (
+				<Alert variant="destructive">
+					<AlertDescription>{registrationError}</AlertDescription>
+				</Alert>
+			)}
+
+			<Tabs defaultValue="fiche" className="space-y-5">
+				<TabsList className="border border-border/40 bg-muted/40">
+					<TabsTrigger value="fiche">Fiche technique</TabsTrigger>
+					<TabsTrigger value="inventaire">Inventaire</TabsTrigger>
+					<TabsTrigger value="wb">Masse / centrage</TabsTrigger>
+				</TabsList>
+
+				<FicheTab
+					draft={draft}
+					isCreateMode={isCreateMode}
+					showValidation={showValidation}
+					registrationError={registrationError}
+					onDraftChange={updateDraft}
+					onRegistrationChange={handleRegistrationChange}
+				/>
+
+				<InventaireTab
+					instruments={draft.instruments}
+					onChange={updateInstruments}
+				/>
+
+				<WeightBalanceTab
+					weightAndBalances={draft.weight_and_balances}
+					onChange={updateWeightBalances}
+				/>
+			</Tabs>
+
+			<div className="flex flex-wrap justify-end gap-3">
+				<Button variant="outline" onClick={() => navigate('/gliders')}>
+					<ArrowLeft data-icon="inline-start" />
+					Retour à la liste planeur
+				</Button>
+				<Button onClick={handleSave} disabled={saveMutation.isPending}>
+					<Save data-icon="inline-start" />
+					{saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+				</Button>
+			</div>
+
+			<Separator className="my-2 bg-border/40" />
+		</>
+	)
+}
+
+export function GliderEditorPage({ mode }: { mode: 'create' | 'edit' }) {
+	const navigate = useNavigate()
+	const [searchParams] = useSearchParams()
+	const originalRegistration = searchParams.get('registration') ?? ''
+	const isCreateMode = mode === 'create'
+
+	const gliderQuery = useQuery({
+		queryKey: queryKeys.glider(originalRegistration),
+		queryFn: () => backend.getGlider(originalRegistration),
+		enabled: !isCreateMode && Boolean(originalRegistration),
+	})
+
+	const blockingLoadError = !isCreateMode ? gliderQuery.error : null
+	const showMissingRegistration = !isCreateMode && !originalRegistration
+
 	if (showMissingRegistration) {
 		return (
 			<div className="space-y-5">
@@ -128,7 +186,7 @@ export function GliderEditorPage({ mode }: { mode: 'create' | 'edit' }) {
 	}
 
 	const isBlockingLoadState = !isCreateMode && gliderQuery.isLoading
-	const shouldRenderEditor = !blockingLoadError || Boolean(gliderQuery.data) || isCreateMode
+	const loadedDraft = isCreateMode ? EMPTY_GLIDER : gliderQuery.data
 
 	return (
 		<div className="space-y-5">
@@ -139,22 +197,8 @@ export function GliderEditorPage({ mode }: { mode: 'create' | 'edit' }) {
 				</h1>
 			</div>
 
-			{saveError && (
-				<Alert variant="destructive">
-					<AlertDescription className="whitespace-pre-wrap break-words">{apiError(saveError)}</AlertDescription>
-				</Alert>
-			)}
-
-			{showValidation && registrationError && (
-				<Alert variant="destructive">
-					<AlertDescription>{registrationError}</AlertDescription>
-				</Alert>
-			)}
-
-			{blockingLoadError && !gliderQuery.data && !isCreateMode && (
-				<Alert variant="destructive">
-					<AlertDescription className="whitespace-pre-wrap break-words">{apiError(blockingLoadError)}</AlertDescription>
-				</Alert>
+			{!gliderQuery.data && !isCreateMode && (
+				<QueryErrorAlert error={blockingLoadError} />
 			)}
 
 			{isBlockingLoadState ? (
@@ -163,51 +207,13 @@ export function GliderEditorPage({ mode }: { mode: 'create' | 'edit' }) {
 						Chargement...
 					</CardContent>
 				</Card>
-			) : shouldRenderEditor ? (
-				<>
-					<Tabs defaultValue="fiche" className="space-y-5">
-						<TabsList className="border border-border/40 bg-muted/40">
-							<TabsTrigger value="fiche">Fiche technique</TabsTrigger>
-							<TabsTrigger value="inventaire">Inventaire</TabsTrigger>
-							<TabsTrigger value="wb">Masse / centrage</TabsTrigger>
-						</TabsList>
-
-						<FicheTab
-							draft={draft}
-							isCreateMode={isCreateMode}
-							showValidation={showValidation}
-							registrationError={registrationError}
-							onDraftChange={updateDraft}
-							onRegistrationChange={handleRegistrationChange}
-						/>
-
-						<InventaireTab
-							instruments={draft.instruments}
-							onChange={updateInstruments}
-						/>
-
-						<WeightBalanceTab
-							weightAndBalances={draft.weight_and_balances}
-							onChange={updateWeightBalances}
-						/>
-					</Tabs>
-
-					<div className="flex flex-wrap justify-end gap-3">
-						<Button variant="outline" onClick={() => navigate('/gliders')}>
-							<ArrowLeft data-icon="inline-start" />
-							Retour à la liste planeur
-						</Button>
-						<Button
-							onClick={handleSave}
-							disabled={saveMutation.isPending || isBlockingLoadState}
-						>
-							<Save data-icon="inline-start" />
-							{saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
-						</Button>
-					</div>
-
-					<Separator className="my-2 bg-border/40" />
-				</>
+			) : loadedDraft ? (
+				<GliderEditorForm
+					key={isCreateMode ? 'create' : originalRegistration}
+					mode={mode}
+					originalRegistration={originalRegistration}
+					initialDraft={loadedDraft}
+				/>
 			) : null}
 		</div>
 	)

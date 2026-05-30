@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Database, Download, Eye, MoreHorizontal, Pencil, Plus, Save, Trash2, TriangleAlert, Upload, Users } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Database, Download, Eye, MoreHorizontal, Pencil, Plus, Save, Trash2, TriangleAlert, Upload, Users } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { QueryErrorAlert } from '@/components/QueryErrorAlert'
+import { SortableTableHead } from '@/components/table/SortableTableHead'
+import { TableStatusRow } from '@/components/table/TableStatusRow'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -33,11 +36,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { apiError, backend } from '@/lib/api'
+import { backend } from '@/lib/api'
+import { invalidateUsersQuery, useUsers } from '@/hooks/use-app-queries'
 import type { User } from '@/lib/types'
 
 const EMPTY_USER: User = { username: '', email: '', password: '', role: 'viewer' }
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EMPTY_TOUCHED_FIELDS = { email: false, password: false }
 
 type DialogMode = 'create' | 'view' | 'edit' | null
 type SortKey = 'username' | 'email'
@@ -67,39 +72,6 @@ function getPasswordError(password: string): string | null {
   return null
 }
 
-function SortIcon({ active, direction }: { active: boolean; direction: SortDirection }) {
-  if (!active) return <ArrowUpDown data-icon="inline-end" />
-  return direction === 'asc' ? <ArrowUpAZ data-icon="inline-end" /> : <ArrowDownAZ data-icon="inline-end" />
-}
-
-function SortableHeader({
-  label,
-  sortKey,
-  activeSortKey,
-  sortDirection,
-  onSort,
-}: {
-  label: string
-  sortKey: SortKey
-  activeSortKey: SortKey
-  sortDirection: SortDirection
-  onSort: (nextKey: SortKey) => void
-}) {
-  return (
-    <TableHead>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-2 h-8 px-2"
-        onClick={() => onSort(sortKey)}
-      >
-        {label}
-        <SortIcon active={activeSortKey === sortKey} direction={sortDirection} />
-      </Button>
-    </TableHead>
-  )
-}
-
 export function UsersPage() {
   const queryClient = useQueryClient()
   const importInputRef = useRef<HTMLInputElement | null>(null)
@@ -108,18 +80,23 @@ export function UsersPage() {
   const [draft, setDraft] = useState<User>(EMPTY_USER)
   const [initialPassword, setInitialPassword] = useState('')
   const [showValidation, setShowValidation] = useState(false)
-  const [touchedFields, setTouchedFields] = useState({ email: false, password: false })
+  const [touchedFields, setTouchedFields] = useState(EMPTY_TOUCHED_FIELDS)
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([])
   const [sortKey, setSortKey] = useState<SortKey>('username')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
-  const usersQuery = useQuery({
-    queryKey: ['users'],
-    queryFn: () => backend.getUsers(),
-  })
+  const usersQuery = useUsers()
 
-  const users = usersQuery.data ?? []
-  const allSelected = users.length > 0 && selectedUsernames.length === users.length
+  const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data])
+  const availableUsernames = useMemo(
+    () => new Set(users.map((user) => user.username)),
+    [users],
+  )
+  const effectiveSelectedUsernames = useMemo(
+    () => selectedUsernames.filter((username) => availableUsernames.has(username)),
+    [selectedUsernames, availableUsernames],
+  )
+  const allSelected = users.length > 0 && effectiveSelectedUsernames.length === users.length
   const isCreateMode = dialogMode === 'create'
   const isEditMode = dialogMode === 'edit'
   const isViewMode = dialogMode === 'view'
@@ -129,6 +106,30 @@ export function UsersPage() {
   const shouldShowEmailError = Boolean(emailError && (showValidation || touchedFields.email))
   const shouldShowPasswordError = Boolean(passwordError && (showValidation || touchedFields.password))
   const isFormInvalid = !draft.username.trim() || Boolean(emailError) || Boolean(passwordError)
+
+  const resetDialogFields = () => {
+    setActiveUsername('')
+    setDraft({ ...EMPTY_USER })
+    setInitialPassword('')
+    setShowValidation(false)
+    setTouchedFields(EMPTY_TOUCHED_FIELDS)
+  }
+
+  const openDialog = (mode: Exclude<DialogMode, null>, user?: User) => {
+    saveMutation.reset()
+    setDialogMode(mode)
+
+    if (!user) {
+      resetDialogFields()
+      return
+    }
+
+    setActiveUsername(user.username)
+    setDraft({ ...user })
+    setInitialPassword(user.password ?? '')
+    setShowValidation(false)
+    setTouchedFields(EMPTY_TOUCHED_FIELDS)
+  }
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -149,13 +150,9 @@ export function UsersPage() {
       return backend.updateUser(activeUsername, updatePayload)
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['users'] })
+      await invalidateUsersQuery(queryClient)
       setDialogMode(null)
-      setActiveUsername('')
-      setDraft(EMPTY_USER)
-      setInitialPassword('')
-      setShowValidation(false)
-      setTouchedFields({ email: false, password: false })
+      resetDialogFields()
     },
   })
 
@@ -164,12 +161,11 @@ export function UsersPage() {
       await Promise.all(usernames.map((username) => backend.deleteUser(username)))
     },
     onSuccess: async (_, usernames) => {
-      await queryClient.invalidateQueries({ queryKey: ['users'] })
+      await invalidateUsersQuery(queryClient)
       setSelectedUsernames((previous) => previous.filter((username) => !usernames.includes(username)))
       if (usernames.includes(activeUsername)) {
         setDialogMode(null)
-        setActiveUsername('')
-        setDraft(EMPTY_USER)
+        resetDialogFields()
       }
     },
   })
@@ -188,18 +184,16 @@ export function UsersPage() {
 
   const importMutation = useMutation({
     mutationFn: (file: File) => backend.importDatabase(file),
+    onSuccess: async () => {
+      await invalidateUsersQuery(queryClient)
+    },
   })
 
   const anyError = deleteUsersMutation.error
     ?? exportMutation.error
     ?? importMutation.error
 
-  useEffect(() => {
-    const usernames = new Set(users.map((user) => user.username))
-    setSelectedUsernames((previous) => previous.filter((username) => usernames.has(username)))
-  }, [users])
-
-  const selectedCount = selectedUsernames.length
+  const selectedCount = effectiveSelectedUsernames.length
   const sortedUsers = useMemo(
     () => [...users].sort((left, right) => {
       const leftValue = sortKey === 'username' ? left.username : left.email
@@ -225,43 +219,21 @@ export function UsersPage() {
   }
 
   const openCreateDialog = () => {
-    saveMutation.reset()
-    setDialogMode('create')
-    setActiveUsername('')
-    setDraft(EMPTY_USER)
-    setInitialPassword('')
-    setShowValidation(false)
-    setTouchedFields({ email: false, password: false })
+    openDialog('create')
   }
 
   const openViewDialog = (user: User) => {
-    saveMutation.reset()
-    setDialogMode('view')
-    setActiveUsername(user.username)
-    setDraft(user)
-    setInitialPassword(user.password ?? '')
-    setShowValidation(false)
-    setTouchedFields({ email: false, password: false })
+    openDialog('view', user)
   }
 
   const openEditDialog = (user: User) => {
-    saveMutation.reset()
-    setDialogMode('edit')
-    setActiveUsername(user.username)
-    setDraft(user)
-    setInitialPassword(user.password ?? '')
-    setShowValidation(false)
-    setTouchedFields({ email: false, password: false })
+    openDialog('edit', user)
   }
 
   const closeDialog = () => {
     saveMutation.reset()
     setDialogMode(null)
-    setActiveUsername('')
-    setDraft(EMPTY_USER)
-    setInitialPassword('')
-    setShowValidation(false)
-    setTouchedFields({ email: false, password: false })
+    resetDialogFields()
   }
 
   const toggleUserSelection = (username: string, checked: boolean | 'indeterminate') => {
@@ -292,7 +264,7 @@ export function UsersPage() {
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => deleteUsersMutation.mutate(selectedUsernames)}
+              onClick={() => deleteUsersMutation.mutate(effectiveSelectedUsernames)}
               disabled={deleteUsersMutation.isPending || selectedCount === 0}
             >
               <Trash2 data-icon="inline-start" />
@@ -306,6 +278,8 @@ export function UsersPage() {
         </div>
 
         <div className="rounded-lg border border-border/80">
+          <QueryErrorAlert error={usersQuery.error} />
+
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -316,14 +290,14 @@ export function UsersPage() {
                     onCheckedChange={toggleAllSelection}
                   />
                 </TableHead>
-                <SortableHeader
+                <SortableTableHead
                   label="Identifiant"
                   sortKey="username"
                   activeSortKey={sortKey}
                   sortDirection={sortDirection}
                   onSort={handleSort}
                 />
-                <SortableHeader
+                <SortableTableHead
                   label="Email"
                   sortKey="email"
                   activeSortKey={sortKey}
@@ -337,20 +311,16 @@ export function UsersPage() {
             </TableHeader>
             <TableBody>
               {usersQuery.isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
-                    Chargement…
-                  </TableCell>
-                </TableRow>
+                <TableStatusRow colSpan={6} className="py-8 text-sm">
+                  Chargement…
+                </TableStatusRow>
               ) : sortedUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
-                    Aucun utilisateur trouvé.
-                  </TableCell>
-                </TableRow>
+                <TableStatusRow colSpan={6} className="py-8 text-sm">
+                  Aucun utilisateur trouvé.
+                </TableStatusRow>
               ) : (
                 sortedUsers.map((user) => {
-                  const isSelected = selectedUsernames.includes(user.username)
+                  const isSelected = effectiveSelectedUsernames.includes(user.username)
                   return (
                     <TableRow key={user.username} data-state={isSelected ? 'selected' : undefined}>
                       <TableCell>
@@ -457,11 +427,7 @@ export function UsersPage() {
         </div>
       </div>
 
-      {anyError && (
-        <Alert variant="destructive">
-          <AlertDescription>{apiError(anyError)}</AlertDescription>
-        </Alert>
-      )}
+      <QueryErrorAlert error={anyError} />
 
       <Dialog open={dialogMode !== null} onOpenChange={(open) => { if (!open) closeDialog() }}>
         <DialogContent className="sm:max-w-lg">
@@ -478,15 +444,7 @@ export function UsersPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {saveMutation.error && (
-            <Alert variant="destructive">
-              <TriangleAlert />
-              <AlertTitle>Une erreur est survenue</AlertTitle>
-              <AlertDescription className="whitespace-pre-wrap break-words">
-                {apiError(saveMutation.error)}
-              </AlertDescription>
-            </Alert>
-          )}
+          <QueryErrorAlert error={saveMutation.error} title="Une erreur est survenue" />
 
           {!saveMutation.error && (shouldShowEmailError || shouldShowPasswordError) && (
             <Alert variant="destructive">

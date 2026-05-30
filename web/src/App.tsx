@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
+import { type AppRole, hasRequiredRole } from './lib/auth'
 import { AuditPage } from './pages/AuditPage'
 import { GliderEditorPage } from './pages/GliderEditorPage'
 import { GlidersPage } from './pages/GlidersPage'
@@ -9,24 +10,18 @@ import { UsersPage } from './pages/UsersPage'
 import { WeighingsPage } from './pages/WeighingsPage'
 import { useAuth } from './state/auth'
 
-const roleOrder: Record<string, number> = {
-  viewer: 1,
-  editor: 2,
-  administrator: 3,
-}
-
 function Guard({
   children,
   minRole,
 }: {
   children: ReactElement
-  minRole: 'viewer' | 'editor' | 'administrator'
+  minRole: AppRole
 }) {
   const { user } = useAuth()
   if (!user) {
     return <Navigate to="/" replace />
   }
-  if (roleOrder[user.role] < roleOrder[minRole]) {
+  if (!hasRequiredRole(user.role, minRole)) {
     return <Navigate to="/" replace />
   }
   return children

@@ -27,11 +27,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { type AppRole, hasRequiredRole } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import { apiError } from '@/lib/api'
 import { useAuth } from '@/state/auth'
-
-const roleOrder: Record<string, number> = { viewer: 1, editor: 2, administrator: 3 }
 
 const NAV_ITEMS = [
   { to: '/', label: 'Accueil', Icon: Home, minRole: null },
@@ -39,7 +38,7 @@ const NAV_ITEMS = [
   { to: '/weighings', label: 'Pesées', Icon: Scale, minRole: 'editor' },
   { to: '/users', label: 'Utilisateurs', Icon: Users, minRole: 'administrator' },
   { to: '/audit', label: 'Audit Log', Icon: ClipboardList, minRole: 'administrator' },
-]
+] satisfies Array<{ to: string; label: string; Icon: typeof Home; minRole: AppRole | null }>
 
 export function AppSidebar() {
   const { pathname } = useLocation()
@@ -52,8 +51,7 @@ export function AppSidebar() {
 
   const visibleLinks = NAV_ITEMS.filter(({ minRole }) => {
     if (!minRole) return true
-    if (!user) return false
-    return roleOrder[user.role] >= roleOrder[minRole as string]
+    return hasRequiredRole(user?.role, minRole)
   })
 
   async function onLogin(event: React.FormEvent<HTMLFormElement>) {

@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, MoreHorizontal, Pencil, PlaneTakeoff, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { MoreHorizontal, Pencil, PlaneTakeoff, Plus, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { QueryErrorAlert } from '@/components/QueryErrorAlert'
+import { PageNavigation } from '@/components/table/PageNavigation'
+import { SortableTableHead } from '@/components/table/SortableTableHead'
+import { TableStatusRow } from '@/components/table/TableStatusRow'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -13,15 +16,6 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-	Pagination,
-	PaginationContent,
-	PaginationEllipsis,
-	PaginationItem,
-	PaginationLink,
-	PaginationNext,
-	PaginationPrevious,
-} from '@/components/ui/pagination'
-import {
 	Table,
 	TableBody,
 	TableCell,
@@ -29,24 +23,17 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table'
-import { apiError, backend } from '@/lib/api'
-import { cn } from '@/lib/utils'
+import { backend } from '@/lib/api'
+import { invalidateGliderQueries, useGliders } from '@/hooks/use-app-queries'
+import { getPageTokens } from '@/lib/pagination'
 
 const PAGE_SIZE = 10
 
-type PageToken = number | 'ellipsis'
 type SortKey = 'registration' | 'model' | 'brand' | 'serial_number' | 'single_seat'
 type SortDirection = 'asc' | 'desc'
 
 function isChecked(value: boolean | 'indeterminate') {
 	return value === true
-}
-
-function getPageTokens(pageCount: number, currentPage: number): PageToken[] {
-	if (pageCount <= 7) return Array.from({ length: pageCount }, (_, index) => index + 1)
-	if (currentPage <= 3) return [1, 2, 3, 4, 'ellipsis', pageCount]
-	if (currentPage >= pageCount - 2) return [1, 'ellipsis', pageCount - 3, pageCount - 2, pageCount - 1, pageCount]
-	return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', pageCount]
 }
 
 export function GlidersPage() {
@@ -57,22 +44,18 @@ export function GlidersPage() {
 	const [sortKey, setSortKey] = useState<SortKey>('registration')
 	const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
-	const glidersQuery = useQuery({
-		queryKey: ['gliders'],
-		queryFn: () => backend.getGliders(),
-	})
+	const glidersQuery = useGliders()
 
 	const deleteMutation = useMutation({
 		mutationFn: async (registrations: string[]) => Promise.all(registrations.map((registration) => backend.deleteGlider(registration))),
 		onSuccess: async (_, registrations) => {
-			await queryClient.invalidateQueries({ queryKey: ['gliders'] })
+			await invalidateGliderQueries(queryClient, registrations)
 			setSelectedRegistrations((previous) => previous.filter((registration) => !registrations.includes(registration)))
 		},
 	})
 
-	const gliders = glidersQuery.data ?? []
 	const sortedGliders = useMemo(
-		() => [...gliders].sort((left, right) => {
+		() => [...(glidersQuery.data ?? [])].sort((left, right) => {
 			if (sortKey === 'single_seat') {
 				if (left.single_seat !== right.single_seat) {
 					return sortDirection === 'asc'
@@ -90,25 +73,29 @@ export function GlidersPage() {
 
 			return left.registration.localeCompare(right.registration, undefined, { numeric: true, sensitivity: 'base' })
 		}),
-		[gliders, sortDirection, sortKey],
+		[glidersQuery.data, sortDirection, sortKey],
 	)
-	const allSelected = sortedGliders.length > 0 && selectedRegistrations.length === sortedGliders.length
+	const availableRegistrations = useMemo(
+		() => new Set(sortedGliders.map((glider) => glider.registration)),
+		[sortedGliders],
+	)
+	const effectiveSelectedRegistrations = useMemo(
+		() => selectedRegistrations.filter((registration) => availableRegistrations.has(registration)),
+		[selectedRegistrations, availableRegistrations],
+	)
+	const allSelected = sortedGliders.length > 0 && effectiveSelectedRegistrations.length === sortedGliders.length
 	const pageCount = Math.max(1, Math.ceil(sortedGliders.length / PAGE_SIZE))
+	const effectiveCurrentPage = Math.min(currentPage, pageCount)
 	const currentPageGliders = useMemo(() => {
-		const startIndex = (currentPage - 1) * PAGE_SIZE
+		const startIndex = (effectiveCurrentPage - 1) * PAGE_SIZE
 		return sortedGliders.slice(startIndex, startIndex + PAGE_SIZE)
-	}, [currentPage, sortedGliders])
-	const pageTokens = useMemo(() => getPageTokens(pageCount, currentPage), [currentPage, pageCount])
-	const visibleStart = sortedGliders.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
-	const visibleEnd = sortedGliders.length === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, sortedGliders.length)
-
-	useEffect(() => {
-		setSelectedRegistrations((previous) => previous.filter((registration) => sortedGliders.some((item) => item.registration === registration)))
-	}, [sortedGliders])
-
-	useEffect(() => {
-		if (currentPage > pageCount) setCurrentPage(pageCount)
-	}, [currentPage, pageCount])
+	}, [effectiveCurrentPage, sortedGliders])
+	const pageTokens = useMemo(
+		() => getPageTokens(pageCount, effectiveCurrentPage, { edgeWindow: 4 }),
+		[effectiveCurrentPage, pageCount],
+	)
+	const visibleStart = sortedGliders.length === 0 ? 0 : (effectiveCurrentPage - 1) * PAGE_SIZE + 1
+	const visibleEnd = sortedGliders.length === 0 ? 0 : Math.min(effectiveCurrentPage * PAGE_SIZE, sortedGliders.length)
 
 	function toggleSort(nextKey: SortKey) {
 		setCurrentPage(1)
@@ -131,23 +118,14 @@ export function GlidersPage() {
 				</div>
 			</div>
 
-			{glidersQuery.error && (
-				<Alert variant="destructive">
-					<AlertDescription className="whitespace-pre-wrap break-words">{apiError(glidersQuery.error)}</AlertDescription>
-				</Alert>
-			)}
-
-			{deleteMutation.error && (
-				<Alert variant="destructive">
-					<AlertDescription className="whitespace-pre-wrap break-words">{apiError(deleteMutation.error)}</AlertDescription>
-				</Alert>
-			)}
+			<QueryErrorAlert error={glidersQuery.error} />
+			<QueryErrorAlert error={deleteMutation.error} />
 
 			<div className="flex flex-wrap items-center justify-end gap-2">
 				<Button
 					variant="destructive"
-					onClick={() => deleteMutation.mutate(selectedRegistrations)}
-					disabled={deleteMutation.isPending || selectedRegistrations.length === 0}
+					onClick={() => deleteMutation.mutate(effectiveSelectedRegistrations)}
+					disabled={deleteMutation.isPending || effectiveSelectedRegistrations.length === 0}
 				>
 					<Trash2 data-icon="inline-start" />
 					Supprimer la selection
@@ -172,33 +150,64 @@ export function GlidersPage() {
 										}}
 									/>
 								</TableHead>
-								<TableHead><SortableHeader label="Immatriculation" active={sortKey === 'registration'} direction={sortDirection} onClick={() => toggleSort('registration')} /></TableHead>
-								<TableHead><SortableHeader label="Modele" active={sortKey === 'model'} direction={sortDirection} onClick={() => toggleSort('model')} /></TableHead>
-								<TableHead><SortableHeader label="Marque" active={sortKey === 'brand'} direction={sortDirection} onClick={() => toggleSort('brand')} /></TableHead>
-								<TableHead><SortableHeader label="Numero de serie" active={sortKey === 'serial_number'} direction={sortDirection} onClick={() => toggleSort('serial_number')} /></TableHead>
-								<TableHead><SortableHeader label="Monoplace" active={sortKey === 'single_seat'} direction={sortDirection} onClick={() => toggleSort('single_seat')} /></TableHead>
+								<SortableTableHead
+									label="Immatriculation"
+									sortKey="registration"
+									activeSortKey={sortKey}
+									sortDirection={sortDirection}
+									onSort={toggleSort}
+									buttonClassName="-ml-3 h-8 px-3"
+								/>
+								<SortableTableHead
+									label="Modele"
+									sortKey="model"
+									activeSortKey={sortKey}
+									sortDirection={sortDirection}
+									onSort={toggleSort}
+									buttonClassName="-ml-3 h-8 px-3"
+								/>
+								<SortableTableHead
+									label="Marque"
+									sortKey="brand"
+									activeSortKey={sortKey}
+									sortDirection={sortDirection}
+									onSort={toggleSort}
+									buttonClassName="-ml-3 h-8 px-3"
+								/>
+								<SortableTableHead
+									label="Numero de serie"
+									sortKey="serial_number"
+									activeSortKey={sortKey}
+									sortDirection={sortDirection}
+									onSort={toggleSort}
+									buttonClassName="-ml-3 h-8 px-3"
+								/>
+								<SortableTableHead
+									label="Monoplace"
+									sortKey="single_seat"
+									activeSortKey={sortKey}
+									sortDirection={sortDirection}
+									onSort={toggleSort}
+									buttonClassName="-ml-3 h-8 px-3"
+								/>
 								<TableHead className="w-16 text-right">Actions</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{glidersQuery.isLoading ? (
-								<TableRow>
-									<TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-										Chargement...
-									</TableCell>
-								</TableRow>
+								<TableStatusRow colSpan={7}>
+									Chargement...
+								</TableStatusRow>
 							) : currentPageGliders.length === 0 ? (
-								<TableRow>
-									<TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-										Aucun planeur enregistre.
-									</TableCell>
-								</TableRow>
+								<TableStatusRow colSpan={7}>
+									Aucun planeur enregistre.
+								</TableStatusRow>
 							) : (
 								currentPageGliders.map((glider) => (
 									<TableRow key={glider.registration}>
 										<TableCell>
 											<Checkbox
-												checked={selectedRegistrations.includes(glider.registration)}
+												checked={effectiveSelectedRegistrations.includes(glider.registration)}
 												aria-label={`Selectionner ${glider.registration}`}
 												onCheckedChange={(checked) => {
 													setSelectedRegistrations((previous) => (
@@ -254,80 +263,15 @@ export function GlidersPage() {
 							Affichage de {visibleStart} a {visibleEnd} sur {sortedGliders.length} planeur{sortedGliders.length > 1 ? 's' : ''}
 						</p>
 
-						{pageCount > 1 && (
-							<Pagination className="mx-0 w-auto justify-start md:justify-end">
-								<PaginationContent>
-									<PaginationItem>
-										<PaginationPrevious
-											href="#"
-											text="Precedent"
-											onClick={(event) => {
-												event.preventDefault()
-												if (currentPage > 1) setCurrentPage(currentPage - 1)
-											}}
-											className={cn(currentPage === 1 && 'pointer-events-none opacity-50')}
-										/>
-									</PaginationItem>
-
-									{pageTokens.map((token, index) => (
-										<PaginationItem key={`${token}-${index}`}>
-											{typeof token === 'number' ? (
-												<PaginationLink
-													href="#"
-													isActive={token === currentPage}
-													onClick={(event) => {
-														event.preventDefault()
-														setCurrentPage(token)
-													}}
-												>
-													{token}
-												</PaginationLink>
-											) : (
-												<PaginationEllipsis />
-											)}
-										</PaginationItem>
-									))}
-
-									<PaginationItem>
-										<PaginationNext
-											href="#"
-											text="Suivant"
-											onClick={(event) => {
-												event.preventDefault()
-												if (currentPage < pageCount) setCurrentPage(currentPage + 1)
-											}}
-											className={cn(currentPage === pageCount && 'pointer-events-none opacity-50')}
-										/>
-									</PaginationItem>
-								</PaginationContent>
-							</Pagination>
-						)}
+						<PageNavigation
+							currentPage={effectiveCurrentPage}
+							pageCount={pageCount}
+							pageTokens={pageTokens}
+							onPageChange={setCurrentPage}
+						/>
 					</div>
 				)}
 			</div>
 		</div>
-	)
-}
-
-function SortableHeader({
-	label,
-	active,
-	direction,
-	onClick,
-}: {
-	label: string
-	active: boolean
-	direction: SortDirection
-	onClick: () => void
-}) {
-	return (
-		<Button variant="ghost" className="-ml-3 h-8 px-3" onClick={onClick}>
-			{label}
-			{active ? (
-				direction === 'asc' ? <ArrowUpAZ data-icon="inline-end" /> : <ArrowDownAZ data-icon="inline-end" />
-			) : (
-				<ArrowUpDown data-icon="inline-end" />
-			)}
-		</Button>
 	)
 }

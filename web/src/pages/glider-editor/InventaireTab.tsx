@@ -1,5 +1,7 @@
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, MoreHorizontal, PackageCheck, PackageX, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { MoreHorizontal, PackageCheck, PackageX, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { SortableTableHead } from '@/components/table/SortableTableHead'
+import { TableStatusRow } from '@/components/table/TableStatusRow'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -58,39 +60,6 @@ const EMPTY_LOCATION_VALUE = '__empty__'
 interface InventaireTabProps {
 	instruments: Instrument[]
 	onChange: UpdateInstruments
-}
-
-function SortIcon({ active, direction }: { active: boolean; direction: SortDirection }) {
-	if (!active) return <ArrowUpDown data-icon="inline-end" />
-	return direction === 'asc' ? <ArrowUpAZ data-icon="inline-end" /> : <ArrowDownAZ data-icon="inline-end" />
-}
-
-function SortableHeader({
-	label,
-	sortKey,
-	activeSortKey,
-	sortDirection,
-	onSort,
-}: {
-	label: string
-	sortKey: SortKey
-	activeSortKey: SortKey
-	sortDirection: SortDirection
-	onSort: (nextKey: SortKey) => void
-}) {
-	return (
-		<TableHead>
-			<Button
-				variant="ghost"
-				size="sm"
-				className="-ml-2 h-8 px-2"
-				onClick={() => onSort(sortKey)}
-			>
-				{label}
-				<SortIcon active={activeSortKey === sortKey} direction={sortDirection} />
-			</Button>
-		</TableHead>
-	)
 }
 
 export function InventaireTab({
@@ -161,7 +130,7 @@ export function InventaireTab({
 			return
 		}
 
-		onChange((current) => current.filter((_, itemIndex) => !selectedIndexes.has(itemIndex)))
+		onChange((current) => current.filter((_, itemIndex) => !effectiveSelectedIndexes.has(itemIndex)))
 		setSelectedIndexes(new Set())
 	}
 
@@ -200,7 +169,9 @@ export function InventaireTab({
 		setSortDirection('asc')
 	}
 
-	const selectedCount = selectedIndexes.size
+	const effectiveSelectedIndexValues = [...selectedIndexes].filter((index) => index < instruments.length)
+	const effectiveSelectedIndexes = new Set(effectiveSelectedIndexValues)
+	const selectedCount = effectiveSelectedIndexValues.length
 	const allSelected = instruments.length > 0 && selectedCount === instruments.length
 	const draftDateInvalid = draftDateInput.length > 0 && !parseDateInput(draftDateInput)
 	const selectedDraftDate = useMemo(() => parseStoredDate(draft.date), [draft.date])
@@ -225,10 +196,6 @@ export function InventaireTab({
 
 		setSelectedIndexes(new Set())
 	}
-
-	useEffect(() => {
-		setSelectedIndexes(new Set())
-	}, [instruments])
 
 	return (
 		<TabsContent value="inventaire" className="space-y-5">
@@ -261,49 +228,49 @@ export function InventaireTab({
 										aria-label="Sélectionner tous les instruments"
 									/>
 								</TableHead>
-								<SortableHeader
+								<SortableTableHead
 									label="Installé"
 									sortKey="on_board"
 									activeSortKey={sortKey}
 									sortDirection={sortDirection}
 									onSort={handleSort}
 								/>
-								<SortableHeader
+								<SortableTableHead
 									label="Instrument"
 									sortKey="instrument"
 									activeSortKey={sortKey}
 									sortDirection={sortDirection}
 									onSort={handleSort}
 								/>
-								<SortableHeader
+								<SortableTableHead
 									label="Marque"
 									sortKey="brand"
 									activeSortKey={sortKey}
 									sortDirection={sortDirection}
 									onSort={handleSort}
 								/>
-								<SortableHeader
+								<SortableTableHead
 									label="Type"
 									sortKey="type"
 									activeSortKey={sortKey}
 									sortDirection={sortDirection}
 									onSort={handleSort}
 								/>
-								<SortableHeader
+								<SortableTableHead
 									label="Numero"
 									sortKey="number"
 									activeSortKey={sortKey}
 									sortDirection={sortDirection}
 									onSort={handleSort}
 								/>
-								<SortableHeader
+								<SortableTableHead
 									label="Date"
 									sortKey="date"
 									activeSortKey={sortKey}
 									sortDirection={sortDirection}
 									onSort={handleSort}
 								/>
-								<SortableHeader
+								<SortableTableHead
 									label="Où"
 									sortKey="seat"
 									activeSortKey={sortKey}
@@ -315,17 +282,15 @@ export function InventaireTab({
 						</TableHeader>
 						<TableBody>
 							{instruments.length === 0 ? (
-								<TableRow>
-									<TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-										Aucun instrument.
-									</TableCell>
-								</TableRow>
+								<TableStatusRow colSpan={9} className="py-8 text-sm">
+									Aucun instrument.
+								</TableStatusRow>
 							) : (
 								sortedInstruments.map(({ instrument, index }) => (
 									<TableRow key={`${instrument.id ?? 'new'}-${index}`}>
 										<TableCell>
 											<Checkbox
-												checked={selectedIndexes.has(index)}
+												checked={effectiveSelectedIndexes.has(index)}
 												onCheckedChange={(checked) => toggleSelection(index, checked)}
 												aria-label={`Sélectionner ${instrument.instrument || 'cet instrument'}`}
 											/>

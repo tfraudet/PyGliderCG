@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
-import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { SortableTableHead } from '@/components/table/SortableTableHead'
+import { TableStatusRow } from '@/components/table/TableStatusRow'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -37,39 +39,6 @@ import {
 	WEIGHING_FORM_LABELS,
 } from './constants'
 import type { SortDirection, WeighingSortKey } from './constants'
-
-function SortIcon({ active, direction }: { active: boolean; direction: SortDirection }) {
-	if (!active) return <ArrowUpDown data-icon="inline-end" />
-	return direction === 'asc' ? <ArrowUpAZ data-icon="inline-end" /> : <ArrowDownAZ data-icon="inline-end" />
-}
-
-function SortableHeader({
-	label,
-	sortKey,
-	activeSortKey,
-	sortDirection,
-	onSort,
-}: {
-	label: string
-	sortKey: WeighingSortKey
-	activeSortKey: WeighingSortKey
-	sortDirection: SortDirection
-	onSort: (nextKey: WeighingSortKey) => void
-}) {
-	return (
-		<TableHead>
-			<Button
-				variant="ghost"
-				size="sm"
-				className="-ml-2 h-8 px-2"
-				onClick={() => onSort(sortKey)}
-			>
-				{label}
-				<SortIcon active={activeSortKey === sortKey} direction={sortDirection} />
-			</Button>
-		</TableHead>
-	)
-}
 
 interface WeighingsHistorySectionProps {
 	glider: Glider
@@ -195,7 +164,7 @@ export function WeighingsHistorySection({
 								/>
 							</TableHead>
 							{WEIGHING_FIELDS.map((field) => (
-								<SortableHeader
+								<SortableTableHead
 									key={field}
 									label={WEIGHING_FORM_LABELS[field]}
 									sortKey={field}
@@ -209,11 +178,9 @@ export function WeighingsHistorySection({
 					</TableHeader>
 					<TableBody>
 						{glider.weighings.length === 0 ? (
-							<TableRow>
-								<TableCell colSpan={WEIGHING_FIELDS.length + 2} className="py-8 text-center text-sm text-muted-foreground">
-									Aucune pesée enregistrée.
-								</TableCell>
-							</TableRow>
+							<TableStatusRow colSpan={WEIGHING_FIELDS.length + 2} className="py-8 text-sm">
+								Aucune pesée enregistrée.
+							</TableStatusRow>
 						) : (
 							sortedWeighings.map(({ weighing, index }) => {
 								const weighingId = weighing.id

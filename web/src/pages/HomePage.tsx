@@ -1,13 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 import { Barcode, Calculator, Plane, TriangleAlert, UserRound, UsersRound } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { QueryErrorAlert } from '@/components/QueryErrorAlert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { backend } from '@/lib/api'
+import { useGliderLimits, useGliders } from '@/hooks/use-app-queries'
 import { CentrageTab } from './home-page/CentrageTab'
 import { LimitsTab } from './home-page/LimitsTab'
 import { EMPTY_PAYLOAD } from './home-page/types'
@@ -15,10 +17,7 @@ import { buildChartEnvelopePoints } from './home-page/utils'
 import { WeighingTab } from './home-page/WeighingTab'
 
 export function HomePage() {
-  const glidersQuery = useQuery({
-    queryKey: ['gliders'],
-    queryFn: () => backend.getGliders(),
-  })
+  const glidersQuery = useGliders()
   const [selected, setSelected] = useState('')
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [payload, setPayload] = useState(EMPTY_PAYLOAD)
@@ -28,11 +27,7 @@ export function HomePage() {
     [glidersQuery.data, selected],
   )
 
-  const gliderLimitsQuery = useQuery({
-    queryKey: ['gliderLimits', selected],
-    queryFn: () => backend.gliderLimits(selected),
-    enabled: !!selected,
-  })
+  const gliderLimitsQuery = useGliderLimits(selected)
 
   const calcMutation = useMutation({
     mutationFn: () => backend.calculateWeightBalance(selected, payload),
@@ -50,12 +45,16 @@ export function HomePage() {
     [selectedGlider, enpMass],
   )
 
-  useEffect(() => {
-    // Keep stale results from a previous glider out of the current view.
+  const handleSelectedChange = (value: string | null) => {
+    if (!value || value === selected) {
+      return
+    }
+
     calcMutation.reset()
     setPayload({ ...EMPTY_PAYLOAD })
     setFocusedField(null)
-  }, [selected])
+    setSelected(value)
+  }
 
   return (
     <div className="space-y-5">
@@ -75,7 +74,7 @@ export function HomePage() {
         <CardHeader className="flex flex-wrap items-center gap-3">
           <CardTitle>Planeur</CardTitle>
 
-          <Select value={selected} onValueChange={(value: string | null) => { if (value) setSelected(value) }} disabled={glidersQuery.isLoading}>
+          <Select value={selected} onValueChange={handleSelectedChange} disabled={glidersQuery.isLoading}>
             <SelectTrigger className="min-w-[15rem] bg-input/50">
               <SelectValue placeholder={glidersQuery.isLoading ? 'Chargement…' : 'Sélectionner un planeur…'} />
             </SelectTrigger>
@@ -107,6 +106,9 @@ export function HomePage() {
           )}
         </CardContent>
       </Card>
+
+      <QueryErrorAlert error={glidersQuery.error} />
+      <QueryErrorAlert error={gliderLimitsQuery.error} />
 
       {selectedGlider && (
         <>
