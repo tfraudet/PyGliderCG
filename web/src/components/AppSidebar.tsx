@@ -44,7 +44,7 @@ const NAV_ITEMS = [
 export function AppSidebar() {
   const { pathname } = useLocation()
   const { user, loading, login, logout } = useAuth()
-  const { state, isMobile, openMobile } = useSidebar()
+  const { state, isMobile, openMobile, setOpen, setOpenMobile } = useSidebar()
   const [loginError, setLoginError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
@@ -67,8 +67,17 @@ export function AppSidebar() {
     }
   }
 
+  function openLoginPanel() {
+    if (isMobile) {
+      setOpenMobile(true)
+      return
+    }
+
+    setOpen(true)
+  }
+
   return (
-    <Sidebar className="top-[--header-height] h-[calc(100svh-var(--header-height))] md:top-0 md:h-[calc(100svh-var(--header-height))]">
+    <Sidebar className="top-[--header-height] h-[calc(100svh-var(--header-height))] md:top-0 md:h-auto md:min-h-[calc(100svh-var(--header-height))]">
       {/* <SidebarHeader className="flex items-center justify-between gap-2 px-4 py-3.5">
         {!isCollapsed && (
         )}
@@ -84,6 +93,7 @@ export function AppSidebar() {
                   variant="ghost"
                   size="icon"
                   className="h-9 w-9 text-primary hover:bg-sidebar-accent"
+                  onClick={openLoginPanel}
                 >
                   <LogIn size={18} strokeWidth={1.8} />
                 </Button>

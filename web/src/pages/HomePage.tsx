@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Calculator, TriangleAlert, UserRound, UsersRound, Barcode, Plane, Plus, Minus, Users, Droplet, X } from 'lucide-react'
+import { Calculator, TriangleAlert, UserRound, UsersRound, Barcode, Plane, Plus, Minus, Users, Droplet, Info, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -59,7 +59,47 @@ const ARM_FIELDS: Array<{ key: keyof Arms, label: string }> = [
   { key: 'arm_instruments_panel', label: 'Bras de levier tableau de bord (mm)' },
 ]
 
+const WEIGHING_FIELD_COLUMNS: Array<Array<{ key: WeighingMetricKey, label: string, decimals?: number }>> = [
+  [
+    { key: 'p1', label: 'P1 (kg)' },
+    { key: 'p2', label: 'P2 (kg)' },
+    { key: 'A', label: 'A (mm)', decimals: 0 },
+    { key: 'D', label: 'D (mm)', decimals: 0 },
+  ],
+  [
+    { key: 'right_wing_weight', label: 'Aile droite (kg)' },
+    { key: 'left_wing_weight', label: 'Aile gauche (kg)' },
+    { key: 'tail_weight', label: 'Empennage H (kg)' },
+    { key: 'fuselage_weight', label: 'Fuselage (kg)' },
+    { key: 'fix_ballast_weight', label: 'Masse du lest fixe (kg)' },
+  ],
+]
+
+const WEIGHING_SUMMARY_COLUMNS: Array<Array<{ key: WeighingSummaryKey, label: string }>> = [
+  [
+    { key: 'mve', label: 'Masse à vide équipée MVE (kg)' },
+    { key: 'mvenp', label: 'Masse à vide des éléments non portants (MVENP) en kg' },
+    { key: 'cu', label: 'Charge utile (kg)' },
+  ],
+  [
+    { key: 'cv_max', label: 'Charge variable max (kg)' },
+    { key: 'cu_max', label: 'Charge utile max (kg)' },
+    { key: 'empty_arm', label: 'X0 (mm)' },
+  ],
+]
+
 type ChartPoint = { x: number; y: number }
+type WeighingMetricKey =
+  | 'p1'
+  | 'p2'
+  | 'A'
+  | 'D'
+  | 'right_wing_weight'
+  | 'left_wing_weight'
+  | 'tail_weight'
+  | 'fuselage_weight'
+  | 'fix_ballast_weight'
+type WeighingSummaryKey = 'mve' | 'mvenp' | 'cu' | 'cv_max' | 'cu_max' | 'empty_arm'
 
 const CHART_COLORS = {
   envelope: '#2ecbff',
@@ -119,6 +159,50 @@ function createAxisTicks(min: number, max: number, targetTickCount: number) {
 }
 
 const formatTick = (value: number) => (Number.isInteger(value) ? String(value) : value.toFixed(1))
+
+const formatMetricValue = (value: number | null | undefined, decimals = 1) =>
+  Number.isFinite(value) ? Number(value).toFixed(decimals) : '—'
+
+const formatDateLabel = (value: string | null | undefined) => {
+  if (!value) return 'date inconnue'
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch
+    return `${day}/${month}/${year}`
+  }
+  return value
+}
+
+function getRetainedPilotMin(manualMin: number | null | undefined, calculatedMin: number | null | undefined) {
+  const candidates = [manualMin, calculatedMin].filter((value): value is number => Number.isFinite(value))
+  const value = candidates.length ? Math.max(...candidates) : null
+  const reason = value == null
+    ? null
+    : manualMin != null && value === manualMin && (calculatedMin == null || manualMin >= calculatedMin)
+      ? 'Manuel de vol'
+      : 'Centrage'
+
+  return { value, reason }
+}
+
+function getRetainedPilotMax(
+  calculatedMax: number | null | undefined,
+  usefulLoadLimit: number | null | undefined,
+  seatLimit: number | null | undefined,
+) {
+  const candidates = [
+    calculatedMax != null ? { value: calculatedMax, reason: 'Centrage' } : null,
+    usefulLoadLimit != null ? { value: usefulLoadLimit, reason: 'Limité par les éléments non portants' } : null,
+    seatLimit != null ? { value: seatLimit, reason: 'Limité par les harnais' } : null,
+  ].filter((candidate): candidate is { value: number, reason: string } => candidate !== null && Number.isFinite(candidate.value))
+
+  const value = candidates.length ? Math.min(...candidates.map((candidate) => candidate.value)) : null
+  const reason = value == null
+    ? null
+    : candidates.find((candidate) => candidate.value === value)?.reason ?? 'Limitation retenue'
+
+  return { value, reason }
+}
 
 function WeightBalanceGraph({
   envelopePoints,
@@ -481,6 +565,54 @@ export function HomePage() {
   const frontBallast = payload.front_ballast_weight || 0
   const pilots = (payload.front_pilot_weight || 0) + (payload.rear_pilot_weight || 0)
   const enpMass = mvenp + pilots + rearBallast + frontBallast
+  const latestWeighing = selectedGlider?.weighings.at(-1) ?? null
+  const monoplacePilotMin = gliderLimitsQuery.data?.pilot_av_mini ?? null
+  const biplacePilotMin = gliderLimitsQuery.data?.pilot_av_mini_duo ?? monoplacePilotMin
+  const calculatedPilotMax = gliderLimitsQuery.data?.pilot_av_maxi ?? null
+  const manualPilotMin = selectedGlider?.limits.weight_min_pilot ?? null
+  const usefulLoadLimit = gliderLimitsQuery.data?.cu ?? null
+  const seatLimit = selectedGlider?.limits.mm_harnais ?? null
+  const retainedMonoplacePilotMin = getRetainedPilotMin(manualPilotMin, monoplacePilotMin)
+  const retainedBiplacePilotMin = getRetainedPilotMin(manualPilotMin, biplacePilotMin)
+  const retainedPilotMax = getRetainedPilotMax(calculatedPilotMax, usefulLoadLimit, seatLimit)
+  const weighingCabinSections = selectedGlider?.single_seat
+    ? [
+        {
+          title: 'Monoplace',
+          calculatedMinLabel: 'Masse mini pilote calculé:',
+          calculatedMaxLabel: 'Masse maxi pilote calculé:',
+          retainedMinLabel: 'Masse mini pilote',
+          retainedMaxLabel: 'Masse maxi pilote',
+          calculatedMin: monoplacePilotMin,
+          retainedMin: retainedMonoplacePilotMin.value,
+          retainedMinReason: retainedMonoplacePilotMin.reason,
+          showInfo: true,
+        },
+      ]
+    : [
+        {
+          title: 'En monoplace',
+          calculatedMinLabel: 'Masse mini pilote calculé:',
+          calculatedMaxLabel: 'Masse maxi pilote calculé:',
+          retainedMinLabel: 'Masse mini pilote',
+          retainedMaxLabel: 'Masse maxi pilote',
+          calculatedMin: monoplacePilotMin,
+          retainedMin: retainedMonoplacePilotMin.value,
+          retainedMinReason: retainedMonoplacePilotMin.reason,
+          showInfo: false,
+        },
+        {
+          title: 'En biplace',
+          calculatedMinLabel: 'Masse mini pilote avant calculé:',
+          calculatedMaxLabel: 'Masse maxi pilote avant calculé:',
+          retainedMinLabel: 'Masse mini pilote avant',
+          retainedMaxLabel: 'Masse maxi pilote avant',
+          calculatedMin: biplacePilotMin,
+          retainedMin: retainedBiplacePilotMin.value,
+          retainedMinReason: retainedBiplacePilotMin.reason,
+          showInfo: true,
+        },
+      ]
   const chartEnvelopePoints = useMemo<ChartPoint[]>(() => {
     if (!selectedGlider) return []
 
@@ -553,15 +685,15 @@ export function HomePage() {
         <CardContent>
           {selectedGlider && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="outline" className="text-xs font-extralight bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
                 <Plane size={11} className="mr-1"/>
                 {selectedGlider.brand}
               </Badge>
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="outline" className="text-xs font-extralight bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
                 <Barcode size={11} className="mr-1"/>
                 {selectedGlider.model}
               </Badge>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs font-extralight bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">
                 {selectedGlider.single_seat ?  <UserRound /> : <UsersRound /> }
                 {selectedGlider.single_seat ? 'Monoplace' : 'Biplace'}
               </Badge>
@@ -576,6 +708,7 @@ export function HomePage() {
             <TabsList className="bg-muted/40 border border-border/40">
               <TabsTrigger value="centrage">Centrage</TabsTrigger>
               <TabsTrigger value="limites">Limites & Bras</TabsTrigger>
+              <TabsTrigger value="pesee">Pesée</TabsTrigger>
             </TabsList>
 
             <TabsContent value="centrage" className="space-y-5">
@@ -859,6 +992,126 @@ export function HomePage() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="pesee" className="space-y-5">
+              {!latestWeighing ? (
+                <Card className="border-border/60 bg-card/80">
+                  <CardContent className="px-4 py-8 text-sm text-muted-foreground">
+                    Aucune pesée enregistrée pour ce planeur.
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <Card className="border-border/60 bg-card/80">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-xl">
+                        Détails de la pesée
+                        {latestWeighing.id ? ` #${latestWeighing.id}` : ''}
+                        {' '}du {formatDateLabel(latestWeighing.date)}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-8 px-4 pb-4">
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        {WEIGHING_FIELD_COLUMNS.map((column, columnIndex) => (
+                          <div key={columnIndex} className="space-y-4">
+                            {column.map(({ key, label, decimals = 1 }) => (
+                              <div key={key} className="space-y-1.5">
+                                <Label className="text-xs text-muted-foreground">{label}</Label>
+                                <Input
+                                  value={formatMetricValue(latestWeighing[key], decimals)}
+                                  readOnly
+                                  className="bg-input/60 font-mono text-base"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="grid gap-8 lg:grid-cols-2">
+                        {WEIGHING_SUMMARY_COLUMNS.map((column, columnIndex) => (
+                          <div key={columnIndex} className="space-y-6">
+                            {column.map(({ key, label }) => (
+                              <div key={key} className="space-y-2">
+                                <p className="text-xs  text-muted-foreground">{label}</p> 
+                                <p className="text-4xl font-semibold tracking-tight text-foreground">
+                                  {formatMetricValue(gliderLimitsQuery.data?.[key], key === 'empty_arm' ? 1 : 1)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {weighingCabinSections.map((section) => (
+                    <Card key={section.title} className="border-border/60 bg-card/80">
+                      <CardContent className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+                        <section className="space-y-5">
+                          <div>
+                            <p className="text-lg text-foreground">
+                              {section.title}
+                            </p>
+                          </div>
+
+                          <div className="space-y-4">
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">{section.calculatedMinLabel}</p>
+                              <p className="text-xl font-semibold text-green-500">
+                                {formatMetricValue(section.calculatedMin)} kg
+                              </p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <p className="text-xs text-muted-foreground">{section.calculatedMaxLabel}</p>
+                              <p className="text-xl font-semibold text-green-500">
+                                {formatMetricValue(calculatedPilotMax)} kg
+                              </p>
+                            </div>
+                          </div>
+                        </section>
+
+                        <section className="space-y-5">
+                          <p className="text-lg text-foreground">Etiquette cabine / Valeurs retenues</p>
+
+                          <div className="space-y-4">
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">
+                                {section.retainedMinLabel}{' '}
+                                <span className="font-semibold text-green-500">{formatMetricValue(section.retainedMin)} kg</span>
+                                {section.retainedMinReason ? `, (${section.retainedMinReason})` : ''}
+                              </p>
+                            </div>
+
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">
+                                {section.retainedMaxLabel}{' '}
+                                <span className="font-semibold text-green-500">{formatMetricValue(retainedPilotMax.value)} kg</span>
+                                {retainedPilotMax.reason ? `, (${retainedPilotMax.reason})` : ''}
+                              </p>
+                            </div>
+                          </div>
+
+                          {section.showInfo && (
+                            <div className="rounded-xl border border-sky-500/20 bg-sky-500/10 px-4 py-4 text-sky-100">
+                              <div className="flex items-start gap-3">
+                                <Info size={18} className="mt-0.5 shrink-0 text-sky-300" />
+                                <p className="text-sm leading-7">
+                                  Charge utile de <span className="font-semibold text-green-500">{formatMetricValue(usefulLoadLimit)} kg</span>
+                                  {' '}dans le respect des limitations de masse, de centrage
+                                  {seatLimit != null ? ` et de siège à ${formatMetricValue(seatLimit)} kg` : ''}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </section>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </>
+              )}
             </TabsContent>
           </Tabs>
 
