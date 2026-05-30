@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Database, Eye, MoreHorizontal, Pencil, Plus, Save, Trash2, Upload, Users } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ArrowDownAZ, ArrowUpAZ, ArrowUpDown, Database, Download, Eye, MoreHorizontal, Pencil, Plus, Save, Trash2, TriangleAlert, Upload, Users } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
@@ -38,31 +37,81 @@ import { apiError, backend } from '@/lib/api'
 import type { User } from '@/lib/types'
 
 const EMPTY_USER: User = { username: '', email: '', password: '', role: 'viewer' }
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 type DialogMode = 'create' | 'view' | 'edit' | null
+type SortKey = 'username' | 'email'
+type SortDirection = 'asc' | 'desc'
 
-const ROLE_VARIANT: Record<User['role'], 'default' | 'secondary' | 'outline'> = {
-  administrator: 'default',
-  editor: 'secondary',
-  viewer: 'outline',
+const ROLE_CLASSNAME: Record<User['role'],string> = {
+  administrator: 'bg-purple-50 text-xs font-extralight text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
+  editor: 'bg-amber-50 text-xs font-extralight text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
+  viewer: 'bg-green-50 text-xs font-extralight text-green-700 dark:bg-green-900/20 dark:text-green-400',
 }
 
 const ROLE_OPTIONS: User['role'][] = ['viewer', 'editor', 'administrator']
-
-function makeDraft(user: User): User {
-  return { ...user, password: '' }
-}
 
 function isChecked(value: boolean | 'indeterminate') {
   return value === true
 }
 
+function getEmailError(email: string): string | null {
+  const normalizedEmail = email.trim()
+  if (!normalizedEmail) return "L'email est requis."
+  if (!EMAIL_PATTERN.test(normalizedEmail)) return 'Veuillez saisir une adresse email valide.'
+  return null
+}
+
+function getPasswordError(password: string): string | null {
+  if (password.length < 6) return 'Le mot de passe doit contenir au moins 6 caracteres.'
+  return null
+}
+
+function SortIcon({ active, direction }: { active: boolean; direction: SortDirection }) {
+  if (!active) return <ArrowUpDown data-icon="inline-end" />
+  return direction === 'asc' ? <ArrowUpAZ data-icon="inline-end" /> : <ArrowDownAZ data-icon="inline-end" />
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  activeSortKey,
+  sortDirection,
+  onSort,
+}: {
+  label: string
+  sortKey: SortKey
+  activeSortKey: SortKey
+  sortDirection: SortDirection
+  onSort: (nextKey: SortKey) => void
+}) {
+  return (
+    <TableHead>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-2 h-8 px-2"
+        onClick={() => onSort(sortKey)}
+      >
+        {label}
+        <SortIcon active={activeSortKey === sortKey} direction={sortDirection} />
+      </Button>
+    </TableHead>
+  )
+}
+
 export function UsersPage() {
   const queryClient = useQueryClient()
+  const importInputRef = useRef<HTMLInputElement | null>(null)
   const [dialogMode, setDialogMode] = useState<DialogMode>(null)
   const [activeUsername, setActiveUsername] = useState('')
   const [draft, setDraft] = useState<User>(EMPTY_USER)
+  const [initialPassword, setInitialPassword] = useState('')
+  const [showValidation, setShowValidation] = useState(false)
+  const [touchedFields, setTouchedFields] = useState({ email: false, password: false })
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([])
+  const [sortKey, setSortKey] = useState<SortKey>('username')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   const usersQuery = useQuery({
     queryKey: ['users'],
@@ -74,18 +123,39 @@ export function UsersPage() {
   const isCreateMode = dialogMode === 'create'
   const isEditMode = dialogMode === 'edit'
   const isViewMode = dialogMode === 'view'
+  const hasPasswordChanged = isCreateMode || (draft.password ?? '') !== initialPassword
+  const emailError = isViewMode ? null : getEmailError(draft.email)
+  const passwordError = isViewMode || !hasPasswordChanged ? null : getPasswordError(draft.password ?? '')
+  const shouldShowEmailError = Boolean(emailError && (showValidation || touchedFields.email))
+  const shouldShowPasswordError = Boolean(passwordError && (showValidation || touchedFields.password))
+  const isFormInvalid = !draft.username.trim() || Boolean(emailError) || Boolean(passwordError)
 
   const saveMutation = useMutation({
-    mutationFn: async () => (
-      isCreateMode
-        ? backend.createUser(draft)
-        : backend.updateUser(activeUsername, draft)
-    ),
+    mutationFn: async () => {
+      if (isCreateMode) {
+        return backend.createUser(draft)
+      }
+
+      const updatePayload: User = {
+        username: draft.username,
+        email: draft.email,
+        role: draft.role,
+      }
+
+      if ((draft.password ?? '') !== initialPassword) {
+        updatePayload.password = draft.password
+      }
+
+      return backend.updateUser(activeUsername, updatePayload)
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['users'] })
       setDialogMode(null)
       setActiveUsername('')
       setDraft(EMPTY_USER)
+      setInitialPassword('')
+      setShowValidation(false)
+      setTouchedFields({ email: false, password: false })
     },
   })
 
@@ -120,8 +190,7 @@ export function UsersPage() {
     mutationFn: (file: File) => backend.importDatabase(file),
   })
 
-  const anyError = saveMutation.error
-    ?? deleteUsersMutation.error
+  const anyError = deleteUsersMutation.error
     ?? exportMutation.error
     ?? importMutation.error
 
@@ -132,32 +201,67 @@ export function UsersPage() {
 
   const selectedCount = selectedUsernames.length
   const sortedUsers = useMemo(
-    () => [...users].sort((left, right) => left.username.localeCompare(right.username, 'fr', { sensitivity: 'base' })),
-    [users],
+    () => [...users].sort((left, right) => {
+      const leftValue = sortKey === 'username' ? left.username : left.email
+      const rightValue = sortKey === 'username' ? right.username : right.email
+      const result = leftValue.localeCompare(rightValue, 'fr', { sensitivity: 'base' })
+      if (result !== 0) {
+        return sortDirection === 'asc' ? result : -result
+      }
+
+      return left.username.localeCompare(right.username, 'fr', { sensitivity: 'base' })
+    }),
+    [sortDirection, sortKey, users],
   )
 
+  const handleSort = (nextKey: SortKey) => {
+    if (sortKey === nextKey) {
+      setSortDirection((previous) => (previous === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+
+    setSortKey(nextKey)
+    setSortDirection('asc')
+  }
+
   const openCreateDialog = () => {
+    saveMutation.reset()
     setDialogMode('create')
     setActiveUsername('')
     setDraft(EMPTY_USER)
+    setInitialPassword('')
+    setShowValidation(false)
+    setTouchedFields({ email: false, password: false })
   }
 
   const openViewDialog = (user: User) => {
+    saveMutation.reset()
     setDialogMode('view')
     setActiveUsername(user.username)
-    setDraft(makeDraft(user))
+    setDraft(user)
+    setInitialPassword(user.password ?? '')
+    setShowValidation(false)
+    setTouchedFields({ email: false, password: false })
   }
 
   const openEditDialog = (user: User) => {
+    saveMutation.reset()
     setDialogMode('edit')
     setActiveUsername(user.username)
-    setDraft(makeDraft(user))
+    setDraft(user)
+    setInitialPassword(user.password ?? '')
+    setShowValidation(false)
+    setTouchedFields({ email: false, password: false })
   }
 
   const closeDialog = () => {
+    saveMutation.reset()
     setDialogMode(null)
     setActiveUsername('')
     setDraft(EMPTY_USER)
+    setInitialPassword('')
+    setShowValidation(false)
+    setTouchedFields({ email: false, password: false })
   }
 
   const toggleUserSelection = (username: string, checked: boolean | 'indeterminate') => {
@@ -182,11 +286,8 @@ export function UsersPage() {
         <Badge variant="secondary">{users.length}</Badge>
       </div>
 
-      <Card className="border-border/60 bg-card/80">
-        <CardHeader className="flex flex-col gap-3 px-4 pt-4 pb-2 md:flex-row md:items-center md:justify-between">
-          <CardTitle className="text-sm font-semibold text-foreground">
-            Utilisateurs
-          </CardTitle>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="destructive"
@@ -197,13 +298,14 @@ export function UsersPage() {
               <Trash2 data-icon="inline-start" />
               {deleteUsersMutation.isPending ? 'Suppression…' : `Supprimer la sélection${selectedCount ? ` (${selectedCount})` : ''}`}
             </Button>
-            <Button size="sm" onClick={openCreateDialog}>
+            <Button size="sm" onClick={openCreateDialog}            >
               <Plus data-icon="inline-start" />
               Ajouter un utilisateur
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
+        </div>
+
+        <div className="rounded-lg border border-border/80">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -214,8 +316,20 @@ export function UsersPage() {
                     onCheckedChange={toggleAllSelection}
                   />
                 </TableHead>
-                <TableHead>Identifiant</TableHead>
-                <TableHead>Email</TableHead>
+                <SortableHeader
+                  label="Identifiant"
+                  sortKey="username"
+                  activeSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+                <SortableHeader
+                  label="Email"
+                  sortKey="email"
+                  activeSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
                 <TableHead>Mot de passe</TableHead>
                 <TableHead>Rôle</TableHead>
                 <TableHead className="w-14 text-right">Actions</TableHead>
@@ -254,7 +368,7 @@ export function UsersPage() {
                         {user.password ? `${user.password.substring(0, 24)}…` : '—'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={ROLE_VARIANT[user.role]}>
+                        <Badge variant="outline" className={ROLE_CLASSNAME[user.role]}>
                           {user.role}
                         </Badge>
                       </TableCell>
@@ -301,47 +415,47 @@ export function UsersPage() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Separator className="bg-border/80" />
+      <Separator className="bg-border/80 mt-10" />
 
-      <Card className="border-border/60 bg-card/80">
-        <CardHeader className="px-4 pt-4 pb-2">
-          <CardTitle className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <Database />
-            Administration base de données
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3 px-4 pb-4">
+      <div className="space-y-3">
+        <div className="flex items-center gap-1.5 text-base font-semibold tracking-wider text-foreground mb-5">
+          <Database />
+          <h2>Administration</h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
-            size="sm"
             onClick={() => exportMutation.mutate()}
             disabled={exportMutation.isPending}
           >
-            <Database data-icon="inline-start" />
+            <Download data-icon="inline-start" />
             {exportMutation.isPending ? 'Export…' : 'Exporter la base'}
           </Button>
-          <Label
-            htmlFor="import-db"
-            className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border/60 bg-transparent px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/40"
+          <Button
+            variant="outline"
+            onClick={() => importInputRef.current?.click()}
+            disabled={importMutation.isPending}
           >
             <Upload />
-            Importer la base
-            <Input
-              id="import-db"
-              type="file"
-              accept=".zip"
-              className="sr-only"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (file) importMutation.mutate(file)
-              }}
-            />
-          </Label>
-        </CardContent>
-      </Card>
+            {importMutation.isPending ? 'Import…' : 'Importer la base'}
+          </Button>
+          <Input
+            ref={importInputRef}
+            id="import-db"
+            type="file"
+            accept=".zip"
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              if (file) importMutation.mutate(file)
+              event.target.value = ''
+            }}
+          />
+        </div>
+      </div>
 
       {anyError && (
         <Alert variant="destructive">
@@ -364,6 +478,26 @@ export function UsersPage() {
             </DialogDescription>
           </DialogHeader>
 
+          {saveMutation.error && (
+            <Alert variant="destructive">
+              <TriangleAlert />
+              <AlertTitle>Une erreur est survenue</AlertTitle>
+              <AlertDescription className="whitespace-pre-wrap break-words">
+                {apiError(saveMutation.error)}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!saveMutation.error && (shouldShowEmailError || shouldShowPasswordError) && (
+            <Alert variant="destructive">
+              <TriangleAlert />
+              <AlertTitle>Formulaire invalide</AlertTitle>
+              <AlertDescription className="whitespace-pre-wrap break-words">
+                {[emailError, passwordError].filter(Boolean).join('\n')}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">Identifiant</Label>
@@ -382,27 +516,45 @@ export function UsersPage() {
                 type="email"
                 value={draft.email}
                 readOnly={isViewMode}
-                onChange={(event) => setDraft((previous) => ({ ...previous, email: event.target.value }))}
+                onChange={(event) => {
+                  saveMutation.reset()
+                  setTouchedFields((previous) => ({ ...previous, email: true }))
+                  setDraft((previous) => ({ ...previous, email: event.target.value }))
+                }}
+                onBlur={() => setTouchedFields((previous) => ({ ...previous, email: true }))}
+                aria-invalid={shouldShowEmailError}
                 className="bg-input/50"
                 placeholder="ex: john@example.com"
               />
+              {shouldShowEmailError && (
+                <p className="text-xs text-destructive">{emailError}</p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">Mot de passe</Label>
               <Input
-                type={isViewMode ? 'text' : 'password'}
+                type={isCreateMode ? 'password' : 'text'}
                 value={draft.password ?? ''}
                 readOnly={isViewMode}
-                onChange={(event) => setDraft((previous) => ({ ...previous, password: event.target.value }))}
+                onChange={(event) => {
+                  saveMutation.reset()
+                  setTouchedFields((previous) => ({ ...previous, password: true }))
+                  setDraft((previous) => ({ ...previous, password: event.target.value }))
+                }}
+                onBlur={() => setTouchedFields((previous) => ({ ...previous, password: true }))}
+                aria-invalid={shouldShowPasswordError}
                 className="bg-input/50"
-                placeholder={isCreateMode ? 'Mot de passe' : isEditMode ? 'Laisser vide pour ne pas changer' : '—'}
+                placeholder={isCreateMode ? 'Mot de passe' : '—'}
               />
+              {shouldShowPasswordError && (
+                <p className="text-xs text-destructive">{passwordError}</p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">Rôle</Label>
               {isViewMode ? (
                 <div className="flex min-h-8 items-center">
-                  <Badge variant={ROLE_VARIANT[draft.role]}>{draft.role}</Badge>
+                  <Badge variant="outline" className={ROLE_CLASSNAME[draft.role]}>{draft.role}</Badge>
                 </div>
               ) : (
                 <Select
@@ -432,8 +584,12 @@ export function UsersPage() {
                 Annuler
               </Button>
               <Button
-                onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending || !draft.username || !draft.email || (isCreateMode && !draft.password)}
+                onClick={() => {
+                  setShowValidation(true)
+                  if (isFormInvalid) return
+                  saveMutation.mutate()
+                }}
+                disabled={saveMutation.isPending || !draft.username.trim()}
               >
                 <Save data-icon="inline-start" />
                 {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
