@@ -1,57 +1,106 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Users, Plus, Save, Trash2, Database, Upload, ArrowUpDown } from 'lucide-react'
-import type { ColumnDef } from '@tanstack/react-table'
+import { Database, Eye, MoreHorizontal, Pencil, Plus, Save, Trash2, Upload, Users } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { DataTable } from '@/components/DataTable'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { apiError, backend } from '@/lib/api'
 import type { User } from '@/lib/types'
 
 const EMPTY_USER: User = { username: '', email: '', password: '', role: 'viewer' }
 
-const ROLE_BADGE: Record<string, string> = {
-  administrator: 'bg-primary/10 text-primary border-primary/30',
-  editor:        'bg-secondary text-secondary-foreground border-border',
-  viewer:        'bg-muted text-muted-foreground border-border',
+type DialogMode = 'create' | 'view' | 'edit' | null
+
+const ROLE_VARIANT: Record<User['role'], 'default' | 'secondary' | 'outline'> = {
+  administrator: 'default',
+  editor: 'secondary',
+  viewer: 'outline',
+}
+
+const ROLE_OPTIONS: User['role'][] = ['viewer', 'editor', 'administrator']
+
+function makeDraft(user: User): User {
+  return { ...user, password: '' }
+}
+
+function isChecked(value: boolean | 'indeterminate') {
+  return value === true
 }
 
 export function UsersPage() {
   const queryClient = useQueryClient()
-  const [selectedUsername, setSelectedUsername] = useState('')
+  const [dialogMode, setDialogMode] = useState<DialogMode>(null)
+  const [activeUsername, setActiveUsername] = useState('')
   const [draft, setDraft] = useState<User>(EMPTY_USER)
-  const [newMode, setNewMode] = useState(false)
+  const [selectedUsernames, setSelectedUsernames] = useState<string[]>([])
 
   const usersQuery = useQuery({
     queryKey: ['users'],
     queryFn: () => backend.getUsers(),
   })
 
+  const users = usersQuery.data ?? []
+  const allSelected = users.length > 0 && selectedUsernames.length === users.length
+  const isCreateMode = dialogMode === 'create'
+  const isEditMode = dialogMode === 'edit'
+  const isViewMode = dialogMode === 'view'
+
   const saveMutation = useMutation({
-    mutationFn: async () =>
-      newMode ? backend.createUser(draft) : backend.updateUser(selectedUsername, draft),
+    mutationFn: async () => (
+      isCreateMode
+        ? backend.createUser(draft)
+        : backend.updateUser(activeUsername, draft)
+    ),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['users'] })
-      setNewMode(false)
-      setSelectedUsername(draft.username)
+      setDialogMode(null)
+      setActiveUsername('')
+      setDraft(EMPTY_USER)
     },
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: async () => backend.deleteUser(selectedUsername),
-    onSuccess: async () => {
+  const deleteUsersMutation = useMutation({
+    mutationFn: async (usernames: string[]) => {
+      await Promise.all(usernames.map((username) => backend.deleteUser(username)))
+    },
+    onSuccess: async (_, usernames) => {
       await queryClient.invalidateQueries({ queryKey: ['users'] })
-      setSelectedUsername('')
-      setDraft(EMPTY_USER)
-      setNewMode(false)
+      setSelectedUsernames((previous) => previous.filter((username) => !usernames.includes(username)))
+      if (usernames.includes(activeUsername)) {
+        setDialogMode(null)
+        setActiveUsername('')
+        setDraft(EMPTY_USER)
+      }
     },
   })
 
@@ -59,8 +108,10 @@ export function UsersPage() {
     mutationFn: () => backend.exportDatabase(),
     onSuccess: (blob) => {
       const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url; a.download = 'exported_db.zip'; a.click()
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'exported_db.zip'
+      link.click()
       URL.revokeObjectURL(url)
     },
   })
@@ -69,213 +120,223 @@ export function UsersPage() {
     mutationFn: (file: File) => backend.importDatabase(file),
   })
 
-  const anyError = saveMutation.error ?? deleteMutation.error ?? exportMutation.error ?? importMutation.error
+  const anyError = saveMutation.error
+    ?? deleteUsersMutation.error
+    ?? exportMutation.error
+    ?? importMutation.error
 
-  // Define columns for the data table
-  const columns: ColumnDef<User>[] = [
-    {
-      accessorKey: 'username',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-auto p-0 font-semibold hover:bg-transparent"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Identifiant
-          {column.getIsSorted() && (
-            <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-          )}
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <span
-          className="cursor-pointer hover:underline"
-          onClick={() => {
-            setSelectedUsername(row.original.username)
-            setDraft({ ...row.original, password: '' })
-            setNewMode(false)
-          }}
-        >
-          {row.getValue('username')}
-        </span>
-      ),
-    },
-    {
-      accessorKey: 'email',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-auto p-0 font-semibold hover:bg-transparent"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          eMail
-          {column.getIsSorted() && (
-            <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-          )}
-        </Button>
-      ),
-      cell: ({ row }) => <div className="break-all">{row.getValue('email')}</div>,
-    },
-    {
-      accessorKey: 'password',
-      header: 'Mot de passe',
-      cell: ({ row }) => {
-        const pwd = row.getValue('password') as string
-        return (
-          <span className="font-mono text-xs text-muted-foreground break-all">
-            {pwd ? `${pwd.substring(0, 20)}…` : '—'}
-          </span>
-        )
-      },
-    },
-    {
-      accessorKey: 'role',
-      header: 'Rôle',
-      cell: ({ row }) => (
-        <Badge variant="outline" className={`text-xs ${ROLE_BADGE[row.getValue('role') as string]}`}>
-          {row.getValue('role')}
-        </Badge>
-      ),
-    },
-  ]
+  useEffect(() => {
+    const usernames = new Set(users.map((user) => user.username))
+    setSelectedUsernames((previous) => previous.filter((username) => usernames.has(username)))
+  }, [users])
+
+  const selectedCount = selectedUsernames.length
+  const sortedUsers = useMemo(
+    () => [...users].sort((left, right) => left.username.localeCompare(right.username, 'fr', { sensitivity: 'base' })),
+    [users],
+  )
+
+  const openCreateDialog = () => {
+    setDialogMode('create')
+    setActiveUsername('')
+    setDraft(EMPTY_USER)
+  }
+
+  const openViewDialog = (user: User) => {
+    setDialogMode('view')
+    setActiveUsername(user.username)
+    setDraft(makeDraft(user))
+  }
+
+  const openEditDialog = (user: User) => {
+    setDialogMode('edit')
+    setActiveUsername(user.username)
+    setDraft(makeDraft(user))
+  }
+
+  const closeDialog = () => {
+    setDialogMode(null)
+    setActiveUsername('')
+    setDraft(EMPTY_USER)
+  }
+
+  const toggleUserSelection = (username: string, checked: boolean | 'indeterminate') => {
+    setSelectedUsernames((previous) => (
+      isChecked(checked)
+        ? previous.includes(username)
+          ? previous
+          : [...previous, username]
+        : previous.filter((value) => value !== username)
+    ))
+  }
+
+  const toggleAllSelection = (checked: boolean | 'indeterminate') => {
+    setSelectedUsernames(isChecked(checked) ? users.map((user) => user.username) : [])
+  }
 
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <Users size={22} className="text-primary" strokeWidth={1.8} />
         <h1 className="text-xl font-bold text-foreground">Liste des utilisateurs</h1>
+        <Badge variant="secondary">{users.length}</Badge>
       </div>
 
       <Card className="border-border/60 bg-card/80">
-        <CardContent className="px-4 py-4">
-          <DataTable
-            columns={columns}
-            data={usersQuery.data ?? []}
-            filterColumn="username"
-            filterPlaceholder="Filtrer par identifiant…"
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/60 bg-card/80">
-        <CardHeader className="pb-3 pt-4 px-4">
+        <CardHeader className="flex flex-col gap-3 px-4 pt-4 pb-2 md:flex-row md:items-center md:justify-between">
           <CardTitle className="text-sm font-semibold text-foreground">
-            {newMode ? 'Nouvel utilisateur' : 'Éditer l\'utilisateur'}
+            Utilisateurs
           </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 px-4 pb-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Identifiant</Label>
-              <Input
-                value={draft.username}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setDraft((prev) => ({ ...prev, username: e.target.value }))}
-                className="bg-input/50"
-                placeholder="ex: jdoe"
-                disabled={!newMode && selectedUsername !== ''}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Email</Label>
-              <Input
-                type="email"
-                value={draft.email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setDraft((prev) => ({ ...prev, email: e.target.value }))}
-                className="bg-input/50"
-                placeholder="ex: john@example.com"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Mot de passe</Label>
-              <Input
-                type="password"
-                value={draft.password ?? ''}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setDraft((prev) => ({ ...prev, password: e.target.value }))}
-                className="bg-input/50"
-                placeholder={newMode ? 'Mot de passe' : 'Laisser vide pour ne pas changer'}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Rôle</Label>
-              <Select
-                value={draft.role}
-                onValueChange={(v: string | null) =>
-                  setDraft((prev) => ({ ...prev, role: (v ?? 'viewer') as User['role'] }))}
-              >
-                <SelectTrigger className="bg-input/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="viewer">viewer</SelectItem>
-                  <SelectItem value="editor">editor</SelectItem>
-                  <SelectItem value="administrator">administrator</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              size="sm" className="gap-1.5"
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || !draft.username || (newMode && !draft.password)}
+              variant="destructive"
+              size="sm"
+              onClick={() => deleteUsersMutation.mutate(selectedUsernames)}
+              disabled={deleteUsersMutation.isPending || selectedCount === 0}
             >
-              <Save size={14} /> Enregistrer
+              <Trash2 data-icon="inline-start" />
+              {deleteUsersMutation.isPending ? 'Suppression…' : `Supprimer la sélection${selectedCount ? ` (${selectedCount})` : ''}`}
             </Button>
-            {selectedUsername && (
-              <Button
-                variant="destructive" size="sm" className="gap-1.5"
-                onClick={() => deleteMutation.mutate()}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 size={14} /> Supprimer
-              </Button>
-            )}
-            <Button
-              variant="outline" size="sm" className="gap-1.5"
-              onClick={() => { setNewMode(true); setDraft(EMPTY_USER); setSelectedUsername('') }}
-            >
-              <Plus size={14} /> Nouveau
+            <Button size="sm" onClick={openCreateDialog}>
+              <Plus data-icon="inline-start" />
+              Ajouter un utilisateur
             </Button>
           </div>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-10">
+                  <Checkbox
+                    aria-label="Sélectionner tous les utilisateurs"
+                    checked={allSelected}
+                    onCheckedChange={toggleAllSelection}
+                  />
+                </TableHead>
+                <TableHead>Identifiant</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Mot de passe</TableHead>
+                <TableHead>Rôle</TableHead>
+                <TableHead className="w-14 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {usersQuery.isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                    Chargement…
+                  </TableCell>
+                </TableRow>
+              ) : sortedUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                    Aucun utilisateur trouvé.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                sortedUsers.map((user) => {
+                  const isSelected = selectedUsernames.includes(user.username)
+                  return (
+                    <TableRow key={user.username} data-state={isSelected ? 'selected' : undefined}>
+                      <TableCell>
+                        <Checkbox
+                          aria-label={`Sélectionner ${user.username}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => toggleUserSelection(user.username, checked)}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">{user.username}</TableCell>
+                      <TableCell className="max-w-56 whitespace-normal break-all text-muted-foreground">
+                        {user.email}
+                      </TableCell>
+                      <TableCell className="max-w-80 whitespace-normal break-all font-mono text-xs text-muted-foreground">
+                        {user.password ? `${user.password.substring(0, 24)}…` : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={ROLE_VARIANT[user.role]}>
+                          {user.role}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={(
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Actions pour ${user.username}`}
+                              />
+                            )}
+                          >
+                            <MoreHorizontal />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuGroup>
+                              <DropdownMenuItem onClick={() => openViewDialog(user)}>
+                                <Eye />
+                                View
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditDialog(user)}>
+                                <Pencil />
+                                Edit
+                              </DropdownMenuItem>
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuGroup>
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => deleteUsersMutation.mutate([user.username])}
+                              >
+                                <Trash2 />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 
-      <Separator className="bg-border/40" />
+      <Separator className="bg-border/80" />
 
       <Card className="border-border/60 bg-card/80">
-        <CardHeader className="pb-2 pt-4 px-4">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Database size={13} /> Administration base de données
+        <CardHeader className="px-4 pt-4 pb-2">
+          <CardTitle className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Database />
+            Administration base de données
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-3 px-4 pb-4">
           <Button
-            variant="outline" size="sm" className="gap-1.5"
+            variant="outline"
+            size="sm"
             onClick={() => exportMutation.mutate()}
             disabled={exportMutation.isPending}
           >
-            <Database size={14} />
+            <Database data-icon="inline-start" />
             {exportMutation.isPending ? 'Export…' : 'Exporter la base'}
           </Button>
           <Label
             htmlFor="import-db"
-            className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border/60 bg-transparent px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted/40 transition-colors"
+            className="flex cursor-pointer items-center gap-1.5 rounded-md border border-border/60 bg-transparent px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/40"
           >
-            <Upload size={14} /> Importer la base
+            <Upload />
+            Importer la base
             <Input
               id="import-db"
               type="file"
               accept=".zip"
               className="sr-only"
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const f = e.target.files?.[0]
-                if (f) importMutation.mutate(f)
+              onChange={(event) => {
+                const file = event.target.files?.[0]
+                if (file) importMutation.mutate(file)
               }}
             />
           </Label>
@@ -287,6 +348,100 @@ export function UsersPage() {
           <AlertDescription>{apiError(anyError)}</AlertDescription>
         </Alert>
       )}
+
+      <Dialog open={dialogMode !== null} onOpenChange={(open) => { if (!open) closeDialog() }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {isCreateMode ? 'Nouvel utilisateur' : isEditMode ? `Modifier ${activeUsername}` : `Voir ${activeUsername}`}
+            </DialogTitle>
+            <DialogDescription>
+              {isCreateMode
+                ? 'Créer un nouveau compte utilisateur.'
+                : isEditMode
+                  ? 'Modifier les informations du compte sélectionné.'
+                  : 'Consulter les informations du compte sélectionné.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Identifiant</Label>
+              <Input
+                value={draft.username}
+                readOnly={isViewMode}
+                onChange={(event) => setDraft((previous) => ({ ...previous, username: event.target.value }))}
+                className="bg-input/50"
+                placeholder="ex: jdoe"
+                disabled={!isCreateMode}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Input
+                type="email"
+                value={draft.email}
+                readOnly={isViewMode}
+                onChange={(event) => setDraft((previous) => ({ ...previous, email: event.target.value }))}
+                className="bg-input/50"
+                placeholder="ex: john@example.com"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Mot de passe</Label>
+              <Input
+                type={isViewMode ? 'text' : 'password'}
+                value={draft.password ?? ''}
+                readOnly={isViewMode}
+                onChange={(event) => setDraft((previous) => ({ ...previous, password: event.target.value }))}
+                className="bg-input/50"
+                placeholder={isCreateMode ? 'Mot de passe' : isEditMode ? 'Laisser vide pour ne pas changer' : '—'}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-xs text-muted-foreground">Rôle</Label>
+              {isViewMode ? (
+                <div className="flex min-h-8 items-center">
+                  <Badge variant={ROLE_VARIANT[draft.role]}>{draft.role}</Badge>
+                </div>
+              ) : (
+                <Select
+                  value={draft.role}
+                  onValueChange={(value: string | null) => {
+                    setDraft((previous) => ({ ...previous, role: (value ?? 'viewer') as User['role'] }))
+                  }}
+                >
+                  <SelectTrigger className="bg-input/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {role}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+
+          {!isViewMode && (
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDialog}>
+                Annuler
+              </Button>
+              <Button
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending || !draft.username || !draft.email || (isCreateMode && !draft.password)}
+              >
+                <Save data-icon="inline-start" />
+                {saveMutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
