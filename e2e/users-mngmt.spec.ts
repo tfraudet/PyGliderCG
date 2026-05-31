@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
 
 test.describe('Login Functionality', () => {
 	test.beforeEach(async ({ page }) => {
-    await setupTestLogging(page)
+    	await setupTestLogging(page)
 	});
 
 	test('should fail to login with an incorrect password', async ({ page }) => {

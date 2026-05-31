@@ -32,7 +32,9 @@ async function ensureSidebarExpanded(page: Page): Promise<void> {
 }
 
 async function expectAuthenticatedUser(page: Page, username: string): Promise<void> {
-	await expect(page.getByText(`Bienvenue, ${username}`)).toBeVisible();
+	await page.waitForFunction(() => Boolean(window.localStorage.getItem('pyglidercg_token')));
+	await ensureSidebarExpanded(page);
+	await expect(page.getByText(`Bienvenue, ${username}`)).toBeVisible({ timeout: 15000 });
 }
 
 async function login(page: Page, username: string, password: string): Promise<void> {
