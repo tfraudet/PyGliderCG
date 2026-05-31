@@ -60,7 +60,7 @@ export function HomePage() {
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <Calculator size={22} className="text-primary" strokeWidth={1.8} />
-        <h1 className="text-xl font-bold text-foreground">Calculateur de centrage</h1>
+        <h1 className="text-3xl font-bold text-foreground">Calculateur de centrage</h1>
       </div>
 
       <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-200">

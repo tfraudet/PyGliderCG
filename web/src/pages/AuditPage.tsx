@@ -93,7 +93,7 @@ export function AuditPage() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <ClipboardList size={22} className="text-primary" strokeWidth={1.8} />
-          <h1 className="text-xl font-bold text-foreground">Audit Log</h1>
+          <h1 className="text-3xl font-bold text-foreground">Audit Log</h1>
           {total > 0 && <Badge variant="secondary">{total}</Badge>}
         </div>
         <Button

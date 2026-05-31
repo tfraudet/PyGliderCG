@@ -11,12 +11,14 @@ import {
 
 interface WeighingDetailCardProps {
 	weighing: Weighing
+	displayLabel?: string
 	limitsData?: GliderCalcLimits | null
 	showSummary?: boolean
 }
 
 export function WeighingDetailCard({
 	weighing,
+	displayLabel,
 	limitsData,
 	showSummary = true,
 }: WeighingDetailCardProps) {
@@ -24,9 +26,9 @@ export function WeighingDetailCard({
 		<Card className="border-border/60 bg-card/80">
 			<CardHeader className="pb-3">
 				<CardTitle className="text-xl">
-					Détails de la pesée
-					{weighing.id ? ` #${weighing.id}` : ''}
-					{' '}du {formatDateLabel(weighing.date)}
+					{displayLabel
+						? `Détails de la ${displayLabel}`
+						: `Détails de la pesée${weighing.id ? ` #${weighing.id}` : ''} du ${formatDateLabel(weighing.date)}`}
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-8 px-4 pb-4">

@@ -106,7 +106,7 @@ export function WeighingsPage() {
 		<div className="space-y-5">
 			<div className="flex items-center gap-3">
 				<Scale size={22} className="text-primary" strokeWidth={1.8} />
-				<h1 className="text-xl font-bold text-foreground">
+				<h1 className="text-3xl font-bold text-foreground">
 					Pesées
 				</h1>
 			</div>

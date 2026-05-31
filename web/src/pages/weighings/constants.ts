@@ -76,6 +76,6 @@ export function sortWeighings(
 		})
 }
 
-export function formatWeighingOptionLabel(weighing: Weighing, fallbackIndex: number) {
-	return `pesée${weighing.id != null ? ` #${weighing.id}` : ` ${fallbackIndex + 1}`} du ${formatDateLabel(weighing.date)}`
+export function formatWeighingOptionLabel(weighing: Weighing, displayIndex: number) {
+	return `pesée #${displayIndex + 1} du ${formatDateLabel(weighing.date)}`
 }

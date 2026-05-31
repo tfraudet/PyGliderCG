@@ -254,7 +254,7 @@ export function UsersPage() {
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <Users size={22} className="text-primary" strokeWidth={1.8} />
-        <h1 className="text-xl font-bold text-foreground">Liste des utilisateurs</h1>
+        <h1 className="text-3xl font-bold text-foreground">Liste des utilisateurs</h1>
         <Badge variant="secondary">{users.length}</Badge>
       </div>
 

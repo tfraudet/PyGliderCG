@@ -89,6 +89,17 @@ export function WeighingsHistorySection({
 		glider.weighings.find((weighing) => getWeighingSelectionKey(selectedRegistration, weighing) === selectedDetailKey)
 		?? latestWeighing
 	), [glider.weighings, latestWeighing, selectedDetailKey, selectedRegistration])
+	const selectedDetailLabel = useMemo(() => {
+		if (selectedDetailWeighing == null) {
+			return null
+		}
+
+		const selectedIndex = sortedWeighings.findIndex(
+			({ weighing }) => getWeighingSelectionKey(selectedRegistration, weighing) === getWeighingSelectionKey(selectedRegistration, selectedDetailWeighing),
+		)
+
+		return selectedIndex >= 0 ? formatWeighingOptionLabel(selectedDetailWeighing, selectedIndex) : null
+	}, [selectedDetailWeighing, selectedRegistration, sortedWeighings])
 	const selectedDetailIsLatest = selectedDetailWeighing != null
 		&& latestWeighing != null
 		&& getWeighingSelectionKey(selectedRegistration, selectedDetailWeighing) === getWeighingSelectionKey(selectedRegistration, latestWeighing)
@@ -128,13 +139,8 @@ export function WeighingsHistorySection({
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-end justify-between gap-3">
-				<div className="space-y-1">
-					<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-						Historique des pesées
-					</p>
-					<p className="text-sm text-foreground">
-						{`${glider.registration} · ${glider.weighings.length} entr${glider.weighings.length > 1 ? 'ées' : 'ée'}`}
-					</p>
+				<div className="space-y-1 mt-10">
+					<h2 className="text-xl font-semibold tracking-wider text-muted-foreground">Liste des pesées pour ce planeur</h2>
 				</div>
 				<div className="flex flex-wrap items-center justify-end gap-2">
 					<Button variant="outline" onClick={onCreate}>
@@ -257,18 +263,21 @@ export function WeighingsHistorySection({
 			</div>
 
 			{selectedDetailWeighing != null && (
-				<div className="space-y-5">
-					<Separator className="bg-border/40" />
+				<div className="space-y-5 mt-10">
+					<Separator className="bg-border/80" />
+
 					<div className="space-y-2">
-						<Label className="text-sm text-foreground">Sélectionner une pesée</Label>
+						<Label className="text-sm text-muted-foreground">Sélectionner une pesée</Label>
 						<Select
 							value={getWeighingSelectionKey(selectedRegistration, selectedDetailWeighing)}
 							onValueChange={(value: string | null) => {
 								setSelectedDetailKey(value ?? '')
 							}}
 						>
-							<SelectTrigger className="bg-input/50">
-								<SelectValue placeholder="Sélectionner une pesée…" />
+							<SelectTrigger className="bg-input/50 w-full max-w-3xs">
+								<SelectValue placeholder="Sélectionner une pesée…">
+									{selectedDetailLabel ?? undefined}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent>
 								{sortedWeighings.map(({ weighing, index }) => {
@@ -286,6 +295,7 @@ export function WeighingsHistorySection({
 
 					<WeighingDetailCard
 						weighing={selectedDetailWeighing}
+						displayLabel={selectedDetailLabel ?? undefined}
 						limitsData={selectedDetailIsLatest ? limitsData : null}
 						showSummary={selectedDetailIsLatest}
 					/>
