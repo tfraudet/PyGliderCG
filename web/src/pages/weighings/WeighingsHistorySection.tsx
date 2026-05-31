@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CircleAlert, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { SortableTableHead } from '@/components/table/SortableTableHead'
 import { TableStatusRow } from '@/components/table/TableStatusRow'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
 	Select,
 	SelectContent,
@@ -275,6 +276,7 @@ export function WeighingsHistorySection({
 					<div className="space-y-2">
 						<Label className="text-sm text-muted-foreground">Sélectionner une pesée</Label>
 						<Select
+							disabled
 							value={getWeighingSelectionKey(selectedRegistration, selectedDetailWeighing)}
 							onValueChange={(value: string | null) => {
 								setSelectedDetailKey(value ?? '')
@@ -297,6 +299,13 @@ export function WeighingsHistorySection({
 								})}
 							</SelectContent>
 						</Select>
+						<Alert className="border-sky-500/20 bg-sky-500/10 text-sky-950 dark:text-sky-100">
+							<CircleAlert className="text-sky-600 dark:text-sky-300" />
+							<AlertDescription className="text-sky-700 dark:text-sky-100">
+								Les détails de calcul (MVE, charge utile, charge max, etc.) ne sont disponibles
+								que pour la dernière pesée, car ils sont recalculés à partir de l&apos;état actuel du planeur.
+							</AlertDescription>
+						</Alert>
 					</div>
 
 					<WeighingDetailCard

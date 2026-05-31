@@ -15,7 +15,7 @@ import { invalidateAuditLogsQuery, useAuditLogs } from '@/hooks/use-app-queries'
 import { getPageTokens } from '@/lib/pagination'
 import type { AuditItem } from '@/lib/types'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 25
 
 type SortKey = 'timestamp' | 'user_id'
 type SortDirection = 'asc' | 'desc'
