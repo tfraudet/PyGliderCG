@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Database, Download, Eye, MoreHorizontal, Pencil, Plus, Save, Trash2, TriangleAlert, Upload, Users } from 'lucide-react'
+import { toast } from 'sonner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { QueryErrorAlert } from '@/components/QueryErrorAlert'
 import { SortableTableHead } from '@/components/table/SortableTableHead'
@@ -179,6 +180,7 @@ export function UsersPage() {
       link.download = 'exported_db.zip'
       link.click()
       URL.revokeObjectURL(url)
+      toast.success('Base de donnée exportée avec succès.')
     },
   })
 
@@ -186,6 +188,7 @@ export function UsersPage() {
     mutationFn: (file: File) => backend.importDatabase(file),
     onSuccess: async () => {
       await invalidateUsersQuery(queryClient)
+      toast.success('Base de donnée importée avec succès.')
     },
   })
 
