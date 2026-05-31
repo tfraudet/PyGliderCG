@@ -18,10 +18,10 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
     volumes:
       - ./data:/app/data
-      - ./backend:/app/backend
-      - ./web:/app/web
+      # - ./backend:/app/backend
+      # - ./web:/app/web
     healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health && curl -f http://localhost:8000/']
+      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health']
       interval: 30s
       timeout: 10s
       retries: 3

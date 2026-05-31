@@ -28,9 +28,18 @@ Dockerfile
 **.DS_Store
 
 # Playwright
-node_modules/
+**/node_modules/
+**/src/
+!web/src/
+!web/src/**
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
 /tests-examples/
+
+.agents/
+.pytest_cache/
+e2e/
+spec/
+test/
