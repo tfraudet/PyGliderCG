@@ -250,7 +250,7 @@ export function AppSidebar() {
                 <Heart size={12} className="fill-lime-600" />
                 by <a href="http://aeroclub-issoire.fr" target="_blank" rel="noopener noreferrer" className="hover:underline">ACPH</a>
               </p>
-              <p className="text-[11px] text-muted-foreground/40">version 2.2.0</p>
+              <p className="text-[11px] text-muted-foreground/40">version {__APP_VERSION__}</p>
             </div>
           </div>
         )}

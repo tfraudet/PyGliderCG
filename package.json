@@ -1,6 +1,6 @@
 {
   "name": "pyglidercg",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "<p align=\"center\"> \t <img src=\"frontend/img/app-logo-short-v2.png\" width=\"100\" > </p>",
   "main": "index.js",
   "directories": {
