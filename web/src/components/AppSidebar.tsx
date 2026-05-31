@@ -238,13 +238,20 @@ export function AppSidebar() {
             <Heart size={16} className="fill-lime-600 hover:fill-lime-400" color="green" />
           </button>
         ) : (
-          <div className="w-full text-center">
-            <p className="text-[11px] text-muted-foreground/60 flex items-center justify-center gap-1">
-              Made with
-              <Heart size={12} className="fill-lime-600" />
-              by <a href="http://aeroclub-issoire.fr" target="_blank" rel="noopener noreferrer" className="hover:underline">ACPH</a>
-            </p>
-            <p className="text-[11px] text-muted-foreground/40">version 2.2.0</p>
+          <div className="flex w-full flex-col gap-3 text-center">
+            <img
+              src="/img/acph-logo-v2017-gray.png"
+              alt="Logo ACPH Aeroclub Pierre Herbaud"
+              className="h-auto max-h-16 w-auto self-start object-contain"
+            />
+            <div>
+              <p className="text-[11px] text-muted-foreground/60 flex items-center justify-center gap-1">
+                Made with
+                <Heart size={12} className="fill-lime-600" />
+                by <a href="http://aeroclub-issoire.fr" target="_blank" rel="noopener noreferrer" className="hover:underline">ACPH</a>
+              </p>
+              <p className="text-[11px] text-muted-foreground/40">version 2.2.0</p>
+            </div>
           </div>
         )}
       </SidebarFooter>
