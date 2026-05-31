@@ -524,6 +524,69 @@ async def add_weighings(
 		raise HTTPException(status_code=500, detail='Failed to add weighings')
 
 
+@router.put('/by-id/{glider_id:path}/weighings/{weighing_id}', response_model=WeighingSchema, status_code=status.HTTP_200_OK)
+@router.put('/{glider_id}/weighings/{weighing_id}', response_model=WeighingSchema, status_code=status.HTTP_200_OK)
+async def update_glider_weighing(
+	glider_id: str,
+	weighing_id: int,
+	weighing: WeighingRequest,
+	admin_user = Depends(require_admin_role),
+):
+	"""Update one weighing for a glider (admin only)."""
+	try:
+		glider = get_glider_by_id(glider_id)
+		if not glider:
+			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
+
+		if glider.get_weighing_by_id(weighing_id) is None:
+			raise HTTPException(status_code=404, detail=f'Weighing {weighing_id} not found')
+
+		try:
+			parsed_date = _parse_request_date(weighing.date, 'weighing date')
+		except ValueError as e:
+			raise HTTPException(status_code=400, detail=str(e))
+
+		weighing_object = Weighing(
+			id=weighing_id,
+			date=parsed_date,
+			p1=weighing.p1,
+			p2=weighing.p2,
+			right_wing_weight=weighing.right_wing_weight,
+			left_wing_weight=weighing.left_wing_weight,
+			tail_weight=weighing.tail_weight,
+			fuselage_weight=weighing.fuselage_weight,
+			fix_ballast_weight=weighing.fix_ballast_weight,
+			A=weighing.A,
+			D=weighing.D,
+		)
+
+		if not save_weighings(glider_id, [weighing_object]):
+			raise ValueError('Failed to update weighing')
+
+		event = f'Weighing {weighing_id} updated for glider {glider_id}'
+		if audit_queries.create_audit_entry(user_id=admin_user.username, event=event) is None:
+			logger.warning(f'Failed to create weighing update audit event for {glider_id}/{weighing_id}')
+
+		return WeighingSchema(
+			id=weighing_id,
+			date=parsed_date,
+			p1=weighing.p1,
+			p2=weighing.p2,
+			right_wing_weight=weighing.right_wing_weight,
+			left_wing_weight=weighing.left_wing_weight,
+			tail_weight=weighing.tail_weight,
+			fuselage_weight=weighing.fuselage_weight,
+			fix_ballast_weight=weighing.fix_ballast_weight,
+			A=weighing.A,
+			D=weighing.D,
+		)
+	except HTTPException:
+		raise
+	except Exception as e:
+		logger.error(f'Error updating weighing {weighing_id} for {glider_id}: {e}', exc_info=True)
+		raise HTTPException(status_code=500, detail='Failed to update weighing')
+
+
 @router.delete('/by-id/{glider_id:path}/weighings/{weighing_id}', status_code=status.HTTP_204_NO_CONTENT)
 @router.delete('/{glider_id}/weighings/{weighing_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_glider_weighing(

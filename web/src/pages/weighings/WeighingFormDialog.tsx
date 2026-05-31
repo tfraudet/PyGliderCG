@@ -28,7 +28,7 @@ interface WeighingFormDialogProps {
 	isSaving: boolean
 	canSave: boolean
 	onClose: () => void
-	onSave: (payload: { weighing: Weighing; originalWeighingId: number | null }) => void
+	onSave: (payload: { mode: 'create' | 'edit'; weighing: Weighing; originalWeighingId: number | null }) => void
 }
 
 export function WeighingFormDialog({
@@ -106,7 +106,7 @@ export function WeighingFormDialog({
 						Annuler
 					</Button>
 					<Button
-						onClick={() => onSave({ weighing: draft, originalWeighingId })}
+						onClick={() => onSave({ mode, weighing: draft, originalWeighingId })}
 						disabled={isSaving || !canSave || draftDateInvalid}
 					>
 						{isSaving ? 'Enregistrement…' : mode === 'edit' ? 'Enregistrer' : 'Ajouter'}

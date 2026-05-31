@@ -36,11 +36,25 @@ export function WeighingsPage() {
 	const gliderLimitsQuery = useGliderLimits(selectedRegistration)
 
 	const saveMutation = useMutation({
-		mutationFn: async ({ weighing, originalWeighingId }: { weighing: Weighing; originalWeighingId: number | null }) => {
-			await backend.addWeighings(selectedRegistration, [{ ...weighing, id: undefined }])
-			if (originalWeighingId != null) {
-				await backend.deleteWeighing(selectedRegistration, originalWeighingId)
+		mutationFn: async ({
+			mode,
+			weighing,
+			originalWeighingId,
+		}: {
+			mode: 'create' | 'edit'
+			weighing: Weighing
+			originalWeighingId: number | null
+		}) => {
+			if (mode === 'edit') {
+				if (originalWeighingId == null) {
+					throw new Error('Missing weighing id for update')
+				}
+
+				await backend.updateWeighing(selectedRegistration, originalWeighingId, weighing)
+				return
 			}
+
+			await backend.addWeighings(selectedRegistration, [{ ...weighing, id: undefined }])
 		},
 		onSuccess: async () => {
 			await invalidateGliderQueries(queryClient, [selectedRegistration])
