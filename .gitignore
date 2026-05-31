@@ -182,3 +182,4 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /tests-examples/
+.playwright-mcp
