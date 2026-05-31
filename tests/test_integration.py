@@ -73,6 +73,19 @@ def auth_token(test_credentials):
 	raise RuntimeError(f'Failed to obtain test token: {response.status_code} - {response.text}')
 
 
+@pytest.fixture
+def editor_token(editor_credentials):
+	"""Get valid editor auth token for testing."""
+	response = requests.post(
+		f'{BACKEND_URL}/api/auth/login',
+		json=editor_credentials,
+		timeout=TIMEOUT
+	)
+	if response.status_code == 200:
+		return response.json().get('access_token')
+	raise RuntimeError(f'Failed to obtain editor token: {response.status_code} - {response.text}')
+
+
 def _calculate_weight_and_balance(glider_id: str, payload: dict, timeout: int) -> dict:
 	"""Call weight and balance calculation endpoint and return response payload."""
 	response = requests.post(
@@ -422,6 +435,35 @@ class TestWeighingOperations:
 		)
 
 		assert response.status_code == 400
+
+	def test_print_weighing_returns_pdf_for_editor(self, editor_token, timeout):
+		"""Editors should be able to export a weighing sheet as PDF."""
+		headers = {'Authorization': f'Bearer {editor_token}'}
+		original = _get_glider_weighing('F-CGUP', timeout)
+
+		response = requests.get(
+			f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{original["id"]}/print',
+			headers=headers,
+			timeout=timeout,
+		)
+
+		assert response.status_code == 200
+		assert response.headers['content-type'].startswith('application/pdf')
+		assert response.headers['content-disposition'].startswith('inline;')
+		assert response.content.startswith(b'%PDF')
+
+	def test_print_weighing_returns_404_when_missing(self, editor_token, timeout):
+		"""Printing an unknown weighing should return 404."""
+		headers = {'Authorization': f'Bearer {editor_token}'}
+		original = _get_glider_weighing('F-CGUP', timeout)
+
+		response = requests.get(
+			f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{original["id"] + 999999}/print',
+			headers=headers,
+			timeout=timeout,
+		)
+
+		assert response.status_code == 404
 
 
 class TestCGCalculationsFromE2E:

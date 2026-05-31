@@ -1,12 +1,14 @@
 """FastAPI routes for Glider CRUD operations and CG calculations"""
 
+import io
 import logging
 from datetime import date, datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 
-from backend.middleware.auth import require_admin_role
+from backend.middleware.auth import require_admin_role, require_editor_role
 from backend.schemas.glider import (
 	GliderResponse,
 	GliderRequest,
@@ -36,6 +38,7 @@ from backend.db.glider_queries import (
 )
 from backend.db.audit_queries import AuditQueries
 from backend.models.glider import Glider, Limits, Arms, Instrument, Weighing
+from backend.services.weighing_pdf import WeighingPdfService
 
 logger = logging.getLogger(__name__)
 
@@ -585,6 +588,43 @@ async def update_glider_weighing(
 	except Exception as e:
 		logger.error(f'Error updating weighing {weighing_id} for {glider_id}: {e}', exc_info=True)
 		raise HTTPException(status_code=500, detail='Failed to update weighing')
+
+
+@router.get('/by-id/{glider_id:path}/weighings/{weighing_id}/print', response_class=StreamingResponse)
+@router.get('/{glider_id}/weighings/{weighing_id}/print', response_class=StreamingResponse, include_in_schema=False)
+async def print_glider_weighing(
+	glider_id: str,
+	weighing_id: int,
+	current_user = Depends(require_editor_role),
+):
+	"""Generate the official weighing sheet PDF for one glider weighing."""
+	try:
+		glider = get_glider_by_id(glider_id)
+		if not glider:
+			raise HTTPException(status_code=404, detail=f'Glider {glider_id} not found')
+
+		weighing = glider.get_weighing_by_id(weighing_id)
+		if weighing is None:
+			raise HTTPException(status_code=404, detail=f'Weighing {weighing_id} not found')
+
+		pdf_bytes = WeighingPdfService.render_pdf(glider, weighing)
+		filename = f'weighing-{glider.registration.replace("/", "-")}-{weighing_id}.pdf'
+		headers = {
+			'Content-Disposition': f'inline; filename="{filename}"',
+		}
+
+		event = f'Weighing {weighing_id} printed for glider {glider_id}'
+		if audit_queries.create_audit_entry(user_id=current_user.username, event=event) is None:
+			logger.warning(f'Failed to create weighing print audit event for {glider_id}/{weighing_id}')
+
+		return StreamingResponse(io.BytesIO(pdf_bytes), media_type='application/pdf', headers=headers)
+	except HTTPException:
+		raise
+	except (ValueError, NotImplementedError) as e:
+		raise HTTPException(status_code=400, detail=str(e)) from e
+	except Exception as e:
+		logger.error(f'Error generating PDF for weighing {weighing_id} of {glider_id}: {e}', exc_info=True)
+		raise HTTPException(status_code=500, detail='Failed to generate weighing PDF')
 
 
 @router.delete('/by-id/{glider_id:path}/weighings/{weighing_id}', status_code=status.HTTP_204_NO_CONTENT)

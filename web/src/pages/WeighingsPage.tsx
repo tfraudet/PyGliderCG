@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Scale } from 'lucide-react'
+import { Printer, Scale } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { QueryErrorAlert } from '@/components/QueryErrorAlert'
 import {
 	Select,
@@ -26,6 +27,7 @@ export function WeighingsPage() {
 	const [selectedRegistration, setSelectedRegistration] = useState('')
 	const [dialogState, setDialogState] = useState<DialogState>(null)
 	const [selectedWeighingIds, setSelectedWeighingIds] = useState<Set<number>>(new Set())
+	const [selectedDetailWeighing, setSelectedDetailWeighing] = useState<Weighing | null>(null)
 
 	const glidersQuery = useGliders()
 
@@ -74,6 +76,40 @@ export function WeighingsPage() {
 		},
 	})
 
+	const printMutation = useMutation({
+		mutationFn: async ({
+			weighing,
+			previewWindow,
+		}: {
+			weighing: Weighing
+			previewWindow: Window | null
+		}) => {
+			if (weighing.id == null) {
+				throw new Error('Missing weighing id for print')
+			}
+
+			const pdfBlob = await backend.printWeighing(selectedRegistration, weighing.id)
+			const pdfUrl = window.URL.createObjectURL(pdfBlob)
+
+			if (previewWindow != null) {
+				previewWindow.location.href = pdfUrl
+			} else {
+				const link = document.createElement('a')
+				link.href = pdfUrl
+				link.target = '_blank'
+				link.rel = 'noopener noreferrer'
+				link.click()
+			}
+
+			window.setTimeout(() => {
+				window.URL.revokeObjectURL(pdfUrl)
+			}, 60_000)
+		},
+		onError: (_error, variables) => {
+			variables.previewWindow?.close()
+		},
+	})
+
 	const handleRegistrationChange = (value: string | null) => {
 		if (!value || value === selectedRegistration) {
 			return
@@ -81,8 +117,10 @@ export function WeighingsPage() {
 
 		setDialogState(null)
 		setSelectedWeighingIds(new Set())
+		setSelectedDetailWeighing(null)
 		saveMutation.reset()
 		deleteMutation.reset()
+		printMutation.reset()
 		setSelectedRegistration(value)
 	}
 
@@ -114,7 +152,18 @@ export function WeighingsPage() {
 		deleteMutation.mutate(weighingIds)
 	}
 
-	const mutationError = saveMutation.error ?? deleteMutation.error
+	const handlePrintWeighing = () => {
+		if (selectedDetailWeighing == null) {
+			return
+		}
+
+		printMutation.mutate({
+			weighing: selectedDetailWeighing,
+			previewWindow: window.open('', '_blank'),
+		})
+	}
+
+	const mutationError = saveMutation.error ?? deleteMutation.error ?? printMutation.error
 
 	return (
 		<div className="space-y-5">
@@ -155,9 +204,19 @@ export function WeighingsPage() {
 						onEdit={openEditDialog}
 						onDeleteSelection={deleteWeighings}
 						onDeleteOne={(weighingId) => deleteWeighings([weighingId])}
+						onSelectedDetailWeighingChange={setSelectedDetailWeighing}
 					/>
 
 					<QueryErrorAlert error={mutationError} />
+
+					<Button
+						variant="default"
+						onClick={handlePrintWeighing}
+						disabled={selectedDetailWeighing == null || printMutation.isPending}
+					>
+						<Printer />
+						Imprimer la fiche pesée
+					</Button>
 				</>
 			)}
 

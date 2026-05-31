@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react'
 import { SortableTableHead } from '@/components/table/SortableTableHead'
 import { TableStatusRow } from '@/components/table/TableStatusRow'
@@ -51,6 +51,7 @@ interface WeighingsHistorySectionProps {
 	onEdit: (weighing: Weighing) => void
 	onDeleteSelection: (weighingIds: number[]) => void
 	onDeleteOne: (weighingId: number) => void
+	onSelectedDetailWeighingChange?: (weighing: Weighing | null) => void
 }
 
 export function WeighingsHistorySection({
@@ -64,6 +65,7 @@ export function WeighingsHistorySection({
 	onEdit,
 	onDeleteSelection,
 	onDeleteOne,
+	onSelectedDetailWeighingChange,
 }: WeighingsHistorySectionProps) {
 	const [sortKey, setSortKey] = useState<WeighingSortKey>('date')
 	const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -103,6 +105,10 @@ export function WeighingsHistorySection({
 	const selectedDetailIsLatest = selectedDetailWeighing != null
 		&& latestWeighing != null
 		&& getWeighingSelectionKey(selectedRegistration, selectedDetailWeighing) === getWeighingSelectionKey(selectedRegistration, latestWeighing)
+
+	useEffect(() => {
+		onSelectedDetailWeighingChange?.(selectedDetailWeighing ?? null)
+	}, [onSelectedDetailWeighingChange, selectedDetailWeighing])
 
 	const handleSort = (nextKey: WeighingSortKey) => {
 		if (sortKey === nextKey) {
