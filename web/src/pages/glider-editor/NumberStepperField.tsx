@@ -1,20 +1,36 @@
 import { CircleHelp, Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface NumberStepperFieldProps {
 	label: string
+	tooltip?: string
 	value: number
 	step: number
 	onChange: (nextValue: number) => void
 }
 
-export function NumberStepperField({ label, value, step, onChange }: NumberStepperFieldProps) {
+export function NumberStepperField({ label, tooltip, value, step, onChange }: NumberStepperFieldProps) {
+	const hasTooltip = typeof tooltip === 'string' && tooltip.trim().length > 0
+
 	return (
 		<div className="space-y-2.5">
 			<div className="flex items-center justify-between gap-2">
 				<Label className="text-sm font-medium text-foreground">{label}</Label>
-				<CircleHelp className="text-muted-foreground" size={15} />
+				{hasTooltip ? (
+					<Tooltip>
+						<TooltipTrigger
+							aria-label={`Informations pour ${label}`}
+							className="inline-flex items-center text-muted-foreground transition-colors hover:text-foreground"
+						>
+							<CircleHelp size={15} />
+						</TooltipTrigger>
+						<TooltipContent side="top" className="max-w-64 text-center">
+							{tooltip.trim()}
+						</TooltipContent>
+					</Tooltip>
+				) : null}
 			</div>
 			<div className="flex items-center gap-1 rounded-xl bg-input/50 px-3">
 				<input

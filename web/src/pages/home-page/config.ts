@@ -24,26 +24,26 @@ export const PAYLOAD_SECTIONS: Array<{ title: string; icon: LucideIcon; fields: 
   },
 ]
 
-export const MASS_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string }> = [
-  { key: 'mmwp', label: 'MMWP (kg)' },
-  { key: 'mmwv', label: 'MMWV (kg)' },
-  { key: 'mmenp', label: 'MMENP (kg)' },
-  { key: 'mm_harnais', label: 'MMHarnais (kg)' },
-  { key: 'weight_min_pilot', label: 'Masse mini pilote (kg)' },
+export const MASS_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string; tooltip: string }> = [
+  { key: 'mmwp', label: 'MMWP (kg)', tooltip: 'Masse maximale ou masse maximale water ballast plein.' },
+  { key: 'mmwv', label: 'MMWV (kg)', tooltip: 'Masse maximale water ballast vide ou masse maximal si pas de water ballast.' },
+  { key: 'mmenp', label: 'MMENP (kg)', tooltip: 'Masse maximale des éléments non portants.' },
+  { key: 'mm_harnais', label: 'MMHarnais (kg)', tooltip: 'Masse maximale d\'utilisation du harnais.' },
+  { key: 'weight_min_pilot', label: 'Masse mini pilote (kg)', tooltip: 'Masse minimum du pilote équipé.' },
 ]
 
-export const CENTERING_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string }> = [
-  { key: 'front_centering', label: 'Centrage avant (mm)' },
-  { key: 'rear_centering', label: 'Centrage arrière (mm)' },
+export const CENTERING_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string; tooltip: string }> = [
+  { key: 'front_centering', label: 'Centrage avant (mm)', tooltip: 'Limite de centrage avant.' },
+  { key: 'rear_centering', label: 'Centrage arrière (mm)', tooltip: 'Limite de centrage arrière.' },
 ]
 
-export const ARM_FIELDS: Array<{ key: keyof Arms; label: string }> = [
-  { key: 'arm_front_pilot', label: 'Bras de levier pilote avant(mm)' },
-  { key: 'arm_rear_pilot', label: 'Bras de levier pilote arrière (mm)' },
-  { key: 'arm_waterballast', label: 'Bras de levier waterballast (mm)' },
-  { key: 'arm_front_ballast', label: 'Bras de levier gueuse avant (mm)' },
-  { key: 'arm_rear_watterballast_or_ballast', label: 'Bras de levier ballast ou gueuse arrière (mm)' },
-  { key: 'arm_instruments_panel', label: 'Bras de levier tableau de bord (mm)' },
+export const ARM_FIELDS: Array<{ key: keyof Arms; label: string; tooltip: string }> = [
+  { key: 'arm_front_pilot', label: 'Bras de levier pilote avant(mm)', tooltip: '' },
+  { key: 'arm_rear_pilot', label: 'Bras de levier pilote arrière (mm)', tooltip: '' },
+  { key: 'arm_waterballast', label: 'Bras de levier waterballast (mm)', tooltip: '' },
+  { key: 'arm_front_ballast', label: 'Bras de levier gueuse avant (mm)', tooltip: '' },
+  { key: 'arm_rear_watterballast_or_ballast', label: 'Bras de levier ballast ou gueuse arrière (mm)', tooltip: '' },
+  { key: 'arm_instruments_panel', label: 'Bras de levier tableau de bord (mm)', tooltip: '' },
 ]
 
 export const WEIGHING_FIELD_COLUMNS: Array<Array<{ key: WeighingMetricKey; label: string; decimals?: number }>> = [

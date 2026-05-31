@@ -12,27 +12,27 @@ export const PILOT_POSITION_OPTIONS = [
 	{ value: 2, label: 'En arrière de la référence' },
 ] as const
 
-export const MASS_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string; step: number }> = [
-	{ key: 'mmwp', label: 'MMWP (kg)', step: 0.1 },
-	{ key: 'mmwv', label: 'MMWV (kg)', step: 0.1 },
-	{ key: 'mmenp', label: 'MMENP (kg)', step: 0.1 },
-	{ key: 'mm_harnais', label: 'MMHarnais (kg)', step: 0.1 },
-	{ key: 'weight_min_pilot', label: 'Masse mini pilote (kg)', step: 0.1 },
+export const MASS_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string; step: number; tooltip: string }> = [
+	{ key: 'mmwp', label: 'MMWP (kg)', step: 0.1, tooltip: 'Masse maximale ou masse maximale water ballast plein.' },
+	{ key: 'mmwv', label: 'MMWV (kg)', step: 0.1, tooltip: 'Masse maximale water ballast vide ou masse maximale sans water ballast.' },
+	{ key: 'mmenp', label: 'MMENP (kg)', step: 0.1, tooltip: 'Masse maximale des elements non portants.' },
+	{ key: 'mm_harnais', label: 'MMHarnais (kg)', step: 0.1, tooltip: 'Masse maximale d utilisation du harnais.' },
+	{ key: 'weight_min_pilot', label: 'Masse mini pilote (kg)', step: 0.1, tooltip: 'Masse minimum du pilote equipe.' },
 ]
 
-export const CENTERING_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string; step: number }> = [
-	{ key: 'front_centering', label: 'Centrage avant (mm)', step: 1 },
-	{ key: 'rear_centering', label: 'Centrage arrière (mm)', step: 1 },
+export const CENTERING_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string; step: number; tooltip: string }> = [
+	{ key: 'front_centering', label: 'Centrage avant (mm)', step: 1, tooltip: 'Limite de centrage avant.' },
+	{ key: 'rear_centering', label: 'Centrage arrière (mm)', step: 1, tooltip: 'Limite de centrage arriere.' },
 ]
 
-export const ARM_FIELDS: Array<{ key: keyof Arms; label: string; step: number }> = [
-	{ key: 'arm_front_pilot', label: 'Bras de levier pilote avant(mm)', step: 1 },
-	{ key: 'arm_rear_pilot', label: 'Bras de levier pilote arrière (mm)', step: 1 },
-	{ key: 'arm_waterballast', label: 'Bras de levier waterballast (mm)', step: 1 },
-	{ key: 'arm_front_ballast', label: 'Bras de levier gueuse avant (mm)', step: 1 },
-	{ key: 'arm_rear_watterballast_or_ballast', label: 'Bras de levier ballast ou gueuse arrière (mm)', step: 1 },
-	{ key: 'arm_instruments_panel', label: 'Bras de levier tableau de bord (mm)', step: 1 },
-	{ key: 'arm_gas_tank', label: 'Bras de levier reservoir (mm)', step: 1 },
+export const ARM_FIELDS: Array<{ key: keyof Arms; label: string; step: number; tooltip: string }> = [
+	{ key: 'arm_front_pilot', label: 'Bras de levier pilote avant(mm)', step: 1, tooltip: '' },
+	{ key: 'arm_rear_pilot', label: 'Bras de levier pilote arrière (mm)', step: 1, tooltip: '' },
+	{ key: 'arm_waterballast', label: 'Bras de levier waterballast (mm)', step: 1, tooltip: '' },
+	{ key: 'arm_front_ballast', label: 'Bras de levier gueuse avant (mm)', step: 1, tooltip: '' },
+	{ key: 'arm_rear_watterballast_or_ballast', label: 'Bras de levier ballast ou gueuse arrière (mm)', step: 1, tooltip: '' },
+	{ key: 'arm_instruments_panel', label: 'Bras de levier tableau de bord (mm)', step: 1, tooltip: '' },
+	{ key: 'arm_gas_tank', label: 'Bras de levier reservoir (mm)', step: 1, tooltip: '' },
 ]
 
 export const EMPTY_INSTRUMENT: Glider['instruments'][number] = {

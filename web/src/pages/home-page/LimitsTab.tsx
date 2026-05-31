@@ -1,7 +1,9 @@
+import { CircleHelp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TabsContent } from '@/components/ui/tabs'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Glider } from '@/lib/types'
 import { ARM_FIELDS, CENTERING_LIMIT_FIELDS, MASS_LIMIT_FIELDS } from './config'
 
@@ -9,18 +11,37 @@ function ReadonlyFieldList<T extends object>({
   fields,
   values,
 }: {
-  fields: Array<{ key: keyof T; label: string }>
+  fields: Array<{ key: keyof T; label: string; tooltip?: string }>
   values: T
 }) {
   return (
     <Card className="border-border/60 bg-card/80">
       <CardContent className="space-y-4 px-4 py-4">
-        {fields.map(({ key, label }) => (
-          <div key={String(key)} className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground">{label}</Label>
-            <Input value={String(values[key] ?? '—')} readOnly className="bg-input/50 font-mono" />
-          </div>
-        ))}
+        {fields.map(({ key, label, tooltip }) => {
+          const hasTooltip = typeof tooltip === 'string' && tooltip.trim().length > 0
+
+          return (
+            <div key={String(key)} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs text-muted-foreground">{label}</Label>
+                {hasTooltip ? (
+                  <Tooltip>
+                    <TooltipTrigger
+                      aria-label={`Informations pour ${label}`}
+                      className="inline-flex items-center text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      <CircleHelp size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-64 text-center">
+                      {tooltip.trim()}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </div>
+              <Input value={String(values[key] ?? '—')} readOnly className="bg-input/50 font-mono" />
+            </div>
+          )
+        })}
       </CardContent>
     </Card>
   )
