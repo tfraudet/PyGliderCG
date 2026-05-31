@@ -12,7 +12,7 @@ services:
       - DB_NAME=${DB_NAME:?error}
       - HOST=${HOST:-0.0.0.0}
       - PORT=${PORT:-8000}
-      - COOKIE_KEY=${COOKIE_KEY:-your-secret-key-change-in-production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1

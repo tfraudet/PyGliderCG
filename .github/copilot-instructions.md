@@ -79,7 +79,7 @@ export TEST_ADMIN_PASSWORD=testpass123
 - Backend logic is layered: **API routers** (`backend/api/*`) -> **query layer** (`backend/db/*`) -> **domain models** (`backend/models/*`). CG formulas live in `backend/models/glider.py`.
 - Data is persisted in a single **DuckDB** file (`DB_NAME` env). `glider_queries` rebuilds full `Glider` aggregates (limits, arms, weighings, inventory, WB points) from normalized tables.
 - `web/src/lib/api.ts` is the single API client for React components. It handles JWT bearer headers, retries for GET requests, and error mapping.
-- Authentication is JWT-based (`COOKIE_KEY`), with roles `administrator`, `editor`, `viewer`. Frontend routing (`web/src/App.tsx`) is role-gated via React Router.
+- Authentication is JWT-based (`JWT_SECRET_KEY`), with roles `administrator`, `editor`, `viewer`. Frontend routing (`web/src/App.tsx`) is role-gated via React Router.
 
 ## Key codebase conventions
 

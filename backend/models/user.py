@@ -76,10 +76,10 @@ class TokenManager:
 		"""Initialize token manager
 		
 		Args:
-			secret_key: Secret key for signing tokens (uses settings.COOKIE_KEY if not provided)
+			secret_key: Secret key for signing tokens (uses settings.JWT_SECRET_KEY if not provided)
 			algorithm: JWT algorithm (uses settings.JWT_ALGORITHM if not provided)
 		"""
-		self.secret_key = secret_key or settings.COOKIE_KEY
+		self.secret_key = secret_key or settings.JWT_SECRET_KEY
 		self.algorithm = algorithm or settings.JWT_ALGORITHM
 
 	def encode_token(self, username: str, expires_delta: Optional[timedelta] = None) -> str:

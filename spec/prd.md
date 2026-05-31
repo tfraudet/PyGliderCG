@@ -74,7 +74,7 @@
 		- Audit: `/api/audit-logs/*`
 		- Database Admin: `/api/database/export`, `/api/database/import`
 	- **Database**: DuckDB file path from `DB_NAME`.
-	- **Auth**: JWT signed with `COOKIE_KEY`, role checks via middleware dependencies.
+	- **Auth**: JWT signed with `JWT_SECRET_KEY`, role checks via middleware dependencies.
 	- **E2E Base URL**: Playwright uses Streamlit base URL (`http://127.0.0.1:8501` by default).
 
 - **Security & Privacy**:
@@ -82,7 +82,7 @@
 	- JWT bearer authentication gates protected routes; role checks enforce least-privilege access.
 	- Database import/export restricted to administrator role.
 	- Audit log captures operational change events to support traceability.
-	- Environment secrets (`COOKIE_KEY`, DB path, backend URL) are externalized via `.env`.
+	- Environment secrets (`JWT_SECRET_KEY`, DB path, backend URL) are externalized via `.env`.
 
 ## 5. Risks & Roadmap
 

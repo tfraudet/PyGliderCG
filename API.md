@@ -84,7 +84,7 @@ The API is production-ready and designed for aviation professionals managing gli
 PyGliderCG uses **JSON Web Tokens (JWT)** for stateless, scalable authentication:
 
 - **Algorithm**: HS256 (HMAC with SHA-256)
-- **Secret**: Loaded from environment variable `COOKIE_KEY`
+- **Secret**: Loaded from environment variable `JWT_SECRET_KEY`
 - **Token Expiry**: Configurable via `JWT_EXPIRY_HOURS` (default: 24 hours)
 - **Token Type**: Bearer tokens in Authorization header
 

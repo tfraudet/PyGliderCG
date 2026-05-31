@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     DB_NAME: str = os.getenv("DB_NAME", "pyglider.duckdb")
 
     # JWT/Authentication
-    COOKIE_KEY: str = os.getenv("COOKIE_KEY", "your-secret-key-change-in-production")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRY_HOURS: int = 24
     JWT_REFRESH_EXPIRY_DAYS: int = 7

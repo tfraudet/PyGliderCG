@@ -17,7 +17,7 @@ services:
       - HOST=0.0.0.0
       - PORT=8000
       - BACKEND_URL=http://127.0.0.1:8000
-      - COOKIE_KEY=${COOKIE_KEY:?error}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?error}
       - LOG_LEVEL=WARNING
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1

@@ -62,7 +62,7 @@ cp .env.example .env
 Key variables:
 - `BACKEND_URL` (backend API URL, default `http://localhost:8000`)
 - `VITE_BACKEND_URL` (optional override for React frontend API base URL)
-- `COOKIE_KEY` (JWT signing key for backend auth)
+- `JWT_SECRET_KEY` (JWT signing key for backend auth)
 - `DB_NAME` (DuckDB file path)
 
 ### Launch options (backend + frontend)
@@ -128,6 +128,9 @@ Useful if you only need API testing:
 
 ```bash
 python -m uvicorn backend.main:app --reload
+
+# or
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Then call API directly (e.g. with curl/Postman/Swagger).
