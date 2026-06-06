@@ -128,7 +128,9 @@ export function GlidersPage() {
 					disabled={deleteMutation.isPending || effectiveSelectedRegistrations.length === 0}
 				>
 					<Trash2 data-icon="inline-start" />
-					Supprimer la selection
+					{effectiveSelectedRegistrations.length > 0
+						? `Supprimer la sélection (${effectiveSelectedRegistrations.length})`
+						: 'Supprimer la sélection'}
 				</Button>
 				<Button onClick={() => navigate('/gliders/new')}>
 					<Plus data-icon="inline-start" />

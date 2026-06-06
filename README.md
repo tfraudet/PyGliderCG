@@ -190,7 +190,7 @@ npx playwright test --config=playwright.config.ts
 npx playwright test --config=playwright.config.ts --project=chromium
 
 # Run a specific test file with a specific browser
-npx playwright test e2e/glider-mngmt.spec.ts --config=playwright.config.ts --project=chromium
+npx playwright test e2e/glider-mngmt.spec.ts --config=playwright.config.ts --project=webkit
 
 # To open last HTML report run
 npx playwright show-report
