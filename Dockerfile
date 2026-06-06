@@ -46,6 +46,6 @@ COPY --from=web-build /app/web/dist ./web/dist
 RUN chmod +x /app/start.sh
 
 EXPOSE 8000
-HEALTHCHECK CMD curl --fail http://localhost:8000/health && curl --fail http://localhost:8000/
+# HEALTHCHECK CMD curl --fail http://localhost:8000/health && curl --fail http://localhost:8000/
 
 ENTRYPOINT ["/app/start.sh"]
