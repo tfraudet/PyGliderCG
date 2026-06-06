@@ -40,7 +40,7 @@ async function expectAuthenticatedUser(page: Page, username: string): Promise<vo
 async function login(page: Page, username: string, password: string): Promise<void> {
 	await ensureSidebarExpanded(page);
 	await page.getByLabel('Identifiant').fill(username);
-	await page.getByLabel('Mot de passe').fill(password);
+	await page.getByRole('textbox', { name: 'Mot de passe' }).fill(password);
 	await page.getByRole('button', { name: 'Se connecter' }).click();
 	await expectAuthenticatedUser(page, username);
 }

@@ -38,7 +38,7 @@ test.describe('Login Functionality', () => {
 		await expect(loginHeading).toBeVisible()
 
 		await page.getByLabel('Identifiant').fill(TEST_ADMIN_USERNAME)
-		await page.getByLabel('Mot de passe').fill(INCORRECT_PASSWORD)
+		await page.getByRole('textbox', { name: 'Mot de passe' }).fill(INCORRECT_PASSWORD)
 		await page.getByRole('button', { name: 'Se connecter' }).click()
 
 		await expect(page.getByText('Invalid username or password')).toBeVisible()
@@ -82,7 +82,7 @@ test.describe('Login Functionality', () => {
 		await expect(loginButton).toBeVisible()
 
 		await page.getByLabel('Identifiant').fill(TEST_ADMIN_USERNAME)
-		await page.getByLabel('Mot de passe').fill(TEST_ADMIN_PASSWORD)
+		await page.getByRole('textbox', { name: 'Mot de passe' }).fill(TEST_ADMIN_PASSWORD)
 		await loginButton.click()
 
 		await expect(page.getByText(`Bienvenue, ${TEST_ADMIN_USERNAME}`)).toBeVisible()
@@ -106,7 +106,7 @@ test.describe('Login Functionality', () => {
 		await expect(loginButton).toBeVisible()
 
 		await page.getByLabel('Identifiant').fill(TEST_EDITOR_USERNAME)
-		await page.getByLabel('Mot de passe').fill(TEST_EDITOR_PASSWORD)
+		await page.getByRole('textbox', { name: 'Mot de passe' }).fill(TEST_EDITOR_PASSWORD)
 		await loginButton.click()
 
 		await expect(page.getByText(`Bienvenue, ${TEST_EDITOR_USERNAME}`)).toBeVisible()
