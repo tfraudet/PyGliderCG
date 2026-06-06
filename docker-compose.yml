@@ -18,8 +18,6 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
     volumes:
       - ./data:/app/data
-      # - ./backend:/app/backend
-      # - ./web:/app/web
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://localhost:8000/health']
       interval: 30s

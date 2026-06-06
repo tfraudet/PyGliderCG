@@ -1,5 +1,8 @@
 FROM node:24-alpine AS web-build
 
+WORKDIR /app
+COPY package.json ./package.json
+
 WORKDIR /app/web
 COPY web/package*.json ./
 RUN npm ci

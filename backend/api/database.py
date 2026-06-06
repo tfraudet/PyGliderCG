@@ -75,7 +75,7 @@ async def import_database(
 		con.execute(f"IMPORT DATABASE '{import_dir}';")
 		con.close()
 
-		os.replace(temp_db_path, settings.DB_NAME)
+		shutil.move(temp_db_path, settings.DB_NAME)
 		temp_db_path = None
 
 		logger.info(f'Database imported successfully by {admin_user.username}')
