@@ -128,9 +128,8 @@ const Sidebar = React.forwardRef<
       {isMobile && (
         <aside
           className={cn(
-            'flex flex-col fixed left-0 top-0 z-40 h-screen w-[--sidebar-width-mobile] border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out',
-            openMobile ? 'translate-x-0' : '-translate-x-full',
-            className
+            'flex flex-col fixed left-0 inset-y-0 z-50 w-[--sidebar-width-mobile] border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out',
+            openMobile ? 'translate-x-0' : '-translate-x-full'
           )}
           style={
             {

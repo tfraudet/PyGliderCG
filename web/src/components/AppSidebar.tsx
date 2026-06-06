@@ -126,13 +126,15 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar className="top-[--header-height] h-[calc(100svh-var(--header-height))] md:top-0 md:h-auto md:min-h-[calc(100svh-var(--header-height))]">
+    <Sidebar className="md:top-0 md:h-auto md:min-h-[calc(100svh_-_var(--header-height))]">
       {/* <SidebarHeader className="flex items-center justify-between gap-2 px-4 py-3.5">
         {!isCollapsed && (
         )}
       </SidebarHeader> */}
 
       <SidebarContent>
+        {/* On mobile the sidebar covers the full screen; push content below the sticky header */}
+        <div className="h-[--header-height] shrink-0 md:hidden" aria-hidden="true" />
         {/* Collapsed: login shortcut for unauthenticated users */}
         {isCollapsed && !user && (
           <div className="flex flex-col items-center justify-start gap-2 py-2">
