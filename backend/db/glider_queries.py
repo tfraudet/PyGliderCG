@@ -39,9 +39,9 @@ def _next_sequence_value(conn, sequence_name: str) -> int:
 	return int(result[0])
 
 
-def _normalize_float(value, digits: int = 3):
+def _normalize_required_float(value, digits: int = 3) -> float:
 	if value is None:
-		return None
+		raise ValueError('Expected numeric value but got None')
 	number = float(value)
 	if not math.isfinite(number):
 		return number
@@ -82,8 +82,8 @@ def _build_glider_from_row(conn, row: Sequence) -> Glider:
 	main_values[3] = _normalize_serial_number(main_values[3])
 
 	glider = Glider(*main_values)
-	glider.limits = Limits(*[_normalize_float(value) for value in row[10:17]])
-	glider.arms = Arms(*[_normalize_float(value) for value in row[17:25]])
+	glider.limits = Limits(*[_normalize_required_float(value) for value in row[10:17]])
+	glider.arms = Arms(*[_normalize_required_float(value) for value in row[17:25]])
 
 	registration = row[1]
 	points = conn.execute(
@@ -93,7 +93,10 @@ def _build_glider_from_row(conn, row: Sequence) -> Glider:
 		ORDER BY point_index''',
 		[registration],
 	).fetchall()
-	glider.weight_and_balances = [(point[0], _normalize_float(point[1])) for point in points]
+	glider.weight_and_balances = [
+		(int(point[0]), _normalize_required_float(point[1]))
+		for point in points
+	]
 
 	weighing_rows = conn.execute(
 		'''SELECT id, date, p1, p2, right_wing_weight, left_wing_weight, tail_weight,
