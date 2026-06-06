@@ -38,7 +38,7 @@ export const CENTERING_LIMIT_FIELDS: Array<{ key: keyof Limits; label: string; t
 ]
 
 export const ARM_FIELDS: Array<{ key: keyof Arms; label: string; tooltip: string }> = [
-  { key: 'arm_front_pilot', label: 'Bras de levier pilote avant(mm)', tooltip: '' },
+  { key: 'arm_front_pilot', label: 'Bras de levier pilote avant (mm)', tooltip: '' },
   { key: 'arm_rear_pilot', label: 'Bras de levier pilote arrière (mm)', tooltip: '' },
   { key: 'arm_waterballast', label: 'Bras de levier waterballast (mm)', tooltip: '' },
   { key: 'arm_front_ballast', label: 'Bras de levier gueuse avant (mm)', tooltip: '' },

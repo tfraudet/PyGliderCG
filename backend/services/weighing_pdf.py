@@ -295,13 +295,14 @@ HTML_TEMPLATE = """
 						<tr><td class="w150 thick">Charge variable max</td><td>{cv_max} kg</td></tr>
 						<tr><td class="w150 thick">Charge utile max</td><td>{cu_max} kg</td></tr>
 						<tr><td class="w150 thick">Distance du CG à la référence (X0)</td><td>{empty_arm} mm</td></tr>
-						<tr><td class="w150 thick">Masse maxi Pilot avant calculé</td><td>{pilot_av_maxi} kg</td></tr>
-						{pilot_min_rows}
+                        <tr><td class="w150 thick">Masse mini pilote avant calculée</td><td>{pilot_av_mini} kg</td></tr>
+						<tr><td class="w150 thick">Masse maxi pilot avant calculée</td><td>{pilot_av_maxi} kg</td></tr>
 					</table>
 				</td>
 				<td class="p20">
 					<table class="standard">
-						{retained_rows}
+						<tr><td class="thick">Masse mini pilote avant</td><td>{retained_pilot_av_min}</td></tr>
+						<tr><td class="thick">Masse maxi pilote avant</td><td>{retained_pilot_av_max}</td></tr>
 						<tr><td class="thick">Charge utile</td><td>{cu} kg</td></tr>
 					</table>
 					<div class="info-box">{useful_load_message}</div>
@@ -384,7 +385,8 @@ class WeighingPdfService:  # pylint: disable=too-few-public-methods
         )
         retained_max = cls._get_retained_pilot_max(
             pilot_limits['max_weight'],
-            calculation.cu,
+            calculation.cu_max,
+            calculation.cv_max,
             glider.limits.mm_harnais,
         )
 
@@ -453,14 +455,11 @@ class WeighingPdfService:  # pylint: disable=too-few-public-methods
                 calculation.empty_arm,
                 decimals=0,
             ),
+            pilot_av_mini=cls._format_number(pilot_limits["min_weight"]),
             pilot_av_maxi=cls._format_number(pilot_limits['max_weight']),
-            pilot_min_rows=cls._build_calculated_pilot_rows(glider, pilot_limits),
-            retained_rows=cls._build_retained_rows(
-                glider,
-                retained_min,
-                retained_duo_min,
-                retained_max,
-            ),
+            retained_pilot_av_min = f'{cls._format_number(retained_min[0])} kg ({cls._escape(retained_min[1])})',
+            retained_pilot_av_max = f'{cls._format_number(retained_max[0])} kg ({cls._escape(retained_max[1])})',
+
             cu=cls._format_number(calculation.cu),
             useful_load_message=cls._escape(
                 f'Charge utile de {cls._format_number(calculation.cu)} kg '
@@ -524,20 +523,23 @@ class WeighingPdfService:  # pylint: disable=too-few-public-methods
             and (calculated_min is None or manual_min >= calculated_min)
         ):
             return (value, 'Manuel de vol')
-        return (value, 'Centrage')
+        return (value, 'Calculé')
 
     @staticmethod
     def _get_retained_pilot_max(
         calculated_max: float | None,
-        useful_load_limit: float | None,
+        cu_max: float | None,
+        cv_max: float | None,
         seat_limit: float | None,
     ) -> PilotLimitValue:
         """Return the retained maximum pilot weight and its limiting reason."""
         candidates = []
         if calculated_max is not None:
-            candidates.append((calculated_max, 'Centrage'))
-        if useful_load_limit is not None:
-            candidates.append((useful_load_limit, 'Limité par les éléments non portants'))
+            candidates.append((calculated_max, None))
+        if cu_max is not None:
+            candidates.append((cu_max, 'Limité par les éléments non portants'))
+        if cv_max is not None:
+            candidates.append((cv_max, 'Limité par la charge maximun'))
         if seat_limit is not None:
             candidates.append((seat_limit, 'Limité par les harnais'))
 
@@ -546,61 +548,6 @@ class WeighingPdfService:  # pylint: disable=too-few-public-methods
 
         value, reason = min(candidates, key=lambda candidate: candidate[0])
         return (value, reason)
-
-    @classmethod
-    def _build_calculated_pilot_rows(
-        cls,
-        glider: Glider,
-        pilot_limits: dict[str, float | None],
-    ) -> str:
-        rows = [
-            '<tr><td class="thick">Masse mini pilote avant calculée</td>'
-            f'<td>{cls._format_number(pilot_limits["min_weight"])} kg</td></tr>',
-        ]
-        if not glider.single_seat:
-            rows.append(
-                '<tr><td class="thick">Masse mini pilote avant calculée en biplace</td>'
-                f'<td>{cls._format_number(pilot_limits["min_weight_duo"])} kg</td></tr>'
-            )
-        return ''.join(rows)
-
-    @classmethod
-    def _build_retained_rows(
-        cls,
-        glider: Glider,
-        retained_min: PilotLimitValue,
-        retained_duo_min: PilotLimitValue,
-        retained_max: PilotLimitValue,
-    ) -> str:
-        rows = []
-        if glider.single_seat:
-            rows.extend(
-                [
-                    cls._retained_row('Masse mini pilote', retained_min),
-                    cls._retained_row('Masse maxi pilote', retained_max),
-                ]
-            )
-        else:
-            rows.extend(
-                [
-                    cls._retained_row('Masse mini pilote (monoplace)', retained_min),
-                    cls._retained_row('Masse maxi pilote (monoplace)', retained_max),
-                    cls._retained_row('Masse mini pilote avant (biplace)', retained_duo_min),
-                    cls._retained_row('Masse maxi pilote avant (biplace)', retained_max),
-                ]
-            )
-        return ''.join(rows)
-
-    @classmethod
-    def _retained_row(cls, label: str, limit_value: PilotLimitValue) -> str:
-        value, reason = limit_value
-        if value is None:
-            cell = '—'
-        elif reason:
-            cell = f'{cls._format_number(value)} kg ({cls._escape(reason)})'
-        else:
-            cell = f'{cls._format_number(value)} kg'
-        return f'<tr><td class="thick">{cls._escape(label)}</td><td>{cell}</td></tr>'
 
     @classmethod
     def _build_inventory_html(cls, glider: Glider) -> str:

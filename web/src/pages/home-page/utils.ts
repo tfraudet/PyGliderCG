@@ -84,7 +84,7 @@ export function getRetainedPilotMax(
   seatLimit: number | null | undefined,
 ): PilotLimitResult {
   const candidates = [
-    calculatedMax != null ? { value: calculatedMax, reason: 'Centrage' } : null,
+    calculatedMax != null ? { value: calculatedMax, reason: 'Calculé' } : null,
     usefulLoadLimit != null ? { value: usefulLoadLimit, reason: 'Limité par les éléments non portants' } : null,
     seatLimit != null ? { value: seatLimit, reason: 'Limité par les harnais' } : null,
   ].filter((candidate): candidate is { value: number; reason: string } => candidate !== null && Number.isFinite(candidate.value))

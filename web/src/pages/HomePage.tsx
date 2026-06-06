@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Barcode, Calculator, Plane, TriangleAlert, UserRound, UsersRound } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { QueryErrorAlert } from '@/components/QueryErrorAlert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -63,11 +63,16 @@ export function HomePage() {
         <h1 className="text-3xl font-bold text-foreground">Calculateur de centrage</h1>
       </div>
 
-      <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-200">
-        <TriangleAlert size={15} className="text-amber-400" />
-        <AlertDescription className="text-xs">
-          Attention : Ce logiciel est un outil d'aide à la décision pour le calcul du centrage. La fiche de pesée est le document de référence, et la responsabilité finale du centrage incombe au commandant de bord.
-        </AlertDescription>
+      <Alert className="rounded-xl border border-amber-500/40 bg-amber-300/90 px-4 py-3 text-stone-900 shadow-sm">
+        <TriangleAlert className="text-stone-900" />
+        <div className="space-y-0.5">
+          <AlertTitle className="text-sm font-bold text-stone-900">
+            Attention:
+          </AlertTitle>
+          <AlertDescription className="text-sm leading-snug text-stone-900/90">
+           Ce logiciel est un outil d'aide à la décision pour le calcul du centrage. La fiche de pesée est le document de référence, et la responsabilité finale du centrage incombe au commandant de bord.
+          </AlertDescription>
+        </div>
       </Alert>
 
       <Card>

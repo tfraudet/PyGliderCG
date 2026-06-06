@@ -187,7 +187,7 @@ export function CentrageTab({
                   label="Centrage (mm)"
                   value={`${calculation.center_of_gravity.toFixed(1)} mm`}
                   passed={isCenteringPassed}
-                  detail={`(Limit: ${glider.limits.front_centering}-${glider.limits.rear_centering} mm)`}
+                  detail={`(Limites: ${glider.limits.front_centering}-${glider.limits.rear_centering} mm)`}
                   bordered
                 />
                 <ResultStatusCard
