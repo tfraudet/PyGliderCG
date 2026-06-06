@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   Home,
@@ -11,7 +11,9 @@ import {
   Eye,
   EyeOff,
   Heart,
+  TriangleAlert,
 } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Sidebar,
   SidebarContent,
@@ -23,7 +25,12 @@ import {
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -40,26 +47,70 @@ const NAV_ITEMS = [
   { to: '/audit', label: 'Audit Log', Icon: ClipboardList, minRole: 'administrator' },
 ] satisfies Array<{ to: string; label: string; Icon: typeof Home; minRole: AppRole | null }>
 
+const EMPTY_LOGIN_FORM = {
+  username: '',
+  password: '',
+}
+
+const EMPTY_LOGIN_TOUCHED = {
+  username: false,
+  password: false,
+}
+
+function getUsernameError(username: string) {
+  if (!username.trim()) return "L'identifiant est requis."
+  return null
+}
+
+function getPasswordError(password: string) {
+  if (!password) return 'Le mot de passe est requis.'
+  return null
+}
+
 export function AppSidebar() {
   const { pathname } = useLocation()
   const { user, loading, login, logout } = useAuth()
   const { state, isMobile, openMobile, setOpen, setOpenMobile } = useSidebar()
   const [loginError, setLoginError] = useState('')
+  const [loginForm, setLoginForm] = useState(EMPTY_LOGIN_FORM)
+  const [loginTouched, setLoginTouched] = useState(EMPTY_LOGIN_TOUCHED)
+  const [showLoginValidation, setShowLoginValidation] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const isCollapsed = isMobile ? !openMobile : state === 'collapsed'
+  const usernameError = getUsernameError(loginForm.username)
+  const passwordError = getPasswordError(loginForm.password)
+  const shouldShowUsernameError = Boolean(usernameError && (showLoginValidation || loginTouched.username))
+  const shouldShowPasswordError = Boolean(passwordError && (showLoginValidation || loginTouched.password))
 
   const visibleLinks = NAV_ITEMS.filter(({ minRole }) => {
     if (!minRole) return true
     return hasRequiredRole(user?.role, minRole)
   })
 
-  async function onLogin(event: React.FormEvent<HTMLFormElement>) {
+  function updateLoginField(field: keyof typeof loginForm, value: string) {
+    setLoginForm((previous) => ({ ...previous, [field]: value }))
+    if (loginError) {
+      setLoginError('')
+    }
+  }
+
+  function markLoginFieldTouched(field: keyof typeof loginTouched) {
+    setLoginTouched((previous) => ({ ...previous, [field]: true }))
+  }
+
+  async function onLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setLoginError('')
-    const fd = new FormData(event.currentTarget)
+
+    setShowLoginValidation(true)
+
+    if (usernameError || passwordError) {
+      return
+    }
+
     try {
-      await login(String(fd.get('username') ?? ''), String(fd.get('password') ?? ''))
+      setLoginError('')
+      await login(loginForm.username.trim(), loginForm.password)
     } catch (error) {
       setLoginError(apiError(error))
     }
@@ -84,16 +135,17 @@ export function AppSidebar() {
       <SidebarContent>
         {/* Collapsed: login shortcut for unauthenticated users */}
         {isCollapsed && !user && (
-          <div className="flex flex-col items-center justify-start space-y-2 py-2">
+          <div className="flex flex-col items-center justify-start gap-2 py-2">
             <Tooltip>
               <TooltipTrigger>
                 <Button
+                  type="button"
                   variant="ghost"
-                  size="icon"
+                  size="icon-sm"
                   className="h-9 w-9 text-primary hover:bg-sidebar-accent"
                   onClick={openLoginPanel}
                 >
-                  <LogIn size={18} strokeWidth={1.8} />
+                  <LogIn />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">Se connecter</TooltipContent>
@@ -147,9 +199,10 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   tooltip="Déconnexion"
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  type="button"
                   onClick={() => logout()}
                 >
-                  <LogOut size={16} strokeWidth={1.8} className="shrink-0" />
+                  <LogOut />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}
@@ -160,51 +213,76 @@ export function AppSidebar() {
         {!isCollapsed && !user && !loading && (
           <div className="flex flex-1 flex-col px-2 py-3">
             <h2 className="mb-3 text-lg font-bold text-foreground">Connexion</h2>
-            <form onSubmit={onLogin} className="flex flex-col gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="sidebar-username" className="text-sm text-muted-foreground">
+            <form onSubmit={onLogin} noValidate className="flex flex-col gap-4">
+              {loginError && (
+                <Alert variant="destructive">
+                  <TriangleAlert />
+                  <AlertTitle>Connexion impossible</AlertTitle>
+                  <AlertDescription>{loginError}</AlertDescription>
+                </Alert>
+              )}
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="sidebar-username"
+                  className={cn('text-sm text-muted-foreground', shouldShowUsernameError && 'text-destructive')}
+                >
                   Identifiant
                 </Label>
-                <Input
-                  id="sidebar-username"
-                  name="username"
-                  autoComplete="username"
-                  className="bg-input/50 border-border/60 focus-visible:ring-primary/60"
-                  required
-                />
+                <InputGroup>
+                  <InputGroupInput
+                    id="sidebar-username"
+                    name="username"
+                    value={loginForm.username}
+                    onChange={(event) => updateLoginField('username', event.target.value)}
+                    onBlur={() => markLoginFieldTouched('username')}
+                    autoComplete="username"
+                    aria-invalid={shouldShowUsernameError || undefined}
+                  />
+                </InputGroup>
+                {shouldShowUsernameError && (
+                  <p className="text-xs text-destructive">
+                    {usernameError}
+                  </p>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="sidebar-password" className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-1.5">
+                <Label
+                  htmlFor="sidebar-password"
+                  className={cn('text-sm text-muted-foreground', shouldShowPasswordError && 'text-destructive')}
+                >
                   Mot de passe
                 </Label>
-                <div className="relative">
-                  <Input
+                <InputGroup>
+                  <InputGroupInput
                     id="sidebar-password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
+                    value={loginForm.password}
+                    onChange={(event) => updateLoginField('password', event.target.value)}
+                    onBlur={() => markLoginFieldTouched('password')}
                     autoComplete="current-password"
-                    className="bg-input/50 border-border/60 pr-10 focus-visible:ring-primary/60"
-                    required
+                    aria-invalid={shouldShowPasswordError || undefined}
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    tabIndex={-1}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword((s) => !s)}
-                  >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </Button>
-                </div>
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                      onClick={() => setShowPassword((value) => !value)}
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
+                {shouldShowPasswordError && (
+                  <p className="text-xs text-destructive">
+                    {passwordError}
+                  </p>
+                )}
               </div>
-              {loginError && (
-                <p className="rounded-md bg-destructive/15 px-3 py-2 text-xs text-destructive">
-                  {String(loginError)}
-                </p>
-              )}
-              <Button type="submit" className="mt-1 gap-2">
-                <LogIn size={15} strokeWidth={2} />
+              <Button type="submit" className="mt-1 gap-2" disabled={loading}>
+                <LogIn data-icon="inline-start" />
                 Se connecter
               </Button>
             </form>
@@ -218,9 +296,10 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              type="button"
               onClick={() => logout()}
             >
-              <LogOut size={16} strokeWidth={1.8} />
+              <LogOut data-icon="inline-start" />
               Déconnexion
             </Button>
           </>
