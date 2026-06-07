@@ -1,57 +1,52 @@
-<p align="center">
-	 <img src="frontend/img/app-logo-short-v2.png" width="100" >
-</p>
+# Center of Gravity Calculator for Gliders
 
-# Center of Gravity Calculator for ACPH Gliders
+A web application to calculate center of gravity and manage weighings for [ACPH](https://aeroclub-issoire.fr/) gliders.
 
-A simple web  application to calculate center of gravity for [ACPH](https://aeroclub-issoire.fr/) gliders.
-- **Frontend:** Streamlit UI (pilot and admin workflows)
-- **Backend:** FastAPI service (business logic, auth, database access)
+- **Frontend:** React + Vite + Tailwind UI + Shadcn
+- **Backend:** FastAPI service for business logic, auth, and database access
 
-Frontend code now lives under `frontend/` and can run either:
-- locally with two processes (one for FastAPI, one for Streamlit), or
-- in Docker with a **single container** that starts both services.
+<table>
+  <tr>
+    <td><img src="web/public/img/screenshot-1.png" alt="home page screenshot 1"></td>
+    <td><img src="web/public/img/screenshot-2.png" alt="home page screenshot 2"></td>
+  </tr>
+</table>
 
-## Repository layout (relevant folders)
+The frontend lives under `web/`, while the FastAPI backend lives under `backend/`. You can run the app locally with separate frontend/backend processes, or build the frontend and serve it from FastAPI in a single container.
 
-- `frontend/`: Streamlit application (`streamlit_app.py`, pages, frontend modules)
-- `backend/`: FastAPI API service
+## Repository layout
+
+- `web/`: React frontend application
+- `backend/`: FastAPI backend service
 - `tests/`: pytest suite
-- `e2e/`: Playwright E2E tests
+- `e2e/`: Playwright end-to-end tests
 
 ## Requirements
 
 - Python 3.12
-- Node.js (for Playwright E2E tests)
+- Node.js v24
 
 ## Local development setup
 
-Create a virtual environment, clone the repository, then install both frontend and backend dependencies.
-
 ```bash
 git clone https://github.com/tfraudet/PyGliderCG.git
-cd ./PyGliderCG
+cd PyGliderCG
 python3 -m venv .venv
-```
-
-On Unix systems
-
-```bash
 source .venv/bin/activate
 ```
 
-On Window systems
+On Windows:
 
 ```bash
-.venv\scripts\activate
+.venv\Scripts\activate
 ```
 
 ### Install dependencies
 
 ```bash
 pip install -r requirements.txt
-pip install -r requirements-backend.txt
 npm install
+npm install --prefix web
 ```
 
 ### Configure environment
@@ -60,87 +55,155 @@ npm install
 cp .env.example .env
 ```
 
+Update `.env` with the values needed for your local environment.
+
 Key variables:
-- `BACKEND_URL` (used by Streamlit client, default `http://localhost:8000`)
-- `COOKIE_KEY` (JWT signing key for backend auth)
-- `DB_NAME` (DuckDB file path)
+- `BACKEND_URL`: backend API URL (default `http://localhost:8000`)
+- `VITE_BACKEND_URL`: optional frontend API base URL override
+- `JWT_SECRET_KEY`: JWT signing key for backend auth
+- `DB_NAME`: DuckDB database file path
 
-### Run backend and frontend
+## Run the app
 
-Run services in two terminals:
+### Option 1 — Local development (recommended)
 
-**Terminal 1 - Backend (FastAPI)**
+Run the backend and frontend in separate terminals.
+
+Terminal 1 — backend:
+
 ```bash
 python -m uvicorn backend.main:app --reload
 ```
 
-**Terminal 2 - Frontend (Streamlit)**
+Terminal 2 — frontend:
+
 ```bash
-BACKEND_URL=http://localhost:8000 streamlit run frontend/streamlit_app.py
+npm run web:dev
 ```
 
-Endpoints:
-- Frontend: `http://localhost:8501`
+Access:
+- Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
 
-### Quick API Test
+### Option 2 — Unified local run
+
+Build the frontend and serve it from FastAPI.
 
 ```bash
-# Login and get token
+npm run web:build
+./start.sh
+```
+
+Access:
+- App + API: `http://localhost:8000`
+- Swagger UI: `http://localhost:8000/docs`
+
+### Option 3 — Docker
+
+```bash
+docker compose up --build
+```
+
+Access:
+- App + API: `http://localhost:8000`
+
+For a production-style detached run:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### Option 4 — API only
+
+Run only the backend service.
+
+```bash
+python -m uvicorn backend.main:app --reload
+```
+
+Or bind to a specific host/port:
+
+```bash
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+## Development workflow
+
+For everyday development, use the separate backend/frontend flow.
+
+1. Start the backend with auto-reload:
+
+```bash
+python -m uvicorn backend.main:app --reload
+```
+
+2. Start the frontend dev server from the repo root:
+
+```bash
+npm run web:dev
+```
+
+3. Open the frontend at `http://localhost:5173` and the API docs at `http://localhost:8000/docs`.
+
+4. When frontend changes are ready for integration, build and run the app together:
+
+```bash
+npm run web:build
+./start.sh
+```
+
+## Quick API test
+
+```bash
 TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin"}' | jq -r '.access_token')
+  -d '{"username":"admin","xxxx":"xxxx"}' | jq -r '.access_token')
 
-# List gliders
 curl http://localhost:8000/api/gliders \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 For detailed endpoint documentation, see [API.md](./API.md).
 
-## Run with Docker
-
-```bash
-# Unified app container (frontend + backend in one service)
-docker compose up --build
-
-# Production stack (same unified app model)
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
 ## Run the tests
 
-Start backend and frontend first (see "Run backend and frontend"), then run tests in another terminal.
+Start the backend and frontend first, then run tests in another terminal.
 
 ```bash
-# All tests
 pytest tests/ -v
-
- # Glider only
-pytest tests/test_glider.py -v
-
-# Integration only
-pytest tests/test_integration.py -v  
 ```
 
-### Run end to end tests
-
-You can run the tests using [Playwright](https://playwright.dev/) framework. Make sure backend and Streamlit (`frontend/streamlit_app.py`) are already running.
+Run a focused test:
 
 ```bash
-# Install Playwright dependencies
+pytest tests/test_glider.py -v
+pytest tests/test_integration.py -v
+```
+
+## End-to-end tests
+
+Install Playwright dependencies:
+
+```bash
 playwright install
+```
 
-# Run all E2E tests
+Run the suite:
+
+```bash
 npx playwright test --config=playwright.config.ts
+```
 
-# Run the tests with a specific browser
+Run a specific browser or spec:
+
+```bash
 npx playwright test --config=playwright.config.ts --project=chromium
+npx playwright test e2e/glider-mngmt.spec.ts --config=playwright.config.ts --project=webkit
+```
 
-# Run a specific test file with a specific browser
-npx playwright test e2e/glider-mngmt.spec.ts --config=playwright.config.ts --project=chromium
+Open the last generated HTML report:
 
-# To open last HTML report run
+```bash
 npx playwright show-report
 ```

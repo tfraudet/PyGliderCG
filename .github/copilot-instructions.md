@@ -7,17 +7,16 @@
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install -r requirements-backend.txt
 npm install
 ```
 
 ### Run app locally (two processes)
 ```bash
-# Terminal 1
+# Terminal 1 - Backend
 python -m uvicorn backend.main:app --reload
 
-# Terminal 2
-BACKEND_URL=http://localhost:8000 streamlit run frontend/streamlit_app.py
+# Terminal 2 - React Frontend (Vite dev server)
+cd web && npm run dev
 ```
 
 ### Run unified app entrypoint (used in container)
@@ -74,24 +73,25 @@ export TEST_ADMIN_PASSWORD=testpass123
 
 ## High-level architecture
 
-- The app is split between a **Streamlit frontend** (`frontend/`) and a **FastAPI backend** (`backend/`). Frontend calls backend over HTTP (`BACKEND_URL`, default `http://localhost:8000`).
+- The app is split between a **React frontend** (`web/`) and a **FastAPI backend** (`backend/`). Frontend calls backend over HTTP (`VITE_BACKEND_URL`, default `http://localhost:8000`).
+- Backend serves both API routes and React built assets from a single FastAPI application for production deployment.
 - `backend/main.py` wires routers (`auth`, `users`, `gliders`, `audit`, `database`) and initializes DuckDB schema at startup via `backend/init_db.py`.
 - Backend logic is layered: **API routers** (`backend/api/*`) -> **query layer** (`backend/db/*`) -> **domain models** (`backend/models/*`). CG formulas live in `backend/models/glider.py`.
 - Data is persisted in a single **DuckDB** file (`DB_NAME` env). `glider_queries` rebuilds full `Glider` aggregates (limits, arms, weighings, inventory, WB points) from normalized tables.
-- `frontend/backend_client.py` is the single API client for Streamlit pages. It handles JWT bearer headers, retries for GET requests, and error mapping.
-- Authentication is JWT-based (`COOKIE_KEY`), with roles `administrator`, `editor`, `viewer`. Sidebar navigation (`frontend/pages/sidebar.py`) is role-gated.
+- `web/src/lib/api.ts` is the single API client for React components. It handles JWT bearer headers, retries for GET requests, and error mapping.
+- Authentication is JWT-based (`JWT_SECRET_KEY`), with roles `administrator`, `editor`, `viewer`. Frontend routing (`web/src/App.tsx`) is role-gated via React Router.
 
 ## Key codebase conventions
 
 - Keep existing **tab indentation** and **single-quote string style** in Python files; match surrounding file style when editing mixed-style files.
-- Glider API supports both legacy and canonical routes. Frontend uses `/api/gliders/by-id/{glider_id:path}/...` to support registrations containing `/`; prefer `BackendClient._glider_endpoint(...)`.
+- Glider API supports both legacy and canonical routes. Frontend uses `/api/gliders/by-id/{glider_id:path}/...` to support registrations containing `/`; prefer `backend.glider_endpoint(...)`.
 - Public vs protected API behavior matters:
 	- Public: glider list/details/limits/calculate.
 	- Admin-only: user CRUD, database import/export, glider mutations, weighing/instrument/WB updates.
-- Streamlit pages under `frontend/pages/` are executable page scripts, usually with:
-	- `st.set_page_config(...)` near top,
-	- auth guard via `st.session_state.authenticated`,
-	- `sidebar_menu()` call in page flow.
-- `@st.cache_data` is used for fetch helpers; after mutating data, explicitly clear related cache (`fetch_*.clear()` or `st.cache_data.clear()`).
-- User management endpoints intentionally return hashed `password` values in responses; frontend `users_ui.py` edits them via table workflows.
+- React pages under `web/src/pages/` are components, usually with:
+	- `useQuery` / `useMutation` from react-query for data fetching,
+	- authentication check via `auth` context,
+	- layout via App shell component.
+- `@react-query` hooks use caching; after mutations, invalidate related queries with `queryClient.invalidateQueries()`.
+- User management endpoints intentionally return hashed `password` values in responses; frontend `UsersPage` edits them via form submissions.
 - Date input handling is lenient in glider API (`YYYY-MM-DD`, `DD/MM/YYYY`, `DD-MM-YYYY`, `YYYY/MM/DD`); preserve this behavior when changing request parsing.

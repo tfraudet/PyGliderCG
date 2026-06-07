@@ -5,7 +5,7 @@ on:
     branches: [ main, develop ]
     paths:
       - 'backend/**'
-      - 'frontend/**'
+      - 'web/**'
       - 'Dockerfile'
       - 'docker-compose*.yml'
       - 'requirements.txt'
@@ -15,7 +15,7 @@ on:
     branches: [ main, develop ]
     paths:
       - 'backend/**'
-      - 'frontend/**'
+      - 'web/**'
       - 'Dockerfile'
       - 'docker-compose*.yml'
       - 'requirements.txt'
@@ -32,10 +32,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+
+    - name: Build frontend
+      run: |
+        npm install
+        npm run web:build
 
     - name: Install dependencies
       run: |

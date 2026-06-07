@@ -1,13 +1,18 @@
 {
   "name": "pyglidercg",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "<p align=\"center\"> \t <img src=\"frontend/img/app-logo-short-v2.png\" width=\"100\" > </p>",
   "main": "index.js",
   "directories": {
     "doc": "doc",
     "test": "tests"
   },
-  "scripts": {},
+  "scripts": {
+    "web:dev": "npm run dev --prefix web",
+    "web:build": "npm run build --prefix web",
+    "e2e": "npx playwright test --config=playwright.config.ts",
+    "e2e:chromium": "npx playwright test --config=playwright.config.ts --project=chromium"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tfraudet/PyGliderCG.git"
@@ -24,6 +29,7 @@
     "@playwright/test": "^1.56.1",
     "@types/node": "^24.1.0",
     "dotenv": "^17.2.1",
+    "shadcn": "^4.8.0",
     "typescript": "^6.0.3"
   }
 }

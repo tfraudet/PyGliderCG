@@ -63,20 +63,20 @@ def init_gliders_tables(conn):
 				datum_label VARCHAR,
 				wedge VARCHAR,
 				wedge_position VARCHAR,
-				mmwp FLOAT,
-				mmwv FLOAT,
-				mmenp FLOAT,
-				mm_harnais FLOAT,
-				weight_min_pilot FLOAT,
-				front_centering FLOAT,
-				rear_centering FLOAT,
-				arm_front_pilot FLOAT,
-				arm_rear_pilot FLOAT,
-				arm_waterballast FLOAT,
-				arm_front_ballast FLOAT,
-				arm_rear_watterballast_or_ballast FLOAT,
-				arm_gas_tank FLOAT,
-				arm_instruments_panel FLOAT,
+				mmwp DOUBLE,
+				mmwv DOUBLE,
+				mmenp DOUBLE,
+				mm_harnais DOUBLE,
+				weight_min_pilot DOUBLE,
+				front_centering DOUBLE,
+				rear_centering DOUBLE,
+				arm_front_pilot DOUBLE,
+				arm_rear_pilot DOUBLE,
+				arm_waterballast DOUBLE,
+				arm_front_ballast DOUBLE,
+				arm_rear_watterballast_or_ballast DOUBLE,
+				arm_gas_tank DOUBLE,
+				arm_instruments_panel DOUBLE,
 			)
 	'''
 	conn.execute(sql)
@@ -106,7 +106,7 @@ def init_gliders_tables(conn):
 			registration VARCHAR,
 			point_index INTEGER,
 			center_of_gravity INTEGER,
-			weight FLOAT,
+			weight DOUBLE,
 			FOREIGN KEY (registration) REFERENCES GLIDER (registration)
 		)
 	'''

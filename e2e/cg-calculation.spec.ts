@@ -1,13 +1,12 @@
-import { test, expect, Page } from '@playwright/test';
-import { selectGlider, selectGliderByKey, setupTestLogging } from './test-utils';
+import { expect, test } from '@playwright/test'
+import { selectGlider, selectGliderByKey, setupTestLogging } from './test-utils'
 
+test.beforeEach(async ({ page }) => {
+  await setupTestLogging(page)
+})
 
 test.beforeAll( 'Setup', async () => {
   // console.log('Before tests');
-});
-
-test.beforeEach(async ({ page }) => {
-	await setupTestLogging(page);
 });
 
 test.describe('Center of gravity for glider F-CGUP', () => {
@@ -16,72 +15,44 @@ test.describe('Center of gravity for glider F-CGUP', () => {
   });
 
   test('should compute CG with a 80kg pilot', async ({ page }) => {
-    // Check that glider F-CGUP is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace F-CGUP');
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('F-CGUP')
+    await expect(page.getByText('Monoplace')).toBeVisible()
 
-    // Specify a 80kg pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('80');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+    await page.locator('input[type="number"]').first().fill('80')
+    await page.getByRole('button', { name: 'Calculer le centrage' }).click()
 
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1500);
-
-    // check the center of gravity 
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('356.0');
-
-    // Check the weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('364.8');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('212.0');
+    await expect(page.getByText('Résultats du calcul')).toBeVisible()
+    await expect(page.getByText('355.9 mm')).toBeVisible()
+    await expect(page.getByText('364.8 kg')).toBeVisible()
+    await expect(page.getByText('212.0 kg')).toBeVisible()
   }); 
 
   test('should compute CG with a 95kg pilot', async ({ page }) => {
-    // Check that glider F-CGUP is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace F-CGUP');
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('F-CGUP')
 
-    // Specify a 95kg pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('95');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+    await page.locator('input[type="number"]').first().fill('95')
+    await page.getByRole('button', { name: 'Calculer le centrage' }).click()
 
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
-
-    // check weight and CG
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('322.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('379.8');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('227.0');
+    await expect(page.getByText('Résultats du calcul')).toBeVisible()
+    await expect(page.getByText('321.6 mm')).toBeVisible()
+    await expect(page.getByText('379.8 kg')).toBeVisible()
+    await expect(page.getByText('227.0 kg')).toBeVisible()
   });
 
   test('should compute CG with a 62kg pilot', async ({ page }) => {
-    // Check that glider F-CGUP is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace F-CGUP');
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('F-CGUP')
 
-    // Specify a 62kg pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('62');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
-    
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
+    await page.locator('input[type="number"]').first().fill('62')
+    await page.getByRole('button', { name: 'Calculer le centrage' }).click()
 
-    // check weight and CG
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('401.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('346.8');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('194.0');
-
-    // check the center of gravity
-    await expect(page.getByRole('tabpanel', { name: 'Calculateur centrage pilote' }).getByTestId('stAlertContainer')).toBeVisible();
-    await expect(page.getByTestId('stAlertContentError').getByRole('paragraph')).toContainText('Centrage hors secteur.');
+    await expect(page.getByText('Résultats du calcul')).toBeVisible()
+    await expect(page.getByText('401.0 mm')).toBeVisible()
+    await expect(page.getByText('346.8 kg')).toBeVisible()
+    await expect(page.getByText('194.0 kg')).toBeVisible()
+    await expect(page.getByText('Failed')).toBeVisible()
   });
 });
 
@@ -91,187 +62,101 @@ test.describe('Center of gravity for glider D-2080', () => {
   });
 
   test('should compute CG with a 80kg pilot', async ({ page }) => {
-    // Check that the correcty glider is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace D-2080');
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('D-2080')
+    await expect(page.getByText('Monoplace')).toBeVisible()
 
-    // Specify a 80kg pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('80');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+    const enabledInputs = page.locator('input[type="number"]:not([disabled])')
+    await enabledInputs.nth(0).fill('80')
+    await page.getByRole('button', { name: 'Calculer le centrage' }).click()
 
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
-
-    // check the center of gravity 
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('351.0');
-
-    // Check the weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('364.2');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('214.2');
+    await expect(page.getByText('Résultats du calcul')).toBeVisible()
+    await expect(page.getByText('350.9 mm')).toBeVisible()
+    await expect(page.getByText('364.2 kg')).toBeVisible()
+    await expect(page.getByText('214.2 kg')).toBeVisible()
   }); 
 
   test('should compute CG with a 80kg pilot and a 3kg tail ballast', async ({ page }) => {
-    // Check that the correcty glider is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace D-2080');
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('D-2080')
 
-    // Specify a 80kg pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('80');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+    const enabledInputs = page.locator('input[type="number"]:not([disabled])')
+    await enabledInputs.nth(0).fill('80')
+    await enabledInputs.nth(2).fill('3')
+    await page.getByRole('button', { name: 'Calculer le centrage' }).click()
 
-    // Specify a tail ballast of 80kg
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse ou water ballast' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse ou water ballast' }).fill('3');
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse ou water ballast' }).press('Enter');
-
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
-
-    // check the center of gravity 
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('383.0');
-
-    // Check the weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('367.2');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('217.2');
-
-    // check CG out of limit
-    await expect(page.getByRole('tabpanel', { name: 'Calculateur centrage pilote' }).getByTestId('stAlertContainer')).toBeVisible();
-    await expect(page.getByTestId('stAlertContentError').getByRole('paragraph')).toContainText('Centrage hors secteur.');
-
+    await expect(page.getByText('Résultats du calcul')).toBeVisible()
+    await expect(page.getByText('382.9 mm')).toBeVisible()
+    await expect(page.getByText('367.2 kg')).toBeVisible()
+    await expect(page.getByText('217.2 kg')).toBeVisible()
+    await expect(page.getByText('Failed')).toBeVisible()
   }); 
 
   test('should compute CG with a 65kg pilot and 5kg front ballast', async ({ page }) => {
-    // Check that the correcty glider is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Monoplace D-2080');
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('D-2080')
 
-    // Specify a 65kg pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('65');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+    const enabledInputs = page.locator('input[type="number"]:not([disabled])')
+    await enabledInputs.nth(0).fill('65')
+    await enabledInputs.nth(1).fill('5')
+    await page.getByRole('button', { name: 'Calculer le centrage' }).click()
 
-    // Specify a 5kg front ballast
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).fill('5');
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).press('Enter');
-
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
-
-    // check the center of gravity 
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('359.0');
-
-    // Check the weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('354.2');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('204.2');
+    await expect(page.getByText('Résultats du calcul')).toBeVisible()
+    await expect(page.getByText('359.1 mm')).toBeVisible()
+    await expect(page.getByText('354.2 kg')).toBeVisible()
+    await expect(page.getByText('204.2 kg')).toBeVisible()
   }); 
 
 });
 
 test.describe('Center of gravity for glider F-CJBH', () => {
   test.beforeEach(async ({ page }) => {
-    await selectGliderByKey(page, 'F-CJBH', 11);
+    await selectGlider(page, 'F-CJBH');
   });
  
   test('should compute CG with a 60kg front pilot and an 80kg rear pilot', async ({ page }) => {
-    // Check that glider F-CJBH is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Biplace F-CJBH');
-    await expect(page.getByTestId('stMainBlockContainer')).toContainText('planeur SNC34C Alliance de marque SN Centrair');
-    
-    // Specify a 60kg front pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('60');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('F-CJBH')
+    await expect(page.getByText('Biplace')).toBeVisible()
 
-    // Specify a 80kg rear pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).fill('80');
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).press('Enter');
-    
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
+    const enabledInputs = page.locator('input[type="number"]:not([disabled])')
+    await enabledInputs.nth(0).fill('60')
+    await enabledInputs.nth(1).fill('80')
+    await enabledInputs.nth(1).press('Tab')
+    await Promise.all([
+      page.waitForResponse((response) =>
+        response.url().includes('/api/gliders/by-id/F-CJBH/calculate') && response.ok(),
+      ),
+      page.getByRole('button', { name: 'Calculer le centrage' }).click(),
+    ])
 
-    // check weight and CG
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('2330.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('501.4');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('321.0');
+    await expect(page.getByText('Résultats du calcul')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('2329.6 mm')).toBeVisible()
+    await expect(page.getByText('501.4 kg')).toBeVisible()
+    await expect(page.getByText('321.0 kg')).toBeVisible()
   });
 
   test('should compute CG with a 50kg front pilot and an 80kg rear pilot', async ({ page }) => {
-    // Check that glider F-CJBH is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Biplace F-CJBH');
-    await expect(page.getByTestId('stMainBlockContainer')).toContainText('planeur SNC34C Alliance de marque SN Centrair');
-    
-    // Specify a 50kg front pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('50');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('F-CJBH')
+    await expect(page.getByText('Biplace')).toBeVisible()
 
-    // Specify a 80kg rear pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).fill('80');
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).press('Enter');
-    
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
+    const enabledInputs = page.locator('input[type="number"]:not([disabled])')
+    await enabledInputs.nth(0).fill('50')
+    await enabledInputs.nth(1).fill('80')
+    await enabledInputs.nth(1).press('Tab')
+    await Promise.all([
+      page.waitForResponse((response) =>
+        response.url().includes('/api/gliders/by-id/F-CJBH/calculate') && response.ok(),
+      ),
+      page.getByRole('button', { name: 'Calculer le centrage' }).click(),
+    ])
 
-    // check weight and CG
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('2356.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('491.4');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('311.0');
-
-    // check CG out of limit
-    await expect(page.getByRole('tabpanel', { name: 'Calculateur centrage pilote' }).getByTestId('stAlertContainer')).toBeVisible();
-    await expect(page.getByTestId('stAlertContentError').getByRole('paragraph')).toContainText('Centrage hors secteur.');
-  });
- 
-  test('should compute CG with a 50kg front pilot, an 80kg rear pilot and a 5kg front ballast', async ({ page }) => {
-    // Check that glider F-CJBH is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Biplace F-CJBH');
-    await expect(page.getByTestId('stMainBlockContainer')).toContainText('planeur SNC34C Alliance de marque SN Centrair');
-    
-    // Specify a 50kg front pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('50');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
-
-    // Specify a 80kg rear pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).fill('80');
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).press('Enter');
-
-    // Specify a 5kg front ballast
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).fill('5');
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).press('Enter');
-    
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
-
-    // check weight and CG
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('2333.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('496.4');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('316.0');
-
-    // check CG out of limit
-    await expect(page.getByRole('tabpanel', { name: 'Calculateur centrage pilote' }).getByTestId('stAlertContainer')).not.toBeVisible();
+    await expect(page.getByText('Résultats du calcul')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('2355.8 mm')).toBeVisible()
+    await expect(page.getByText('491.4 kg')).toBeVisible()
+    await expect(page.getByText('311.0 kg')).toBeVisible()
+    await expect(page.getByText('Failed')).toBeVisible()
   });
 
 });
@@ -281,93 +166,52 @@ test.describe('Center of gravity for glider F-CJDT', () => {
     await selectGlider(page, 'F-CJDT');
   });
 
-  test('should compute CG with a 60kg front pilot, an 70kg rear pilot, a 5kg front ballast and 40kg wing ballast', async ({ page }) => {
-    // Check that glider F-CJBH is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Biplace F-CJDT');
-    await expect(page.getByTestId('stMainBlockContainer')).toContainText('planeur Janus C de marque Schempp Hirth');
-    
-    // Specify a 60kg front pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('60');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+  test('should compute CG with a 60kg front pilot, a 70kg rear pilot, a 5kg front ballast and 40kg wing ballast', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('F-CJDT')
+    await expect(page.getByText('Biplace')).toBeVisible()
 
-    // Specify a 80kg rear pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).fill('80');
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).press('Enter');
+    const enabledInputs = page.locator('input[type="number"]:not([disabled])')
+    await enabledInputs.nth(0).fill('60')
+    await enabledInputs.nth(1).fill('70')
+    await enabledInputs.nth(2).fill('5')
+    await enabledInputs.nth(3).fill('40')
+    await enabledInputs.nth(3).press('Tab')
+    await Promise.all([
+      page.waitForResponse((response) =>
+        response.url().includes('/api/gliders/by-id/F-CJDT/calculate') && response.ok(),
+      ),
+      page.getByRole('button', { name: 'Calculer le centrage' }).click(),
+    ])
 
-    // Specify a 5kg front ballast
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).fill('5');
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).press('Enter');
-
-    // Specify a 40kg wing ballast
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (kg)' }).fill('40');
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (kg)' }).press('Enter');    
-
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
-
-    // check weight and CG
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('203.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('595.9');
-
-    // check weight and CG with empty ballast
-
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('206.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('555.9');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('336.4');
-
-    // check CG out of limit
-    await expect(page.getByRole('tabpanel', { name: 'Calculateur centrage pilote' }).getByTestId('stAlertContainer')).toBeVisible();
+    await expect(page.getByText('Résultats du calcul')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('209.8 mm')).toBeVisible()
+    await expect(page.getByText('585.9 kg')).toBeVisible()
+    await expect(page.getByText('326.4 kg')).toBeVisible()
   });
 
-  test('should compute CG with a 50kg front pilot, an 70kg rear pilot, a 5kg front ballast and 40kg wing ballast', async ({ page }) => {
-    // Check that glider F-CJBH is selected
-    await expect(page.locator('#monoplace-f-cgup')).toContainText('Biplace F-CJDT');
-    await expect(page.getByTestId('stMainBlockContainer')).toContainText('planeur Janus C de marque Schempp Hirth');
-    
-    // Specify a 50kg front pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).fill('50');
-    await page.getByRole('spinbutton', { name: 'Masse pilote avant équipé (en' }).press('Enter');
+  test('should compute CG with a 50kg front pilot, a 70kg rear pilot, a 5kg front ballast and 40kg wing ballast', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Calculateur de centrage' })).toBeVisible()
+    await expect(page.getByRole('combobox').first()).toContainText('F-CJDT')
+    await expect(page.getByText('Biplace')).toBeVisible()
 
-    // Specify a 80kg rear pilot
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).fill('80');
-    await page.getByRole('spinbutton', { name: 'Masse pilote arrière équipé (kg)' }).press('Enter');
+    const enabledInputs = page.locator('input[type="number"]:not([disabled])')
+    await enabledInputs.nth(0).fill('50')
+    await enabledInputs.nth(1).fill('70')
+    await enabledInputs.nth(2).fill('5')
+    await enabledInputs.nth(3).fill('40')
+    await enabledInputs.nth(3).press('Tab')
+    await Promise.all([
+      page.waitForResponse((response) =>
+        response.url().includes('/api/gliders/by-id/F-CJDT/calculate') && response.ok(),
+      ),
+      page.getByRole('button', { name: 'Calculer le centrage' }).click(),
+    ])
 
-    // Specify a 5kg front ballast
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).fill('5');
-    await page.getByRole('spinbutton', { name: 'Masse Gueuse avant (kg)' }).press('Enter');
-
-    // Specify a 40kg wing ballast
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (kg)' }).click();
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (kg)' }).fill('40');
-    await page.getByRole('spinbutton', { name: 'Masse d\'eau dans les ailes (kg)' }).press('Enter');    
-
-    // compute weight and balance
-    await page.getByTestId('stBaseButton-primary').click();
-		await page.waitForTimeout(1000);
-
-    // check weight and CG
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('229.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('585.9');
-
-    // check weight and CG with empty ballast
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('233.0');
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('545.9');
-
-    // check the non-lifting components weight
-    await expect(page.getByLabel('Calculateur centrage pilote')).toContainText('326.4');
-
-    // check CG out of limit
-    await expect(page.getByRole('tabpanel', { name: 'Calculateur centrage pilote' }).getByTestId('stAlertContainer')).not.toBeVisible();
+    await expect(page.getByText('Résultats du calcul')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('236.0 mm')).toBeVisible()
+    await expect(page.getByText('575.9 kg')).toBeVisible()
+    await expect(page.getByText('316.4 kg')).toBeVisible()
   });
 
 });

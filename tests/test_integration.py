@@ -73,6 +73,19 @@ def auth_token(test_credentials):
 	raise RuntimeError(f'Failed to obtain test token: {response.status_code} - {response.text}')
 
 
+@pytest.fixture
+def editor_token(editor_credentials):
+	"""Get valid editor auth token for testing."""
+	response = requests.post(
+		f'{BACKEND_URL}/api/auth/login',
+		json=editor_credentials,
+		timeout=TIMEOUT
+	)
+	if response.status_code == 200:
+		return response.json().get('access_token')
+	raise RuntimeError(f'Failed to obtain editor token: {response.status_code} - {response.text}')
+
+
 def _calculate_weight_and_balance(glider_id: str, payload: dict, timeout: int) -> dict:
 	"""Call weight and balance calculation endpoint and return response payload."""
 	response = requests.post(
@@ -109,6 +122,14 @@ def _get_glider_details(glider_id: str, timeout: int) -> dict:
 	data = response.json()
 	assert 'weight_and_balances' in data
 	return data
+
+
+def _get_glider_weighing(glider_id: str, timeout: int) -> dict:
+	"""Get the first weighing of a glider for mutation tests."""
+	details = _get_glider_details(glider_id, timeout)
+	assert 'weighings' in details
+	assert len(details['weighings']) > 0
+	return details['weighings'][0]
 
 
 def _is_point_inside_polygon(point_x: float, point_y: float, polygon: list[list[float]]) -> bool:
@@ -275,6 +296,173 @@ class TestGliderOperations:
 			timeout=timeout
 		)
 		
+		assert response.status_code == 404
+
+
+class TestWeighingOperations:
+	"""Weighing mutation tests."""
+
+	def test_update_weighing_preserves_id(self, auth_token, timeout):
+		"""Update a weighing in place and keep the same weighing id."""
+		headers = {'Authorization': f'Bearer {auth_token}'}
+		original = _get_glider_weighing('F-CGUP', timeout)
+		updated_payload = {
+			'date': original['date'],
+			'p1': round(original['p1'] + 1.0, 2),
+			'p2': original['p2'],
+			'right_wing_weight': original['right_wing_weight'],
+			'left_wing_weight': original['left_wing_weight'],
+			'tail_weight': original['tail_weight'],
+			'fuselage_weight': original['fuselage_weight'],
+			'fix_ballast_weight': original['fix_ballast_weight'],
+			'A': original['A'],
+			'D': original['D'],
+		}
+
+		try:
+			response = requests.put(
+				f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{original["id"]}',
+				json=updated_payload,
+				headers=headers,
+				timeout=timeout,
+			)
+
+			assert response.status_code == 200
+			data = response.json()
+			assert data['id'] == original['id']
+			assert data['p1'] == updated_payload['p1']
+
+			refetched = _get_glider_details('F-CGUP', timeout)
+			matching = next((weighing for weighing in refetched['weighings'] if weighing['id'] == original['id']), None)
+			assert matching is not None
+			assert matching['p1'] == updated_payload['p1']
+		finally:
+			restore_payload = {
+				'date': original['date'],
+				'p1': original['p1'],
+				'p2': original['p2'],
+				'right_wing_weight': original['right_wing_weight'],
+				'left_wing_weight': original['left_wing_weight'],
+				'tail_weight': original['tail_weight'],
+				'fuselage_weight': original['fuselage_weight'],
+				'fix_ballast_weight': original['fix_ballast_weight'],
+				'A': original['A'],
+				'D': original['D'],
+			}
+			requests.put(
+				f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{original["id"]}',
+				json=restore_payload,
+				headers=headers,
+				timeout=timeout,
+			)
+
+	def test_update_weighing_returns_404_when_missing(self, auth_token, timeout):
+		"""Updating an unknown weighing should return 404."""
+		headers = {'Authorization': f'Bearer {auth_token}'}
+		original = _get_glider_weighing('F-CGUP', timeout)
+		missing_weighing_id = original['id'] + 999999
+		payload = {
+			'date': original['date'],
+			'p1': original['p1'],
+			'p2': original['p2'],
+			'right_wing_weight': original['right_wing_weight'],
+			'left_wing_weight': original['left_wing_weight'],
+			'tail_weight': original['tail_weight'],
+			'fuselage_weight': original['fuselage_weight'],
+			'fix_ballast_weight': original['fix_ballast_weight'],
+			'A': original['A'],
+			'D': original['D'],
+		}
+
+		response = requests.put(
+			f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{missing_weighing_id}',
+			json=payload,
+			headers=headers,
+			timeout=timeout,
+		)
+
+		assert response.status_code == 404
+
+	def test_update_weighing_rejects_other_glider_id(self, auth_token, timeout):
+		"""A weighing id from another glider must not be reassigned."""
+		headers = {'Authorization': f'Bearer {auth_token}'}
+		target = _get_glider_weighing('F-CGUP', timeout)
+		other = _get_glider_weighing('D-2080', timeout)
+		payload = {
+			'date': target['date'],
+			'p1': target['p1'],
+			'p2': target['p2'],
+			'right_wing_weight': target['right_wing_weight'],
+			'left_wing_weight': target['left_wing_weight'],
+			'tail_weight': target['tail_weight'],
+			'fuselage_weight': target['fuselage_weight'],
+			'fix_ballast_weight': target['fix_ballast_weight'],
+			'A': target['A'],
+			'D': target['D'],
+		}
+
+		response = requests.put(
+			f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{other["id"]}',
+			json=payload,
+			headers=headers,
+			timeout=timeout,
+		)
+
+		assert response.status_code == 404
+
+	def test_update_weighing_returns_400_for_invalid_date(self, auth_token, timeout):
+		"""Invalid weighing dates should be rejected."""
+		headers = {'Authorization': f'Bearer {auth_token}'}
+		original = _get_glider_weighing('F-CGUP', timeout)
+		payload = {
+			'date': '2024/31/12',
+			'p1': original['p1'],
+			'p2': original['p2'],
+			'right_wing_weight': original['right_wing_weight'],
+			'left_wing_weight': original['left_wing_weight'],
+			'tail_weight': original['tail_weight'],
+			'fuselage_weight': original['fuselage_weight'],
+			'fix_ballast_weight': original['fix_ballast_weight'],
+			'A': original['A'],
+			'D': original['D'],
+		}
+
+		response = requests.put(
+			f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{original["id"]}',
+			json=payload,
+			headers=headers,
+			timeout=timeout,
+		)
+
+		assert response.status_code == 400
+
+	def test_print_weighing_returns_pdf_for_editor(self, editor_token, timeout):
+		"""Editors should be able to export a weighing sheet as PDF."""
+		headers = {'Authorization': f'Bearer {editor_token}'}
+		original = _get_glider_weighing('F-CGUP', timeout)
+
+		response = requests.get(
+			f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{original["id"]}/print',
+			headers=headers,
+			timeout=timeout,
+		)
+
+		assert response.status_code == 200
+		assert response.headers['content-type'].startswith('application/pdf')
+		assert response.headers['content-disposition'].startswith('inline;')
+		assert response.content.startswith(b'%PDF')
+
+	def test_print_weighing_returns_404_when_missing(self, editor_token, timeout):
+		"""Printing an unknown weighing should return 404."""
+		headers = {'Authorization': f'Bearer {editor_token}'}
+		original = _get_glider_weighing('F-CGUP', timeout)
+
+		response = requests.get(
+			f'{BACKEND_URL}/api/gliders/by-id/F-CGUP/weighings/{original["id"] + 999999}/print',
+			headers=headers,
+			timeout=timeout,
+		)
+
 		assert response.status_code == 404
 
 
