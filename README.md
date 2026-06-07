@@ -2,11 +2,18 @@
 	<h1>PyGliderCG</h1>
 </p>
 
-# Center of Gravity Calculator for ACPH Gliders
+# Center of Gravity Calculator for Gliders
 
-A simple web  application to calculate center of gravity for [ACPH](https://aeroclub-issoire.fr/) gliders.
-- **Frontend:** React + Vite + Tailwind UI (pilot and admin workflows)
+A web  application to calculate center of gravity and manage weighings for [ACPH](https://aeroclub-issoire.fr/) gliders.
+- **Frontend:** React + Vite + Tailwind UI + Shadcn (pilot and admin workflows)
 - **Backend:** FastAPI service (business logic, auth, database access)
+
+<table>
+  <tr>
+    <td><img src="web/public/img/screenshot-1.png" alt="home page screenshot 1"></td>
+    <td><img src="web/public/img/screenshot-2.png" alt="home page screenshot 2"></td>
+  </tr>
+</table>
 
 Frontend code now lives under `web/` and can run either:
 - locally with two processes (one for FastAPI, one for Vite dev server), or
@@ -22,7 +29,7 @@ Frontend code now lives under `web/` and can run either:
 ## Requirements
 
 - Python 3.12
-- Node.js (for Playwright E2E tests)
+- Node.js v24
 
 ## Local development setup
 
@@ -141,7 +148,7 @@ Then call API directly (e.g. with curl/Postman/Swagger).
 # Login and get token
 TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin"}' | jq -r '.access_token')
+  -d '{"username":"admin","xxxx":"xxxx"}' | jq -r '.access_token')
 
 # List gliders
 curl http://localhost:8000/api/gliders \
