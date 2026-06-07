@@ -4,9 +4,10 @@
 
 # Center of Gravity Calculator for Gliders
 
-A web  application to calculate center of gravity and manage weighings for [ACPH](https://aeroclub-issoire.fr/) gliders.
-- **Frontend:** React + Vite + Tailwind UI + Shadcn (pilot and admin workflows)
-- **Backend:** FastAPI service (business logic, auth, database access)
+A web application to calculate center of gravity and manage weighings for [ACPH](https://aeroclub-issoire.fr/) gliders.
+
+- **Frontend:** React + Vite + Tailwind UI + Shadcn
+- **Backend:** FastAPI service for business logic, auth, and database access
 
 <table>
   <tr>
@@ -15,16 +16,14 @@ A web  application to calculate center of gravity and manage weighings for [ACPH
   </tr>
 </table>
 
-Frontend code now lives under `web/` and can run either:
-- locally with two processes (one for FastAPI, one for Vite dev server), or
-- in Docker with a **single container** serving built React assets through FastAPI.
+The frontend lives under `web/`, while the FastAPI backend lives under `backend/`. You can run the app locally with separate frontend/backend processes, or build the frontend and serve it from FastAPI in a single container.
 
-## Repository layout (relevant folders)
+## Repository layout
 
 - `web/`: React frontend application
-- `backend/`: FastAPI API service
+- `backend/`: FastAPI backend service
 - `tests/`: pytest suite
-- `e2e/`: Playwright E2E tests
+- `e2e/`: Playwright end-to-end tests
 
 ## Requirements
 
@@ -33,24 +32,17 @@ Frontend code now lives under `web/` and can run either:
 
 ## Local development setup
 
-Create a virtual environment, clone the repository, then install both frontend and backend dependencies.
-
 ```bash
 git clone https://github.com/tfraudet/PyGliderCG.git
-cd ./PyGliderCG
+cd PyGliderCG
 python3 -m venv .venv
-```
-
-On Unix systems
-
-```bash
 source .venv/bin/activate
 ```
 
-On Window systems
+On Windows:
 
 ```bash
-.venv\scripts\activate
+.venv\Scripts\activate
 ```
 
 ### Install dependencies
@@ -58,6 +50,7 @@ On Window systems
 ```bash
 pip install -r requirements.txt
 npm install
+npm install --prefix web
 ```
 
 ### Configure environment
@@ -66,26 +59,28 @@ npm install
 cp .env.example .env
 ```
 
+Update `.env` with the values needed for your local environment.
+
 Key variables:
-- `BACKEND_URL` (backend API URL, default `http://localhost:8000`)
-- `VITE_BACKEND_URL` (optional override for React frontend API base URL)
-- `JWT_SECRET_KEY` (JWT signing key for backend auth)
-- `DB_NAME` (DuckDB file path)
+- `BACKEND_URL`: backend API URL (default `http://localhost:8000`)
+- `VITE_BACKEND_URL`: optional frontend API base URL override
+- `JWT_SECRET_KEY`: JWT signing key for backend auth
+- `DB_NAME`: DuckDB database file path
 
-### Launch options (backend + frontend)
+## Run the app
 
-You have 4 ways to run the app, depending on your workflow.
+### Option 1 — Local development (recommended)
 
-#### Option 1 — Local dev (recommended for coding)
+Run the backend and frontend in separate terminals.
 
-Run backend and frontend separately in two terminals:
+Terminal 1 — backend:
 
-**Terminal 1 - Backend (FastAPI, with reload)**
 ```bash
 python -m uvicorn backend.main:app --reload
 ```
 
-**Terminal 2 - Frontend (Vite dev server)**
+Terminal 2 — frontend:
+
 ```bash
 npm run web:dev
 ```
@@ -95,11 +90,9 @@ Access:
 - Backend API: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
 
----
+### Option 2 — Unified local run
 
-#### Option 2 — Unified local run (single process)
-
-Build the React app, then serve it directly from FastAPI:
+Build the frontend and serve it from FastAPI.
 
 ```bash
 npm run web:build
@@ -110,9 +103,7 @@ Access:
 - App + API: `http://localhost:8000`
 - Swagger UI: `http://localhost:8000/docs`
 
----
-
-#### Option 3 — Docker (single container)
+### Option 3 — Docker
 
 ```bash
 docker compose up --build
@@ -121,84 +112,102 @@ docker compose up --build
 Access:
 - App + API: `http://localhost:8000`
 
-For production-style detached run:
+For a production-style detached run:
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
----
+### Option 4 — API only
 
-#### Option 4 — Backend API only
-
-Useful if you only need API testing:
+Run only the backend service.
 
 ```bash
 python -m uvicorn backend.main:app --reload
+```
 
-# or
+Or bind to a specific host/port:
+
+```bash
 python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Then call API directly (e.g. with curl/Postman/Swagger).
+## Development workflow
 
-### Quick API Test
+For everyday development, use the separate backend/frontend flow.
+
+1. Start the backend with auto-reload:
 
 ```bash
-# Login and get token
+python -m uvicorn backend.main:app --reload
+```
+
+2. Start the frontend dev server from the repo root:
+
+```bash
+npm run web:dev
+```
+
+3. Open the frontend at `http://localhost:5173` and the API docs at `http://localhost:8000/docs`.
+
+4. When frontend changes are ready for integration, build and run the app together:
+
+```bash
+npm run web:build
+./start.sh
+```
+
+## Quick API test
+
+```bash
 TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","xxxx":"xxxx"}' | jq -r '.access_token')
 
-# List gliders
 curl http://localhost:8000/api/gliders \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 For detailed endpoint documentation, see [API.md](./API.md).
 
-## Run with Docker
-
-```bash
-# Unified app container (frontend build served by backend)
-docker compose up --build
-
-# Production stack (same unified app model)
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
 ## Run the tests
 
-Start backend and frontend first (see "Run backend and frontend"), then run tests in another terminal.
+Start the backend and frontend first, then run tests in another terminal.
 
 ```bash
-# All tests
 pytest tests/ -v
-
- # Glider only
-pytest tests/test_glider.py -v
-
-# Integration only
-pytest tests/test_integration.py -v  
 ```
 
-### Run end to end tests
-
-You can run the tests using [Playwright](https://playwright.dev/) framework. The config starts backend and frontend web servers automatically.
+Run a focused test:
 
 ```bash
-# Install Playwright dependencies
+pytest tests/test_glider.py -v
+pytest tests/test_integration.py -v
+```
+
+## End-to-end tests
+
+Install Playwright dependencies:
+
+```bash
 playwright install
+```
 
-# Run all E2E tests
+Run the suite:
+
+```bash
 npx playwright test --config=playwright.config.ts
+```
 
-# Run the tests with a specific browser
+Run a specific browser or spec:
+
+```bash
 npx playwright test --config=playwright.config.ts --project=chromium
-
-# Run a specific test file with a specific browser
 npx playwright test e2e/glider-mngmt.spec.ts --config=playwright.config.ts --project=webkit
+```
 
-# To open last HTML report run
+Open the last generated HTML report:
+
+```bash
 npx playwright show-report
 ```
