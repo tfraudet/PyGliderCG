@@ -135,7 +135,7 @@ export function getPayloadFieldState(
   const isRearBallast = key === 'rear_ballast_weight'
   const isWaterBallast = key === 'wing_water_ballast_weight'
   const isPilot = key.includes('pilot')
-  const totalPilotWeight = payload.front_pilot_weight + payload.rear_pilot_weight
+  const currentPilotWeight = isRearPilot ? payload.rear_pilot_weight : payload.front_pilot_weight
   const harnessMax = glider?.limits.mm_harnais ?? 0
 
   const isDisabled = (
@@ -147,7 +147,7 @@ export function getPayloadFieldState(
 
   return {
     isDisabled,
-    showHarnessError: isPilot && focusedField === key && totalPilotWeight > harnessMax,
-    canIncrement: !(isPilot && totalPilotWeight > harnessMax),
+    showHarnessError: isPilot && focusedField === key && currentPilotWeight > harnessMax,
+    canIncrement: !(isPilot && currentPilotWeight >= harnessMax),
   }
 }

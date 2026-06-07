@@ -91,7 +91,7 @@ const Sidebar = React.forwardRef<
     variant?: 'sidebar' | 'floating' | 'inset'
     collapsible?: 'offcanvas' | 'icon' | 'none'
   }
->(({ side = 'left', variant = 'sidebar', collapsible = 'icon', className, children, ...props }, ref) => {
+>(({ className, children, ...props }, ref) => {
   const { state, openMobile, setOpenMobile, isMobile } = useSidebar()
  
   return (
@@ -254,7 +254,7 @@ const SidebarMenuButton = React.forwardRef<
     isActive?: boolean
     tooltip?: string | React.ReactNode
   } & VariantProps<typeof sidebarMenuButtonVariants>
->(({ asChild = false, isActive, size, className, tooltip, ...props }, ref) => {
+>(({ asChild = false, isActive, size, className, ...props }, ref) => {
   const Comp = asChild ? Slot : 'button'
 
   return (

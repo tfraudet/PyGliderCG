@@ -3,7 +3,7 @@ import { Calculator, Minus, Plus, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { TabsContent } from '@/components/ui/tabs'
 import { apiError } from '@/lib/api'
@@ -77,7 +77,8 @@ export function CentrageTab({
   }
 
   const handlePayloadChange = (key: PayloadKey, event: ChangeEvent<HTMLInputElement>) => {
-    updatePayload(key, Number(event.target.value) || 0)
+    const value = event.target.value === '' ? 0 : Number(event.target.value) || 0
+    updatePayload(key, value)
   }
 
   const stepPayload = (key: PayloadKey, delta: number) => {
@@ -94,6 +95,8 @@ export function CentrageTab({
   const isWeightPassed = calculation ? calculation.total_weight <= glider.limits.mmwp : false
   const isEnpMassPassed = enpMass <= glider.limits.mmenp
   const calculationErrorMessage = calculationError ? apiError(calculationError) : null
+  const harnessMax = glider?.limits.mm_harnais ?? 0
+  const isHarnessLimitExceeded = payload.front_pilot_weight > harnessMax || payload.rear_pilot_weight > harnessMax
 
   return (
     <TabsContent value="centrage" className="space-y-5">
@@ -115,12 +118,12 @@ export function CentrageTab({
                     <Label className={`text-xs ${isDisabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`}>
                       {PAYLOAD_LABELS[key]}
                     </Label>
-                    <InputGroup>
-                      <InputGroupInput
+                    <div className="flex gap-1">
+                      <Input
                         type="number"
                         min={0}
                         step={0.5}
-                        value={payload[key]}
+                        value={payload[key] || ''}
                         onChange={(event) => handlePayloadChange(key, event)}
                         onFocus={() => setFocusedField(key)}
                         onBlur={() => setFocusedField(null)}
@@ -128,25 +131,25 @@ export function CentrageTab({
                         disabled={isDisabled}
                         className={`font-mono text-center [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:hidden [&::-webkit-outer-spin-button]:hidden ${showHarnessError ? 'border-red-500 focus-visible:ring-red-500/50' : ''}`}
                       />
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupButton
-                          variant="ghost"
-                          size="icon-xs"
-                          disabled={isDisabled}
-                          onClick={() => stepPayload(key, -0.5)}
-                        >
-                          <Minus size={14} />
-                        </InputGroupButton>
-                        <InputGroupButton
-                          variant="ghost"
-                          size="icon-xs"
-                          disabled={isDisabled || !canIncrement}
-                          onClick={() => stepPayload(key, 0.5)}
-                        >
-                          <Plus size={14} />
-                        </InputGroupButton>
-                      </InputGroupAddon>
-                    </InputGroup>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={isDisabled}
+                        onClick={() => stepPayload(key, -0.5)}
+                        className="h-10 w-10"
+                      >
+                        <Minus size={16} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={isDisabled || !canIncrement}
+                        onClick={() => stepPayload(key, 0.5)}
+                        className="h-10 w-10"
+                      >
+                        <Plus size={16} />
+                      </Button>
+                    </div>
                     {showHarnessError && (
                       <p className="text-xs font-medium text-red-500">
                         Dépasse le poids max du harnais ({glider.limits.mm_harnais} kg)
@@ -163,7 +166,7 @@ export function CentrageTab({
       <Button
         className="w-full gap-2 md:w-auto"
         onClick={onCalculate}
-        disabled={isCalculating}
+        disabled={isCalculating || isHarnessLimitExceeded}
       >
         <Calculator size={15} />
         {isCalculating ? 'Calcul…' : 'Calculer le centrage'}
@@ -175,7 +178,7 @@ export function CentrageTab({
         </Alert>
       )}
 
-      {calculation && (
+      {calculation && !isHarnessLimitExceeded && (
         <>
           <Card className="border-border/60 bg-card/80">
             <CardHeader>
