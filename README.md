@@ -1,7 +1,3 @@
-<p align="center">
-	<h1>PyGliderCG</h1>
-</p>
-
 # Center of Gravity Calculator for Gliders
 
 A web application to calculate center of gravity and manage weighings for [ACPH](https://aeroclub-issoire.fr/) gliders.
