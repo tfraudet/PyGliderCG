@@ -49,7 +49,7 @@ jobs:
     - name: Build frontend
       run: |
         npm install
-        npm --prefix web run web:build   
+        npm --prefix web run build   
 
     - name: Install dependencies
       run: |
