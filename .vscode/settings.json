@@ -24,6 +24,7 @@
 			"matchCommandLine": true
 		},
 		"npm install": true,
-		"npx tsc": true
+		"npx tsc": true,
+		"npx playwright": true
 	}
 }
