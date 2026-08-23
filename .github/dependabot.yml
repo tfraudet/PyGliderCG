@@ -28,8 +28,8 @@ updates:
       dev-dependencies:
         patterns:
           - "*"
-        dependency-type: "production"
+        dependency-type: "development"
       production-dependencies:
         patterns:
           - "*"
-        dependency-type: "direct"
+        dependency-type: "production"
