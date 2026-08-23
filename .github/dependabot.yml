@@ -15,7 +15,7 @@ updates:
       production-dependencies:
         patterns:
           - "*"
-        dependency-type: "direct"
+        dependency-type: "production"
 
   # 2. Gestion de l'application /web
   - package-ecosystem: "npm"
@@ -28,7 +28,7 @@ updates:
       dev-dependencies:
         patterns:
           - "*"
-        dependency-type: "development"
+        dependency-type: "production"
       production-dependencies:
         patterns:
           - "*"
