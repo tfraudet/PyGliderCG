@@ -2,13 +2,13 @@
 # Python 3.12+
 
 # Web Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
 
 # Data validation and settings management
-pydantic==2.4.2
-pydantic-core==2.10.1
-pydantic-settings==2.0.3
+# pydantic-core==2.10.1
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
 pydantic[email]
 
 # Environment variables
