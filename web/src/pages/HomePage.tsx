@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Barcode, Calculator, Plane, TriangleAlert, UserRound, UsersRound } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { backend } from '@/lib/api'
+import type { WeightBalanceResult } from '@/lib/types'
 import { useGliderLimits, useGliders } from '@/hooks/use-app-queries'
 import { CentrageTab } from './home-page/CentrageTab'
 import { LimitsTab } from './home-page/LimitsTab'
@@ -42,9 +43,21 @@ export function HomePage() {
     [isAutoBallast, autoBallast, payload],
   )
 
+  const [calculation, setCalculation] = useState<WeightBalanceResult | null>(null)
   const calcMutation = useMutation({
-    mutationFn: () => backend.calculateWeightBalance(selected, effectivePayload),
+    mutationFn: (body: typeof effectivePayload) => backend.calculateWeightBalance(selected, body),
+    onSuccess: setCalculation,
   })
+
+  // In auto mode the ballast follows the target CG, so refresh an existing result when inputs change.
+  // The result is kept in state (not mutation.data, which is cleared while pending) to avoid a retrigger loop.
+  const { mutate: calculate } = calcMutation
+  const hasCalculation = calculation !== null
+  useEffect(() => {
+    if (rearBallastMode === 'auto' && hasCalculation) {
+      calculate(effectivePayload)
+    }
+  }, [rearBallastMode, hasCalculation, effectivePayload, calculate])
 
   const mvenp = gliderLimitsQuery.data?.mvenp ?? 0
   const enpMass = mvenp
@@ -64,6 +77,7 @@ export function HomePage() {
     }
 
     calcMutation.reset()
+    setCalculation(null)
     setPayload({ ...EMPTY_PAYLOAD })
     setRearBallastMode('manual')
     setTargetCgPercent(DEFAULT_TARGET_CG_PERCENT)
@@ -150,9 +164,9 @@ export function HomePage() {
               autoBallast={autoBallast}
               focusedField={focusedField}
               setFocusedField={setFocusedField}
-              onCalculate={() => calcMutation.mutate()}
+              onCalculate={() => calcMutation.mutate(effectivePayload)}
               isCalculating={calcMutation.isPending}
-              calculation={calcMutation.data}
+              calculation={calculation}
               calculationError={calcMutation.error}
               enpMass={enpMass}
               envelopePoints={chartEnvelopePoints}
