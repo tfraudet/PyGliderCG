@@ -1,22 +1,33 @@
 import type { ChangeEvent, Dispatch, SetStateAction } from 'react'
 import { Calculator, Minus, Plus, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Slider } from '@/components/ui/slider'
 import { TabsContent } from '@/components/ui/tabs'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { apiError } from '@/lib/api'
 import type { Glider, WeightBalanceResult } from '@/lib/types'
 import { PAYLOAD_LABELS, PAYLOAD_SECTIONS } from './config'
-import type { ChartPoint, PayloadKey, PayloadState } from './types'
+import type { AutoBallastResult, ChartPoint, PayloadKey, PayloadState, RearBallastMode } from './types'
 import { getPayloadFieldState } from './utils'
 import { WeightBalanceGraph } from './WeightBalanceGraph'
+
+const formatKg = (value: number) =>
+  `${value.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg`
 
 interface CentrageTabProps {
   glider: Glider
   payload: PayloadState
   setPayload: Dispatch<SetStateAction<PayloadState>>
+  rearBallastMode: RearBallastMode
+  setRearBallastMode: Dispatch<SetStateAction<RearBallastMode>>
+  targetCgPercent: number
+  setTargetCgPercent: Dispatch<SetStateAction<number>>
+  autoBallast: AutoBallastResult | null
   focusedField: string | null
   setFocusedField: Dispatch<SetStateAction<string | null>>
   onCalculate: () => void
@@ -63,6 +74,11 @@ export function CentrageTab({
   glider,
   payload,
   setPayload,
+  rearBallastMode,
+  setRearBallastMode,
+  targetCgPercent,
+  setTargetCgPercent,
+  autoBallast,
   focusedField,
   setFocusedField,
   onCalculate,
@@ -97,6 +113,7 @@ export function CentrageTab({
   const calculationErrorMessage = calculationError ? apiError(calculationError) : null
   const harnessMax = glider?.limits.mm_harnais ?? 0
   const isHarnessLimitExceeded = payload.front_pilot_weight > harnessMax || payload.rear_pilot_weight > harnessMax
+  const isAuto = rearBallastMode === 'auto' && autoBallast !== null
 
   return (
     <TabsContent value="centrage" className="space-y-5">
@@ -112,12 +129,77 @@ export function CentrageTab({
             <CardContent className="space-y-4 px-4 pb-4">
               {fields.map((key) => {
                 const { isDisabled, showHarnessError, canIncrement } = getPayloadFieldState(key, glider, payload, focusedField)
+                const isRearBallast = key === 'rear_ballast_weight'
+                const showAuto = isRearBallast && isAuto && autoBallast !== null
 
                 return (
                   <div key={key} className="space-y-1.5">
-                    <Label className={`text-xs ${isDisabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`}>
-                      {PAYLOAD_LABELS[key]}
-                    </Label>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className={`text-xs ${isDisabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`}>
+                        {PAYLOAD_LABELS[key]}
+                      </Label>
+                      {isRearBallast && (
+                        <ToggleGroup
+                          aria-label="Mode de calcul de la gueuse arrière"
+                          value={[showAuto ? 'auto' : 'manual']}
+                          onValueChange={(value) => {
+                            if (value[0]) setRearBallastMode(value[0] as RearBallastMode)
+                          }}
+                          className="shrink-0"
+                        >
+                          <ToggleGroupItem value="manual">Manuel</ToggleGroupItem>
+                          <ToggleGroupItem
+                            value="auto"
+                            disabled={isDisabled || autoBallast === null}
+                            title={isDisabled || autoBallast === null ? 'Calcul automatique indisponible pour ce planeur' : undefined}
+                          >
+                            Auto
+                          </ToggleGroupItem>
+                        </ToggleGroup>
+                      )}
+                    </div>
+                    {showAuto ? (
+                      <>
+                        <div
+                          data-testid="rear-ballast-auto-value"
+                          className="flex h-10 items-center justify-center gap-2 rounded-md border border-sky-500/50 bg-sky-500/10 px-3 font-mono text-sm"
+                        >
+                          {formatKg(autoBallast.mass)}
+                          <Badge variant="outline" className="border-sky-500/50 text-[10px] font-normal text-sky-500">
+                            calculé
+                          </Badge>
+                        </div>
+                        <div className="space-y-3 rounded-md border border-border/60 bg-background/40 p-3">
+                          <div className="flex items-baseline justify-between">
+                            <span className="text-sm font-medium">Centrage cible</span>
+                            <span className="font-mono text-sm font-semibold text-sky-400">{targetCgPercent} %</span>
+                          </div>
+                          <Slider
+                            aria-label="Centrage cible"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={targetCgPercent}
+                            onValueChange={(value) => setTargetCgPercent(typeof value === 'number' ? value : value[0])}
+                          />
+                          <div className="flex justify-between font-mono text-[10px] text-muted-foreground">
+                            <span>0 % · limite AV</span>
+                            <span>limite AR · 100 %</span>
+                          </div>
+                          {autoBallast.reachable ? (
+                            <p className="flex items-center gap-2 text-xs text-green-400">
+                              <span className="size-1.5 shrink-0 rounded-full bg-green-400" />
+                              Centrage {Math.round(autoBallast.currentPercent)} % → {targetCgPercent} % avec la gueuse de queue.
+                            </p>
+                          ) : (
+                            <p className="flex items-center gap-2 text-xs text-amber-400">
+                              <span className="size-1.5 shrink-0 rounded-full bg-amber-400" />
+                              Centrage déjà à {Math.round(autoBallast.currentPercent)} % sans gueuse de queue : cible non atteignable.
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    ) : (
                     <div className="flex gap-1">
                       <Input
                         type="number"
@@ -150,6 +232,7 @@ export function CentrageTab({
                         <Plus size={16} />
                       </Button>
                     </div>
+                    )}
                     {showHarnessError && (
                       <p className="text-xs font-medium text-red-500">
                         Dépasse le poids max du harnais ({glider.limits.mm_harnais} kg)
@@ -163,14 +246,16 @@ export function CentrageTab({
         ))}
       </div>
 
-      <Button
-        className="w-full gap-2 md:w-auto"
-        onClick={onCalculate}
-        disabled={isCalculating || isHarnessLimitExceeded}
-      >
-        <Calculator size={15} />
-        {isCalculating ? 'Calcul…' : 'Calculer le centrage'}
-      </Button>
+      <div>
+        <Button
+          className="w-full gap-2 md:w-auto"
+          onClick={onCalculate}
+          disabled={isCalculating || isHarnessLimitExceeded}
+        >
+          <Calculator size={15} />
+          {isCalculating ? 'Calcul…' : 'Calculer le centrage'}
+        </Button>
+      </div>
 
       {calculationErrorMessage && (
         <Alert variant="destructive">

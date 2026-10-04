@@ -12,8 +12,8 @@ import { backend } from '@/lib/api'
 import { useGliderLimits, useGliders } from '@/hooks/use-app-queries'
 import { CentrageTab } from './home-page/CentrageTab'
 import { LimitsTab } from './home-page/LimitsTab'
-import { EMPTY_PAYLOAD } from './home-page/types'
-import { buildChartEnvelopePoints } from './home-page/utils'
+import { DEFAULT_TARGET_CG_PERCENT, EMPTY_PAYLOAD, type RearBallastMode } from './home-page/types'
+import { buildChartEnvelopePoints, computeAutoRearBallast } from './home-page/utils'
 import { WeighingTab } from './home-page/WeighingTab'
 
 export function HomePage() {
@@ -21,6 +21,8 @@ export function HomePage() {
   const [selected, setSelected] = useState('')
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [payload, setPayload] = useState(EMPTY_PAYLOAD)
+  const [rearBallastMode, setRearBallastMode] = useState<RearBallastMode>('manual')
+  const [targetCgPercent, setTargetCgPercent] = useState(DEFAULT_TARGET_CG_PERCENT)
 
   const selectedGlider = useMemo(
     () => glidersQuery.data?.find((glider) => glider.registration === selected) ?? null,
@@ -29,16 +31,27 @@ export function HomePage() {
 
   const gliderLimitsQuery = useGliderLimits(selected)
 
+  const autoBallast = useMemo(
+    () => computeAutoRearBallast(selectedGlider, gliderLimitsQuery.data, payload, targetCgPercent),
+    [selectedGlider, gliderLimitsQuery.data, payload, targetCgPercent],
+  )
+
+  const isAutoBallast = rearBallastMode === 'auto' && autoBallast !== null
+  const effectivePayload = useMemo(
+    () => (isAutoBallast ? { ...payload, rear_ballast_weight: autoBallast.mass } : payload),
+    [isAutoBallast, autoBallast, payload],
+  )
+
   const calcMutation = useMutation({
-    mutationFn: () => backend.calculateWeightBalance(selected, payload),
+    mutationFn: () => backend.calculateWeightBalance(selected, effectivePayload),
   })
 
   const mvenp = gliderLimitsQuery.data?.mvenp ?? 0
   const enpMass = mvenp
-    + payload.front_pilot_weight
-    + payload.rear_pilot_weight
-    + payload.front_ballast_weight
-    + payload.rear_ballast_weight
+    + effectivePayload.front_pilot_weight
+    + effectivePayload.rear_pilot_weight
+    + effectivePayload.front_ballast_weight
+    + effectivePayload.rear_ballast_weight
 
   const chartEnvelopePoints = useMemo(
     () => buildChartEnvelopePoints(selectedGlider, enpMass),
@@ -52,6 +65,8 @@ export function HomePage() {
 
     calcMutation.reset()
     setPayload({ ...EMPTY_PAYLOAD })
+    setRearBallastMode('manual')
+    setTargetCgPercent(DEFAULT_TARGET_CG_PERCENT)
     setFocusedField(null)
     setSelected(value)
   }
@@ -128,6 +143,11 @@ export function HomePage() {
               glider={selectedGlider}
               payload={payload}
               setPayload={setPayload}
+              rearBallastMode={rearBallastMode}
+              setRearBallastMode={setRearBallastMode}
+              targetCgPercent={targetCgPercent}
+              setTargetCgPercent={setTargetCgPercent}
+              autoBallast={autoBallast}
               focusedField={focusedField}
               setFocusedField={setFocusedField}
               onCalculate={() => calcMutation.mutate()}

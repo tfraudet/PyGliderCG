@@ -1,5 +1,5 @@
-import type { Glider } from '@/lib/types'
-import type { ChartPoint, PayloadFieldState, PayloadKey, PayloadState, PilotLimitResult } from './types'
+import type { Glider, GliderCalcLimits } from '@/lib/types'
+import type { AutoBallastResult, ChartPoint, PayloadFieldState, PayloadKey, PayloadState, PilotLimitResult } from './types'
 
 export const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value))
 
@@ -122,6 +122,52 @@ export function buildChartEnvelopePoints(glider: Glider | null, enpMass: number)
     { x: rear, y: maxMass },
     { x: rear, y: minMass },
   ]
+}
+
+// Mirrors Glider.weight_and_balance_calculator; null when the datum or data is unsupported.
+export function computeAutoRearBallast(
+  glider: Glider | null,
+  limitsData: GliderCalcLimits | undefined,
+  payload: PayloadState,
+  targetPercent: number,
+): AutoBallastResult | null {
+  const emptyWeight = limitsData?.empty_weight
+  const emptyArm = limitsData?.empty_arm
+  if (!glider || emptyWeight == null || emptyArm == null) return null
+
+  const { arms, limits } = glider
+  const rearArm = arms.arm_rear_watterballast_or_ballast
+  const range = limits.rear_centering - limits.front_centering
+  if (rearArm === 0 || range === 0) return null
+
+  let seatSign: number
+  if (glider.datum === 1) seatSign = -1
+  else if (glider.datum === 4) seatSign = 1
+  else return null
+
+  const baseMass = emptyWeight
+    + payload.front_pilot_weight
+    + payload.rear_pilot_weight
+    + payload.front_ballast_weight
+    + payload.wing_water_ballast_weight
+  const baseMoment = emptyWeight * emptyArm
+    + seatSign * (
+      payload.front_pilot_weight * arms.arm_front_pilot
+      + payload.rear_pilot_weight * arms.arm_rear_pilot
+      + payload.front_ballast_weight * arms.arm_front_ballast
+    )
+    + payload.wing_water_ballast_weight * arms.arm_waterballast
+
+  const currentPercent = ((baseMoment / baseMass - limits.front_centering) / range) * 100
+  const target = limits.front_centering + (targetPercent / 100) * range
+  const mass = (target * baseMass - baseMoment) / (rearArm - target)
+  const reachable = Number.isFinite(mass) && mass > 0
+
+  return {
+    mass: reachable ? Math.round(mass * 10) / 10 : 0,
+    currentPercent,
+    reachable,
+  }
 }
 
 export function getPayloadFieldState(
