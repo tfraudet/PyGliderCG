@@ -139,16 +139,18 @@ export function AppSidebar() {
         {isCollapsed && !user && (
           <div className="flex flex-col items-center justify-start gap-2 py-2">
             <Tooltip>
-              <TooltipTrigger>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="h-9 w-9 text-primary hover:bg-sidebar-accent"
-                  onClick={openLoginPanel}
-                >
-                  <LogIn />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-9 w-9 text-primary hover:bg-sidebar-accent"
+                    onClick={openLoginPanel}
+                  />
+                }
+              >
+                <LogIn />
               </TooltipTrigger>
               <TooltipContent side="right">Se connecter</TooltipContent>
             </Tooltip>

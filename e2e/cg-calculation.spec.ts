@@ -107,6 +107,36 @@ test.describe('Center of gravity for glider D-2080', () => {
     await expect(page.getByText('204.2 kg')).toBeVisible()
   }); 
 
+  test('should reach the 85% target CG with the automatic tail ballast', async ({ page }) => {
+    await page.locator('input[type="number"]:not([disabled])').nth(0).fill('80')
+
+    await page.getByRole('button', { name: 'Auto', exact: true }).click()
+    await expect(page.getByTestId('rear-ballast-auto-value')).toContainText('calculé')
+    await expect(page.getByText('85 %', { exact: true })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Calculer le centrage' }).click()
+    await expect(page.getByText('Résultats du calcul')).toBeVisible()
+
+    const limitsText = await page.getByText(/\(Limites: [\d.]+-[\d.]+ mm\)/).innerText()
+    const [front, rear] = (limitsText.match(/[\d.]+/g) ?? []).map(Number)
+    const cgText = await page.getByText(/^\d+\.\d mm$/).first().innerText()
+    const percent = ((Number.parseFloat(cgText) - front) / (rear - front)) * 100
+
+    expect(percent).toBeGreaterThan(84)
+    expect(percent).toBeLessThan(86)
+  });
+
+  test('should keep the manual tail ballast when switching back from auto', async ({ page }) => {
+    const enabledInputs = page.locator('input[type="number"]:not([disabled])')
+    await enabledInputs.nth(2).fill('3')
+
+    await page.getByRole('button', { name: 'Auto', exact: true }).click()
+    await expect(enabledInputs).toHaveCount(2)
+    await page.getByRole('button', { name: 'Manuel', exact: true }).click()
+
+    await expect(enabledInputs.nth(2)).toHaveValue('3')
+  });
+
 });
 
 test.describe('Center of gravity for glider F-CJBH', () => {

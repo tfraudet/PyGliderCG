@@ -14,7 +14,7 @@ COPY web/public ./public
 COPY web/src ./src
 RUN npm run build
 
-FROM python:3.12.13-alpine3.23
+FROM python:3.12.15-alpine3.24
 
 WORKDIR /app
 

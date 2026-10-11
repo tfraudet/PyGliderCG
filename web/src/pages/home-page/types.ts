@@ -29,6 +29,16 @@ export type WeighingSummaryKey = keyof Pick<
   'mve' | 'mvenp' | 'cu' | 'cv_max' | 'cu_max' | 'empty_arm'
 >
 
+export type RearBallastMode = 'manual' | 'auto'
+
+export const DEFAULT_TARGET_CG_PERCENT = 85
+
+export interface AutoBallastResult {
+  mass: number
+  currentPercent: number
+  reachable: boolean
+}
+
 export interface PilotLimitResult {
   value: number | null
   reason: string | null
